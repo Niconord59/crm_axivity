@@ -5,6 +5,7 @@ export const PROSPECT_STATUTS = [
   "À appeler",
   "Appelé - pas répondu",
   "Rappeler",
+  "RDV planifié",
   "Qualifié",
   "Non qualifié",
   "Perdu",
@@ -98,6 +99,7 @@ export const callResultSchema = z.object({
   resultat: z.enum([
     "Appelé - pas répondu",
     "Rappeler",
+    "RDV planifié",
     "Qualifié",
     "Non qualifié",
     "Perdu",

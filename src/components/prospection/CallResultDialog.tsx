@@ -63,6 +63,7 @@ interface CallResultDialogProps {
 const CALL_RESULTS = [
   { value: "Appelé - pas répondu", label: "Pas répondu", description: "Le contact n'a pas décroché" },
   { value: "Rappeler", label: "Rappeler", description: "Planifier un nouveau contact" },
+  { value: "RDV planifié", label: "RDV planifié", description: "Un rendez-vous a été programmé" },
   { value: "Qualifié", label: "Qualifié", description: "Le lead est qualifié, créer une opportunité" },
   { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas" },
   { value: "Perdu", label: "Perdu", description: "Le lead n'est plus intéressé" },
@@ -111,6 +112,7 @@ function StatusBadge({ status }: { status?: string }) {
     "À appeler": "bg-blue-100 text-blue-800",
     "Appelé - pas répondu": "bg-yellow-100 text-yellow-800",
     "Rappeler": "bg-orange-100 text-orange-800",
+    "RDV planifié": "bg-purple-100 text-purple-800",
     "Qualifié": "bg-green-100 text-green-800",
     "Non qualifié": "bg-gray-100 text-gray-800",
     "Perdu": "bg-red-100 text-red-800",
@@ -249,7 +251,7 @@ export function CallResultDialog({
             <TabsTrigger value="company">Entreprise</TabsTrigger>
             <TabsTrigger value="history">Historique</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
-            <TabsTrigger value="call">Appel</TabsTrigger>
+            <TabsTrigger value="call">Résultat</TabsTrigger>
           </TabsList>
 
           {/* Lead Info Tab */}

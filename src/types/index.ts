@@ -53,6 +53,7 @@ export const PROSPECT_STATUSES = [
   "À appeler",
   "Appelé - pas répondu",
   "Rappeler",
+  "RDV planifié",
   "Qualifié",
   "Non qualifié",
   "Perdu",
