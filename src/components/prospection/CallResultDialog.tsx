@@ -163,6 +163,7 @@ export function CallResultDialog({
 
   const selectedResult = form.watch("resultat");
   const showDatePicker = selectedResult === "Rappeler";
+  const showNotes = selectedResult !== "RDV planifié";
 
   const handleSubmit = async (data: CallResultFormData) => {
     if (!prospect) return;
@@ -181,11 +182,16 @@ export function CallResultDialog({
 
       // 2. Create interaction if checked
       if (data.creerInteraction && prospect.client?.[0]) {
+        // For "RDV planifié", use a specific message since notes are in calendar
+        const interactionResume = data.resultat === "RDV planifié"
+          ? "RDV planifié - voir Google Calendar pour les détails"
+          : data.notes || `Résultat: ${data.resultat}`;
+
         await createInteraction.mutateAsync({
           objet: `Appel prospection - ${data.resultat}`,
           type: "Appel",
           date: new Date().toISOString().split("T")[0],
-          resume: data.notes || `Résultat: ${data.resultat}`,
+          resume: interactionResume,
           contact: [prospect.id],
           client: prospect.client,
         });
@@ -566,16 +572,18 @@ export function CallResultDialog({
                   </div>
                 )}
 
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes de l&apos;appel</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Résumé de la conversation..."
-                    {...form.register("notes")}
-                    rows={3}
-                  />
-                </div>
+                {/* Notes - hidden for RDV planifié since details are in the calendar event */}
+                {showNotes && (
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes de l&apos;appel</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Résumé de la conversation..."
+                      {...form.register("notes")}
+                      rows={3}
+                    />
+                  </div>
+                )}
 
                 {/* Create interaction checkbox */}
                 <div className="flex items-center space-x-2">
