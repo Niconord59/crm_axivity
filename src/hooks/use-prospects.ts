@@ -261,10 +261,12 @@ export function useUpdateProspectStatus() {
       );
       return mapRecordToContact(record);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+    onSuccess: async (_, variables) => {
+      // Refetch all prospect-related queries to ensure UI updates immediately
+      await queryClient.refetchQueries({ queryKey: ["prospects"] });
+      await queryClient.refetchQueries({ queryKey: ["prospects-with-clients"] });
       queryClient.invalidateQueries({ queryKey: ["prospect", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["prospects-with-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
     },
   });
 }
