@@ -31,14 +31,22 @@ function mapRecordToInteraction(
   };
 }
 
-export function useInteractions(options?: { clientId?: string }) {
+export function useInteractions(options?: {
+  contactId?: string;      // Filter by contact ID (direct link field)
+  clientName?: string;     // Filter by client name (lookup field shows names)
+}) {
   return useQuery({
     queryKey: ["interactions", options],
     queryFn: async () => {
       let filterByFormula: string | undefined;
 
-      if (options?.clientId) {
-        filterByFormula = `FIND('${options.clientId}', ARRAYJOIN({Client}))`;
+      // Filter by Contact ID (linked field with actual IDs) - preferred for prospects
+      if (options?.contactId) {
+        filterByFormula = `FIND('${options.contactId}', ARRAYJOIN({Contact}))`;
+      }
+      // Filter by Client name (lookup field contains names, not IDs) - for client pages
+      else if (options?.clientName) {
+        filterByFormula = `FIND('${options.clientName}', ARRAYJOIN({Client}))`;
       }
 
       const records = await airtable.getRecords<InteractionFields>(
@@ -96,16 +104,27 @@ export function useCreateInteraction() {
   });
 }
 
-export function useLastInteractionDate(clientId: string | undefined) {
+export function useLastInteractionDate(options?: {
+  contactId?: string;
+  clientName?: string;
+}) {
   return useQuery({
-    queryKey: ["interactions", "last-date", clientId],
+    queryKey: ["interactions", "last-date", options],
     queryFn: async () => {
-      if (!clientId) return null;
+      let filterByFormula: string | undefined;
+
+      if (options?.contactId) {
+        filterByFormula = `FIND('${options.contactId}', ARRAYJOIN({Contact}))`;
+      } else if (options?.clientName) {
+        filterByFormula = `FIND('${options.clientName}', ARRAYJOIN({Client}))`;
+      }
+
+      if (!filterByFormula) return null;
 
       const records = await airtable.getRecords<InteractionFields>(
         AIRTABLE_TABLES.INTERACTIONS,
         {
-          filterByFormula: `FIND('${clientId}', ARRAYJOIN({Client}))`,
+          filterByFormula,
           sort: [{ field: "Date", direction: "desc" }],
           maxRecords: 1,
         }
@@ -114,6 +133,6 @@ export function useLastInteractionDate(clientId: string | undefined) {
       if (records.length === 0) return null;
       return records[0].fields["Date"] || null;
     },
-    enabled: !!clientId,
+    enabled: !!(options?.contactId || options?.clientName),
   });
 }

@@ -47,10 +47,13 @@ export default function ClientDetailPage() {
   const { data: factures, isLoading: loadingFactures } = useFactures({
     clientId: id,
   });
-  const { data: interactions, isLoading: loadingInteractions } = useInteractions({
-    clientId: id,
-  });
-  const { data: lastInteractionDate } = useLastInteractionDate(id);
+  // Note: Interactions use clientName (lookup field) not clientId
+  const { data: interactions, isLoading: loadingInteractions } = useInteractions(
+    client?.nom ? { clientName: client.nom } : undefined
+  );
+  const { data: lastInteractionDate } = useLastInteractionDate(
+    client?.nom ? { clientName: client.nom } : undefined
+  );
 
   const isLoading = loadingClient || loadingProjets || loadingFactures || loadingInteractions;
 

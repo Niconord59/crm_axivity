@@ -140,9 +140,10 @@ export function CallResultDialog({
   const clientId = prospect?.client?.[0];
   const { data: client, isLoading: clientLoading } = useClient(clientId);
 
-  // Fetch interactions for this client
+  // Fetch interactions for this contact (prospect)
+  // Note: We filter by contactId because Client is a lookup field (names, not IDs)
   const { data: interactions, isLoading: interactionsLoading } = useInteractions(
-    clientId ? { clientId } : undefined
+    prospect?.id ? { contactId: prospect.id } : undefined
   );
 
   const form = useForm<CallResultFormData>({
