@@ -764,6 +764,55 @@ Import CSV → Clients (Prospect) + Contacts (À appeler)
 
 ---
 
+### Phase 7 : Tour Guidé Onboarding ✅ TERMINÉ
+
+> **STATUT** : 100% - 7/7 tâches
+> **Documentation specs** : `Interface/specs/004-onboarding-tour/`
+
+#### Contexte
+
+Les nouveaux utilisateurs découvraient l'application sans guidance, ce qui ralentissait l'adoption et augmentait les besoins en support.
+
+#### Solution Implémentée
+
+Système de visite guidée interactive custom (react-joyride incompatible avec React 19) utilisant les composants Shadcn/UI existants.
+
+#### Fonctionnalités
+
+| Feature | Description |
+|---------|-------------|
+| Auto-démarrage | Tour lancé automatiquement pour les nouveaux utilisateurs (délai 1s) |
+| 11 étapes | Welcome, Dashboard, Prospection, Projets, Opportunités, Tâches, Clients, Factures, Recherche, Notifications, Fin |
+| Navigation clavier | `→` Suivant, `←` Précédent, `Espace` Suivant, `Esc` Fermer, `?` Relancer |
+| Persistance | localStorage (hasCompletedTour, hasSkippedTour, lastSeenVersion) |
+| Spotlight | Animation pulse CSS sur les éléments de navigation mis en surbrillance |
+| Versioning | Possibilité de relancer le tour après mise à jour majeure |
+
+#### Fichiers Créés
+
+**Composants** (`src/components/onboarding/`) :
+- `OnboardingTour.tsx` - Overlay + Card avec Progress, navigation, dots
+- `TourTrigger.tsx` - Bouton aide dans le header avec pulse animation
+- `index.ts` - Barrel export
+
+**Infrastructure** :
+- `src/hooks/use-onboarding-tour.ts` - Hook de gestion d'état avec localStorage
+- `src/lib/tour-steps.ts` - Configuration des 11 étapes (id, title, description, icon, route, spotlightNav)
+- `src/providers/onboarding-provider.tsx` - Context provider
+
+**Modifications** :
+- `src/app/globals.css` - Classes `.tour-spotlight` avec animation pulse
+- `src/components/layout/app-layout.tsx` - Wrap avec OnboardingProvider
+- `src/components/layout/Header.tsx` - Ajout TourTrigger + raccourci `?`
+
+#### Utilisation
+
+- **Première visite** : Tour démarre automatiquement après 1 seconde
+- **Relancer** : Cliquer sur l'icône `?` dans le header ou appuyer sur `?`
+- **Naviguer** : Flèches directionnelles, boutons Suivant/Précédent, clic sur dots
+
+---
+
 ## 8. Contacts et Ressources
 
 ### Documentation
@@ -781,4 +830,4 @@ Import CSV → Clients (Prospect) + Contacts (À appeler)
 
 *Document généré le 14 décembre 2025*
 *Dernière mise à jour : 15 décembre 2025*
-*Version : 1.7* - Module Prospection implémenté (Phase 6 - 95%)
+*Version : 1.8* - Tour Guidé Onboarding implémenté (Phase 7 - 100%)

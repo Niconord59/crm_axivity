@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-14
+Auto-generated from all feature plans. Last updated: 2025-12-15
 
 ## Active Technologies
 
@@ -12,18 +12,21 @@ Auto-generated from all feature plans. Last updated: 2025-12-14
 src/
 ├── app/                    # Next.js App Router pages
 ├── components/
-│   ├── ui/                 # Shadcn/UI components (18 installed)
+│   ├── ui/                 # Shadcn/UI components (27 installed)
 │   ├── layout/             # Sidebar, Header, AppLayout
 │   ├── shared/             # KPICard, StatusBadge, SearchCommand, etc.
-│   ├── forms/              # [Phase 2] Formulaires CRUD
-│   └── charts/             # [Phase 2] Graphiques Recharts
-├── hooks/                  # React Query hooks (9 hooks)
+│   ├── forms/              # Formulaires CRUD
+│   ├── charts/             # Graphiques Recharts
+│   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
+│   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
+├── hooks/                  # React Query hooks (12 hooks)
 ├── lib/
 │   ├── airtable.ts         # API client
 │   ├── airtable-tables.ts  # Table IDs (21 tables)
 │   ├── utils.ts            # Helpers (cn, formatters)
-│   └── schemas/            # [Phase 2] Zod validation schemas
-├── providers/              # React Query provider
+│   ├── schemas/            # Zod validation schemas
+│   └── tour-steps.ts       # Configuration des étapes du tour
+├── providers/              # React Query + Onboarding providers
 └── types/                  # TypeScript definitions
 ```
 
@@ -84,6 +87,24 @@ npm start       # Production server
   - "Source Lead" (Single Select)
   - "Notes Prospection" (Long Text)
 
+### 004-onboarding-tour (Tour Guidé - IMPLEMENTED)
+- **Status**: 100% - Complete
+- **Specs**: `specs/004-onboarding-tour/`
+- **Content**:
+  - Tour guidé automatique pour les nouveaux utilisateurs
+  - 11 étapes couvrant toutes les fonctionnalités CRM
+  - Persistance localStorage (tour complété/skippé)
+  - Navigation clavier (→ Suivant, ← Précédent, Esc Fermer, ? Relancer)
+  - Effet spotlight sur les éléments de navigation
+  - Bouton d'aide dans le header avec animation pulse
+- **Nouveaux composants**:
+  - `components/onboarding/OnboardingTour.tsx` : Composant principal du tour (Card, Progress)
+  - `components/onboarding/TourTrigger.tsx` : Bouton de déclenchement avec tooltip
+- **Nouveaux fichiers**:
+  - `hooks/use-onboarding-tour.ts` : Hook de gestion d'état avec localStorage
+  - `lib/tour-steps.ts` : Configuration des 11 étapes du tour
+  - `providers/onboarding-provider.tsx` : Context provider pour le tour
+
 ## Documentation
 
 - **Passation projet**: `Documentation/passation_projet_agence_ia.md`
@@ -118,6 +139,11 @@ npm start       # Production server
   - Suivi des appels (CallResultDialog avec résultats et rappels)
   - Création manuelle de prospects (ProspectForm)
   - Conversion Lead → Opportunité avec mise à jour statuts
+- **004-onboarding-tour IMPLEMENTÉ** : Tour guidé pour nouveaux utilisateurs (15 déc. 2025)
+  - Solution custom (react-joyride incompatible React 19)
+  - 11 étapes avec navigation inter-pages
+  - Persistance localStorage + auto-démarrage première visite
+  - Raccourcis clavier (→←, Esc, ?)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

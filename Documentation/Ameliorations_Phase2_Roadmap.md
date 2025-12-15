@@ -1,8 +1,8 @@
 # Roadmap Améliorations CRM Axivity - Phase 2
 
 **Date de création** : 14 décembre 2025
-**Dernière mise à jour** : 14 décembre 2025
-**Statut** : En cours (53% - Phases 1-3 terminées)
+**Dernière mise à jour** : 15 décembre 2025
+**Statut** : En cours (60% - Phases 1-3 + Onboarding terminées)
 **Specs techniques** : `Interface/specs/002-crm-ameliorations/`
 
 ---
@@ -39,9 +39,10 @@ Ce document présente la roadmap des améliorations identifiées suite à l'audi
 | A6 | Portail Client | Moyen - satisfaction client | 4-5h | P2 | 📋 À faire |
 | A7 | Recherche Globale | Bas - navigation | 2-3h | P3 | 📋 À faire |
 | A8 | Gestion Équipe | Bas - ressources | 3-4h | P3 | 📋 À faire |
+| A9 | Tour Guidé Onboarding | Haut - adoption utilisateur | 2-3h | P1 | ✅ Terminé |
 
-**Effort total estimé** : 25-33 heures
-**Effort réalisé** : ~10 heures (Phase 1 + Phase 2)
+**Effort total estimé** : 27-36 heures
+**Effort réalisé** : ~13 heures (Phases 1-3 + A9)
 
 ---
 
@@ -249,6 +250,43 @@ const { results, isLoading } = useSearch(query);
 
 ---
 
+### A9 - Tour Guidé Onboarding ✅ TERMINÉ
+
+**Problème initial** : Les nouveaux utilisateurs découvrent l'application sans guidance, ce qui ralentit l'adoption.
+
+**Solution implémentée** : Système de tour guidé custom (react-joyride incompatible React 19) :
+
+| Composant | Fichier | Description |
+|-----------|---------|-------------|
+| OnboardingTour | `components/onboarding/OnboardingTour.tsx` | Overlay avec Card, Progress, navigation |
+| TourTrigger | `components/onboarding/TourTrigger.tsx` | Bouton d'aide avec pulse animation |
+| useOnboardingTour | `hooks/use-onboarding-tour.ts` | Hook de gestion d'état |
+| tour-steps | `lib/tour-steps.ts` | Configuration des 11 étapes |
+| OnboardingProvider | `providers/onboarding-provider.tsx` | Context provider |
+
+**Fonctionnalités** :
+- **Auto-démarrage** : Le tour se lance automatiquement pour les nouveaux utilisateurs (après 1s)
+- **11 étapes** : Welcome, Dashboard, Prospection, Projets, Opportunités, Tâches, Clients, Factures, Recherche, Notifications, Fin
+- **Navigation clavier** : `→` Suivant, `←` Précédent, `Espace` Suivant, `Esc` Fermer, `?` Relancer
+- **Persistance localStorage** : État sauvegardé (hasCompletedTour, hasSkippedTour, lastSeenVersion)
+- **Effet spotlight** : Animation pulse sur les éléments de navigation mis en surbrillance
+- **Dots navigation** : Indicateurs de progression cliquables
+- **Versioning** : Possibilité de relancer le tour lors de mises à jour majeures
+
+**CSS ajouté** (`globals.css`) :
+```css
+.tour-spotlight {
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.3);
+  animation: tour-pulse 2s ease-in-out infinite;
+}
+```
+
+**Bénéfice** : ✅ Adoption rapide par les nouveaux utilisateurs, réduction du support.
+
+**Date de complétion** : 15 décembre 2025
+
+---
+
 ## Planning Recommandé
 
 ### Semaine 1 : P1 (CRITIQUE) - ✅ Partiellement terminé
@@ -311,5 +349,5 @@ const { results, isLoading } = useSearch(query);
 ---
 
 *Document créé le 14 décembre 2025*
-*Dernière mise à jour : 14 décembre 2025*
-*Version : 1.1* - Formulaires CRUD terminés (Phase 1 + Phase 2 de tasks.md)
+*Dernière mise à jour : 15 décembre 2025*
+*Version : 1.2* - Ajout Tour Guidé Onboarding (A9) terminé
