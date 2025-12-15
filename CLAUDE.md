@@ -66,8 +66,8 @@ npm start       # Production server
   - A7. Recherche Globale (Cmd+K)
   - A8. Gestion Équipe et Charge
 
-### 003-prospection (Module Prospection - IMPLEMENTED)
-- **Status**: 95% - 40/44 tasks (Phase 0 Airtable pending)
+### 003-prospection (Module Prospection - COMPLETE)
+- **Status**: 100% - 44/44 tasks
 - **Specs**: `specs/003-prospection/`
 - **Content**:
   - Page `/prospection` dédiée à la gestion des leads
@@ -89,8 +89,8 @@ npm start       # Production server
   - `app/api/auth/[...nextauth]/route.ts` : Handler NextAuth
   - `app/api/calendar/events/route.ts` : API GET/POST events
   - `providers/session-provider.tsx` : SessionProvider wrapper
-- **Prérequis Airtable** (à créer manuellement sur T2-Contacts):
-  - "Statut Prospection" (Single Select) : À appeler, Appelé - pas répondu, Rappeler, **RDV planifié**, Qualifié, Non qualifié, Perdu
+- **Champs Airtable** (T2-Contacts) ✅:
+  - "Statut Prospection" (Single Select) : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
   - "Date Rappel" (Date)
   - "Source Lead" (Single Select)
   - "Notes Prospection" (Long Text)
