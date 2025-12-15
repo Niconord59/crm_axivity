@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { SessionProvider } from "@/providers/session-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { AppLayout } from "@/components/layout";
 
@@ -26,9 +27,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
-        <QueryProvider>
-          <AppLayout>{children}</AppLayout>
-        </QueryProvider>
+        <SessionProvider>
+          <QueryProvider>
+            <AppLayout>{children}</AppLayout>
+          </QueryProvider>
+        </SessionProvider>
       </body>
     </html>
   );

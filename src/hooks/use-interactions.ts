@@ -5,14 +5,13 @@ import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
 import type { Interaction, InteractionType } from "@/types";
 
 interface InteractionFields {
-  "Objet"?: string;
-  "Type d'Interaction"?: string;
+  "Objet de l'Interaction"?: string;
+  "Type"?: string;
   "Date"?: string;
-  "Résumé"?: string;
-  "Prochaine Tâche"?: string;
+  "Notes"?: string;
   "Contact"?: string[];
-  "Client"?: string[];
-  "Membre Équipe"?: string[];
+  "Client"?: { id: string; name: string }[]; // Lookup field (read-only)
+  "Participant Interne"?: { id: string; email: string; name: string };
 }
 
 function mapRecordToInteraction(
@@ -20,14 +19,15 @@ function mapRecordToInteraction(
 ): Interaction {
   return {
     id: record.id,
-    objet: record.fields["Objet"] || "",
-    type: record.fields["Type d'Interaction"] as InteractionType,
+    objet: record.fields["Objet de l'Interaction"] || "",
+    type: record.fields["Type"] as InteractionType,
     date: record.fields["Date"],
-    resume: record.fields["Résumé"],
-    prochaineTache: record.fields["Prochaine Tâche"],
+    resume: record.fields["Notes"],
     contact: record.fields["Contact"],
-    client: record.fields["Client"],
-    membreEquipe: record.fields["Membre Équipe"],
+    client: record.fields["Client"]?.map(c => c.id),
+    membreEquipe: record.fields["Participant Interne"]
+      ? [record.fields["Participant Interne"].id]
+      : undefined,
   };
 }
 
@@ -74,15 +74,14 @@ export function useCreateInteraction() {
 
   return useMutation({
     mutationFn: async (data: Partial<Interaction>) => {
+      // Note: "Client" is a lookup field (read-only), auto-populated from Contact
       const fields: Partial<InteractionFields> = {
-        "Objet": data.objet,
-        "Type d'Interaction": data.type,
+        "Objet de l'Interaction": data.objet,
+        "Type": data.type,
         "Date": data.date,
-        "Résumé": data.resume,
-        "Prochaine Tâche": data.prochaineTache,
+        "Notes": data.resume,
         "Contact": data.contact,
-        "Client": data.client,
-        "Membre Équipe": data.membreEquipe,
+        // Don't include "Client" - it's a lookup field auto-populated via Contact
       };
 
       const record = await airtable.createRecord<InteractionFields>(

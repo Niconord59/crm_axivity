@@ -52,6 +52,7 @@ import {
 } from "@/hooks/use-prospects";
 import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
 import { useClient } from "@/hooks/use-clients";
+import { AgendaTab } from "./agenda";
 
 interface CallResultDialogProps {
   open: boolean;
@@ -239,10 +240,11 @@ export function CallResultDialog({
         </DialogHeader>
 
         <Tabs defaultValue="lead" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="lead">Lead</TabsTrigger>
             <TabsTrigger value="company">Entreprise</TabsTrigger>
             <TabsTrigger value="history">Historique</TabsTrigger>
+            <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="call">Appel</TabsTrigger>
           </TabsList>
 
@@ -458,6 +460,24 @@ export function CallResultDialog({
                 </div>
               )}
             </ScrollArea>
+          </TabsContent>
+
+          {/* Agenda Tab */}
+          <TabsContent value="agenda" className="mt-4">
+            <div className="h-[400px]">
+              <AgendaTab
+                prospect={{
+                  id: prospect.id,
+                  prenom: prospect.prenom,
+                  nom: prospect.nom,
+                  email: prospect.email,
+                  telephone: prospect.telephone,
+                  entreprise: prospect.clientNom,
+                  clientId: prospect.client?.[0],
+                  notes: prospect.notesProspection,
+                }}
+              />
+            </div>
           </TabsContent>
 
           {/* Call Result Tab */}
