@@ -215,7 +215,6 @@ export default function ProspectionPage() {
         }}
         initialData={opportunityInitialData}
         onSuccess={handleOpportunitySuccess}
-        trigger={<></>} // Hidden trigger, controlled externally
       />
     </div>
   );

@@ -23,8 +23,8 @@ interface FormDialogProps<T extends FieldValues> {
   title: string;
   /** Description sous le titre (optionnel) */
   description?: string;
-  /** Élément déclencheur (bouton) */
-  trigger: ReactNode;
+  /** Élément déclencheur (bouton) - optionnel si contrôlé via open/onOpenChange */
+  trigger?: ReactNode;
   /** Schéma Zod pour validation */
   schema: z.ZodSchema<T>;
   /** Valeurs par défaut (pour édition) */
@@ -97,7 +97,7 @@ export function FormDialog<T extends FieldValues>({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
