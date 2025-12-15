@@ -32,7 +32,7 @@ function mapRecordToInteraction(
 }
 
 export function useInteractions(options?: {
-  contactId?: string;      // Filter by contact ID (direct link field)
+  contactName?: string;    // Filter by contact name (ARRAYJOIN returns names from link fields)
   clientName?: string;     // Filter by client name (lookup field shows names)
 }) {
   return useQuery({
@@ -40,11 +40,11 @@ export function useInteractions(options?: {
     queryFn: async () => {
       let filterByFormula: string | undefined;
 
-      // Filter by Contact ID (linked field with actual IDs) - preferred for prospects
-      if (options?.contactId) {
-        filterByFormula = `FIND('${options.contactId}', ARRAYJOIN({Contact}))`;
+      // Filter by Contact name (link field ARRAYJOIN returns primary field = names)
+      if (options?.contactName) {
+        filterByFormula = `FIND('${options.contactName}', ARRAYJOIN({Contact}))`;
       }
-      // Filter by Client name (lookup field contains names, not IDs) - for client pages
+      // Filter by Client name (lookup field contains names, not IDs)
       else if (options?.clientName) {
         filterByFormula = `FIND('${options.clientName}', ARRAYJOIN({Client}))`;
       }
@@ -105,7 +105,7 @@ export function useCreateInteraction() {
 }
 
 export function useLastInteractionDate(options?: {
-  contactId?: string;
+  contactName?: string;
   clientName?: string;
 }) {
   return useQuery({
@@ -113,8 +113,8 @@ export function useLastInteractionDate(options?: {
     queryFn: async () => {
       let filterByFormula: string | undefined;
 
-      if (options?.contactId) {
-        filterByFormula = `FIND('${options.contactId}', ARRAYJOIN({Contact}))`;
+      if (options?.contactName) {
+        filterByFormula = `FIND('${options.contactName}', ARRAYJOIN({Contact}))`;
       } else if (options?.clientName) {
         filterByFormula = `FIND('${options.clientName}', ARRAYJOIN({Client}))`;
       }
@@ -133,6 +133,6 @@ export function useLastInteractionDate(options?: {
       if (records.length === 0) return null;
       return records[0].fields["Date"] || null;
     },
-    enabled: !!(options?.contactId || options?.clientName),
+    enabled: !!(options?.contactName || options?.clientName),
   });
 }

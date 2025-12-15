@@ -141,9 +141,12 @@ export function CallResultDialog({
   const { data: client, isLoading: clientLoading } = useClient(clientId);
 
   // Fetch interactions for this contact (prospect)
-  // Note: We filter by contactId because Client is a lookup field (names, not IDs)
+  // Note: ARRAYJOIN on link fields returns names, not IDs - so we filter by full name
+  const contactFullName = prospect?.prenom
+    ? `${prospect.prenom} ${prospect.nom}`
+    : prospect?.nom;
   const { data: interactions, isLoading: interactionsLoading } = useInteractions(
-    prospect?.id ? { contactId: prospect.id } : undefined
+    contactFullName ? { contactName: contactFullName } : undefined
   );
 
   const form = useForm<CallResultFormData>({
