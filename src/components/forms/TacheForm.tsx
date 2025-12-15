@@ -215,7 +215,10 @@ function TacheFormFields({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Responsable</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={(value) => field.onChange(value === "_none" ? "" : value)}
+                defaultValue={field.value || "_none"}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue
@@ -226,7 +229,7 @@ function TacheFormFields({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Non assigné</SelectItem>
+                  <SelectItem value="_none">Non assigné</SelectItem>
                   {equipe.map((membre) => (
                     <SelectItem key={membre.id} value={membre.id}>
                       {membre.nom}

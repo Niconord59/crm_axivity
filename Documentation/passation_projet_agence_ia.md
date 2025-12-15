@@ -221,8 +221,8 @@ Les workflows N8N sont disponibles dans le dossier `Workflows_n8n/`. Chaque work
 
 | Technologie | Version | Documentation |
 |-------------|---------|---------------|
-| **Next.js** | 14.2.15 | https://nextjs.org/ |
-| **React** | 18.3.1 | https://fr.react.dev/ |
+| **Next.js** | 16.0.10 (Turbopack) | https://nextjs.org/ |
+| **React** | 19.2.3 | https://fr.react.dev/ |
 | **Shadcn/UI** | Latest | https://ui.shadcn.com |
 | **Tailwind CSS** | 3.x | https://tailwindcss.com |
 | **React Query** | 5.x | https://tanstack.com/query |
@@ -572,9 +572,9 @@ export const TABLES = {
 **Note** : Voir `Workflows_n8n/README.md` pour les instructions d'installation
 
 ### Phase 3 : Application Web React + Shadcn ✅ TERMINÉ
-> **Stack** : Next.js 14 + React 18.3.1 + Shadcn/UI + Tailwind CSS + React Query + Airtable API
+> **Stack** : Next.js 16 + React 19 + Shadcn/UI + Tailwind CSS + React Query + Airtable API (migré le 15 déc. 2025)
 
-1. ✅ Setup projet Next.js 14 avec TypeScript
+1. ✅ Setup projet Next.js 16 avec TypeScript et Turbopack
 2. ✅ Installation et configuration Shadcn/UI (New York style)
 3. ✅ Création layout responsive (Sidebar + MobileNav + Header)
 4. ✅ Dashboard avec KPIs et graphiques
@@ -704,6 +704,66 @@ Suite à l'audit de la Phase 3, les améliorations suivantes ont été identifi�
 
 ---
 
+### Phase 6 : Module Prospection ✅ TERMINÉ
+
+> **STATUT** : 95% - 28/32 tâches (Phase 0 Airtable en attente)
+> **Documentation specs** : `Interface/specs/003-prospection/`
+
+#### Contexte
+
+L'import de leads se faisait via la page Opportunités, ce qui impliquait qu'un lead devenait automatiquement une opportunité. Or, un lead doit d'abord être qualifié par téléphone avant de devenir une opportunité.
+
+#### Fonctionnalités Implémentées ✅
+
+| Feature | Description | Statut |
+|---------|-------------|--------|
+| Page `/prospection` | Liste des leads avec KPIs, filtres, carte par lead | ✅ Terminé |
+| Import CSV | Wizard 3 étapes avec mapping, preview, détection doublons | ✅ Terminé |
+| Suivi appels | CallResultDialog (5 résultats + date rappel + notes) | ✅ Terminé |
+| Création manuelle | ProspectForm pour créer leads manuellement | ✅ Terminé |
+| Conversion | Lead qualifié → Opportunité avec pré-remplissage | ✅ Terminé |
+
+#### Fichiers Créés
+
+**Composants** (`src/components/prospection/`) :
+- `ProspectionKPIs.tsx` - 4 KPIs (à appeler, rappels, taux qualif, retards)
+- `LeadCard.tsx` - Carte lead avec badges et actions
+- `ProspectionFilters.tsx` - Filtres statut/source/rappel
+- `CallResultDialog.tsx` - Dialog résultat d'appel
+- `ProspectForm.tsx` - Formulaire création lead
+- `LeadImportDialog.tsx` - Wizard import CSV 3 étapes
+
+**Hooks** (`src/hooks/`) :
+- `use-prospects.ts` - useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
+- `use-import-leads.ts` - useImportLeads (parsing CSV, mapping, batch import)
+- `use-convert-opportunity.ts` - useConvertToOpportunity
+
+**Schemas** (`src/lib/schemas/`) :
+- `prospect.ts` - prospectSchema, callResultSchema, csvMappingSchema
+
+#### Prérequis Airtable (ACTION UTILISATEUR REQUISE)
+
+Les champs suivants doivent être créés manuellement dans T2-Contacts via l'interface Airtable :
+
+| Champ | Type | Options |
+|-------|------|---------|
+| `Statut Prospection` | Single Select | À appeler, Appelé - pas répondu, Rappeler, Qualifié, Non qualifié, Perdu |
+| `Date Rappel` | Date | Format European (DD/MM/YYYY) |
+| `Source Lead` | Single Select | LinkedIn, Site web, Salon, Recommandation, Achat liste, Autre |
+| `Notes Prospection` | Long Text | Rich text désactivé |
+
+#### Flux de prospection
+
+```
+Import CSV → Clients (Prospect) + Contacts (À appeler)
+                            ↓
+                    Appels & Qualification
+                            ↓
+            Qualifié → Client (Actif) + Opportunité (Qualifié)
+```
+
+---
+
 ## 8. Contacts et Ressources
 
 ### Documentation
@@ -720,5 +780,5 @@ Suite à l'audit de la Phase 3, les améliorations suivantes ont été identifi�
 ---
 
 *Document généré le 14 décembre 2025*
-*Dernière mise à jour : 14 décembre 2025*
-*Version : 1.3* - Phase 5 A1 (Formulaires CRUD) + A3 (Graphiques) terminés
+*Dernière mise à jour : 15 décembre 2025*
+*Version : 1.7* - Module Prospection implémenté (Phase 6 - 95%)

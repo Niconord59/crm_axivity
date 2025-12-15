@@ -34,18 +34,24 @@ import type { Opportunite } from "@/types";
 interface OpportuniteFormProps {
   /** Opportunité à éditer (si undefined, mode création) */
   opportunite?: Opportunite;
+  /** Données initiales pour pré-remplir le formulaire (mode création) */
+  initialData?: Partial<OpportuniteFormData>;
   /** Contrôle externe pour l'ouverture */
   open?: boolean;
   /** Callback de changement d'état */
   onOpenChange?: (open: boolean) => void;
+  /** Callback appelé après création réussie avec l'ID de l'opportunité */
+  onSuccess?: (opportuniteId: string) => void;
   /** Trigger personnalisé (si non fourni, bouton par défaut) */
   trigger?: React.ReactNode;
 }
 
 export function OpportuniteForm({
   opportunite,
+  initialData,
   open,
   onOpenChange,
+  onSuccess,
   trigger,
 }: OpportuniteFormProps) {
   const { data: clients, isLoading: isLoadingClients } = useClients();
@@ -65,7 +71,10 @@ export function OpportuniteForm({
         source: opportunite.source || "",
         notes: opportunite.notes || "",
       }
-    : (opportuniteDefaultValues as OpportuniteFormData);
+    : {
+        ...(opportuniteDefaultValues as OpportuniteFormData),
+        ...initialData,
+      };
 
   const handleSubmit = async (data: OpportuniteFormData) => {
     if (isEditing && opportunite) {
@@ -83,7 +92,7 @@ export function OpportuniteForm({
         },
       });
     } else {
-      await createOpportunite.mutateAsync({
+      const result = await createOpportunite.mutateAsync({
         nom: data.nom,
         client: [data.clientId],
         valeurEstimee: data.valeurEstimee,
@@ -93,6 +102,10 @@ export function OpportuniteForm({
         source: data.source || undefined,
         notes: data.notes || undefined,
       });
+      // Call onSuccess callback with the new opportunity ID
+      if (onSuccess && result?.id) {
+        onSuccess(result.id);
+      }
     }
   };
 

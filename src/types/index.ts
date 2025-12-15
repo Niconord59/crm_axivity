@@ -48,6 +48,27 @@ export const INTERACTION_TYPES = [
 ] as const;
 export type InteractionType = (typeof INTERACTION_TYPES)[number];
 
+// Prospection
+export const PROSPECT_STATUSES = [
+  "À appeler",
+  "Appelé - pas répondu",
+  "Rappeler",
+  "Qualifié",
+  "Non qualifié",
+  "Perdu",
+] as const;
+export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
+
+export const PROSPECT_SOURCES = [
+  "LinkedIn",
+  "Site web",
+  "Salon",
+  "Recommandation",
+  "Achat liste",
+  "Autre",
+] as const;
+export type ProspectSource = (typeof PROSPECT_SOURCES)[number];
+
 export const TEAM_ROLES = [
   "Direction",
   "Chef de Projet",
@@ -101,6 +122,11 @@ export interface Contact extends BaseEntity {
   estPrincipal?: boolean;
   notes?: string;
   linkedin?: string;
+  // Prospection fields
+  statutProspection?: ProspectStatus;
+  dateRappel?: string;
+  sourceLead?: ProspectSource;
+  notesProspection?: string;
   // Linked records
   client?: string[];
   interactions?: string[];

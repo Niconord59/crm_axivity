@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   Target,
+  Phone,
   CheckSquare,
   Users,
   FileText,
@@ -32,6 +33,11 @@ const mainNavItems: NavItem[] = [
     title: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Prospection",
+    href: "/prospection",
+    icon: Phone,
   },
   {
     title: "Projets",

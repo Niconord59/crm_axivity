@@ -5,3 +5,5 @@ export * from "./use-opportunites";
 export * from "./use-taches";
 export * from "./use-factures";
 export * from "./use-equipe";
+export * from "./use-interactions";
+export * from "./use-prospects";

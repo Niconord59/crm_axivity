@@ -4,7 +4,7 @@ Auto-generated from all feature plans. Last updated: 2025-12-14
 
 ## Active Technologies
 
-- TypeScript 5.x avec React 18.3.1 + Next.js 14 (App Router), Shadcn/UI, Tailwind CSS 3.x, Recharts, @hello-pangea/dnd (drag-and-drop)
+- TypeScript 5.x avec React 19 + Next.js 16 (App Router + Turbopack), Shadcn/UI, Tailwind CSS 3.x, Recharts, @hello-pangea/dnd v18 (drag-and-drop)
 
 ## Project Structure
 
@@ -17,7 +17,7 @@ src/
 │   ├── shared/             # KPICard, StatusBadge, SearchCommand, etc.
 │   ├── forms/              # [Phase 2] Formulaires CRUD
 │   └── charts/             # [Phase 2] Graphiques Recharts
-├── hooks/                  # React Query hooks (6 hooks)
+├── hooks/                  # React Query hooks (9 hooks)
 ├── lib/
 │   ├── airtable.ts         # API client
 │   ├── airtable-tables.ts  # Table IDs (21 tables)
@@ -63,6 +63,27 @@ npm start       # Production server
   - A7. Recherche Globale (Cmd+K)
   - A8. Gestion Équipe et Charge
 
+### 003-prospection (Module Prospection - IMPLEMENTED)
+- **Status**: 95% - 28/32 tasks (Phase 0 Airtable pending)
+- **Specs**: `specs/003-prospection/`
+- **Content**:
+  - Page `/prospection` dédiée à la gestion des leads
+  - Import CSV avec mapping manuel des colonnes (papaparse)
+  - Suivi des appels (statuts, rappels, notes)
+  - Conversion Lead → Opportunité
+  - KPIs de prospection (à appeler, rappels, taux qualification, retards)
+- **Nouveaux composants**:
+  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog
+- **Nouveaux hooks**:
+  - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
+  - `use-import-leads.ts` : useImportLeads (CSV parsing, mapping, batch import)
+  - `use-convert-opportunity.ts` : useConvertToOpportunity
+- **Prérequis Airtable** (à créer manuellement sur T2-Contacts):
+  - "Statut Prospection" (Single Select)
+  - "Date Rappel" (Date)
+  - "Source Lead" (Single Select)
+  - "Notes Prospection" (Long Text)
+
 ## Documentation
 
 - **Passation projet**: `Documentation/passation_projet_agence_ia.md`
@@ -89,6 +110,14 @@ npm start       # Production server
 
 - 001-crm-axivity-interface: Phase 1 complète (Dashboard, Kanban, Pages, Hooks)
 - 002-crm-ameliorations: Planification des améliorations Phase 2 (51 tâches)
+- **Migration Next.js 16** : Upgrade vers Next.js 16.0.10 + React 19.2.3 + Turbopack (15 déc. 2025)
+- **Fix TacheForm** : Correction SelectItem value vide pour le champ Responsable (15 déc. 2025)
+- **003-prospection IMPLEMENTÉ** : Module complet de gestion des leads (15 déc. 2025)
+  - Page `/prospection` avec KPIs, filtres, liste de leads
+  - Import CSV avec wizard 3 étapes (upload, mapping, preview)
+  - Suivi des appels (CallResultDialog avec résultats et rappels)
+  - Création manuelle de prospects (ProspectForm)
+  - Conversion Lead → Opportunité avec mise à jour statuts
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

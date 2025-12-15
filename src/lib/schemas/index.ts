@@ -4,3 +4,4 @@ export * from "./projet";
 export * from "./tache";
 export * from "./facture";
 export * from "./client";
+export * from "./prospect";

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MobileSidebar } from "./sidebar";
+import { MobileSidebar } from "./Sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SearchCommand, NotificationPanel } from "@/components/shared";
 
