@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -164,6 +164,14 @@ export function CallResultDialog({
   const selectedResult = form.watch("resultat");
   const showDatePicker = selectedResult === "Rappeler";
   const showNotes = selectedResult !== "RDV planifié";
+  const showInteractionCheckbox = selectedResult !== "RDV planifié";
+
+  // Auto-uncheck interaction creation for "RDV planifié" (details are in calendar)
+  useEffect(() => {
+    if (selectedResult === "RDV planifié") {
+      form.setValue("creerInteraction", false);
+    }
+  }, [selectedResult, form]);
 
   const handleSubmit = async (data: CallResultFormData) => {
     if (!prospect) return;
@@ -585,19 +593,21 @@ export function CallResultDialog({
                   </div>
                 )}
 
-                {/* Create interaction checkbox */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="creerInteraction"
-                    checked={form.watch("creerInteraction")}
-                    onCheckedChange={(checked) =>
-                      form.setValue("creerInteraction", checked as boolean)
-                    }
-                  />
-                  <Label htmlFor="creerInteraction" className="text-sm cursor-pointer">
-                    Créer une interaction dans le CRM
-                  </Label>
-                </div>
+                {/* Create interaction checkbox - hidden for RDV planifié (details in calendar) */}
+                {showInteractionCheckbox && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="creerInteraction"
+                      checked={form.watch("creerInteraction")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("creerInteraction", checked as boolean)
+                      }
+                    />
+                    <Label htmlFor="creerInteraction" className="text-sm cursor-pointer">
+                      Créer une interaction dans le CRM
+                    </Label>
+                  </div>
+                )}
 
                 <DialogFooter className="pt-4">
                   <Button type="button" variant="outline" onClick={handleClose}>
