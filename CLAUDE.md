@@ -67,7 +67,7 @@ npm start       # Production server
   - A8. Gestion Équipe et Charge
 
 ### 003-prospection (Module Prospection - IMPLEMENTED)
-- **Status**: 95% - 28/32 tasks (Phase 0 Airtable pending)
+- **Status**: 95% - 40/44 tasks (Phase 0 Airtable pending)
 - **Specs**: `specs/003-prospection/`
 - **Content**:
   - Page `/prospection` dédiée à la gestion des leads
@@ -75,17 +75,29 @@ npm start       # Production server
   - Suivi des appels (statuts, rappels, notes)
   - Conversion Lead → Opportunité
   - KPIs de prospection (à appeler, rappels, taux qualification, retards)
+  - **Intégration Google Calendar** (Phase 7) : Planifier des RDV depuis le CallResultDialog
 - **Nouveaux composants**:
   - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog
+  - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, GoogleAuthButton
 - **Nouveaux hooks**:
   - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
   - `use-import-leads.ts` : useImportLeads (CSV parsing, mapping, batch import)
   - `use-convert-opportunity.ts` : useConvertToOpportunity
+  - `use-google-calendar.ts` : useCalendarEvents, useCreateCalendarEvent, useGoogleCalendarStatus
+- **Auth Google Calendar**:
+  - `lib/auth.ts` : Configuration NextAuth.js v5 avec Google OAuth + calendar scope
+  - `app/api/auth/[...nextauth]/route.ts` : Handler NextAuth
+  - `app/api/calendar/events/route.ts` : API GET/POST events
+  - `providers/session-provider.tsx` : SessionProvider wrapper
 - **Prérequis Airtable** (à créer manuellement sur T2-Contacts):
-  - "Statut Prospection" (Single Select)
+  - "Statut Prospection" (Single Select) : À appeler, Appelé - pas répondu, Rappeler, **RDV planifié**, Qualifié, Non qualifié, Perdu
   - "Date Rappel" (Date)
   - "Source Lead" (Single Select)
   - "Notes Prospection" (Long Text)
+- **Variables d'environnement Google Calendar**:
+  - `AUTH_SECRET` : Secret NextAuth (openssl rand -base64 32)
+  - `AUTH_GOOGLE_ID` : Google OAuth Client ID
+  - `AUTH_GOOGLE_SECRET` : Google OAuth Client Secret
 
 ### 004-onboarding-tour (Tour Guidé - IMPLEMENTED)
 - **Status**: 100% - Complete
@@ -144,6 +156,14 @@ npm start       # Production server
   - 11 étapes avec navigation inter-pages
   - Persistance localStorage + auto-démarrage première visite
   - Raccourcis clavier (→←, Esc, ?)
+- **Google Calendar Integration** : Intégration dans le module prospection (15 déc. 2025)
+  - Onglet "Agenda" dans CallResultDialog avec vue semaine
+  - Authentification Google OAuth via NextAuth.js v5
+  - Création de RDV pré-remplis avec infos du lead
+  - Nouveau statut "RDV planifié" (badge violet)
+  - Onglet "Appel" renommé en "Résultat"
+  - Notes et checkbox masqués pour "RDV planifié" (évite doublons)
+  - Rafraîchissement automatique de la liste après mise à jour statut
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

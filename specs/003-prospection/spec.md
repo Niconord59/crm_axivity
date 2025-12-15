@@ -2,7 +2,8 @@
 
 **Feature Branch**: `003-prospection`
 **Created**: 2025-12-15
-**Status**: Draft
+**Updated**: 2025-12-15
+**Status**: Implemented (Phase 7 - Google Calendar added)
 **Priority**: P1 - Haute
 
 ---
@@ -42,7 +43,7 @@ Créer une page `/prospection` dédiée qui permet :
 
 | Champ | Type | Options | Description |
 |-------|------|---------|-------------|
-| `Statut Prospection` | Single Select | À appeler, Appelé - pas répondu, Rappeler, Qualifié, Non qualifié, Perdu | État dans le cycle de prospection |
+| `Statut Prospection` | Single Select | À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu | État dans le cycle de prospection |
 | `Date Rappel` | Date | - | Date de rappel programmée |
 | `Source Lead` | Single Select | LinkedIn, Site web, Salon, Recommandation, Achat liste, Autre | Origine du lead |
 | `Notes Prospection` | Long Text | - | Notes rapides pour le suivi |
@@ -370,6 +371,7 @@ export const PROSPECT_STATUTS = [
   "À appeler",
   "Appelé - pas répondu",
   "Rappeler",
+  "RDV planifié",
   "Qualifié",
   "Non qualifié",
   "Perdu",
@@ -533,5 +535,80 @@ Avant de coder, créer manuellement dans Airtable :
 
 ---
 
+---
+
+## Phase 7 : Intégration Google Calendar (IMPLEMENTÉE)
+
+### US-006: Planifier un RDV depuis le CallResultDialog (P1)
+
+**En tant que** commercial
+**Je veux** planifier un RDV Google Calendar directement depuis le dialog d'appel
+**Afin de** ne pas basculer entre plusieurs outils
+
+#### Acceptance Criteria
+
+1. **Given** l'utilisateur ouvre le CallResultDialog, **When** il clique sur l'onglet "Agenda", **Then** il voit son calendrier Google de la semaine
+2. **Given** l'utilisateur n'est pas connecté à Google, **When** il accède à l'onglet Agenda, **Then** il voit un bouton "Connecter Google Calendar"
+3. **Given** l'utilisateur est connecté, **When** il clique sur "Créer un RDV", **Then** le formulaire est pré-rempli avec les infos du lead
+4. **Given** l'utilisateur sélectionne "RDV planifié" dans l'onglet Résultat, **When** il enregistre, **Then** les notes et la checkbox interaction sont masquées (infos déjà dans le calendar)
+
+### Architecture technique
+
+#### Stack Authentication
+
+| Technologie | Usage |
+|-------------|-------|
+| **NextAuth.js v5** | OAuth2 avec Google, gestion tokens |
+| **JWT Server-side** | Stockage sécurisé des tokens |
+| **React Query** | Cache et mutations |
+
+#### Nouveaux fichiers
+
+| Fichier | Description |
+|---------|-------------|
+| `src/lib/auth.ts` | Configuration NextAuth (Google provider + calendar scope) |
+| `src/app/api/auth/[...nextauth]/route.ts` | Handler NextAuth |
+| `src/app/api/calendar/events/route.ts` | API GET/POST events |
+| `src/providers/session-provider.tsx` | SessionProvider wrapper |
+| `src/hooks/use-google-calendar.ts` | Hooks React Query (useCalendarEvents, useCreateCalendarEvent) |
+| `src/components/prospection/agenda/` | Composants UI (AgendaTab, WeekCalendar, EventCard, CreateEventDialog, GoogleAuthButton) |
+
+#### Variables d'environnement requises
+
+```env
+AUTH_SECRET=<openssl rand -base64 32>
+AUTH_GOOGLE_ID=<Google OAuth Client ID>
+AUTH_GOOGLE_SECRET=<Google OAuth Client Secret>
+```
+
+#### Pré-remplissage Event
+
+```typescript
+{
+  summary: "RDV - {Prénom} {Nom} ({Entreprise})",
+  description: `
+    Email: {email}
+    Tél: {telephone}
+    Notes: {notesProspection}
+    CRM: https://crm.axivity.com/prospection
+  `,
+  attendees: [{ email: "{email}" }],
+  start: { dateTime: "...", timeZone: "Europe/Paris" },
+  end: { dateTime: "...", timeZone: "Europe/Paris" }
+}
+```
+
+### Comportement "RDV planifié"
+
+Quand l'utilisateur sélectionne "RDV planifié" dans l'onglet Résultat :
+- **Notes** : Champ masqué (infos déjà dans le calendar event)
+- **Checkbox "Créer une interaction"** : Masquée et décochée automatiquement
+- **Statut prospect** : Mis à jour vers "RDV planifié"
+
+Cela évite les doublons entre les détails du RDV (dans Google Calendar) et les notes/interactions du CRM.
+
+---
+
 *Spec créée le 15 décembre 2025*
-*Version : 1.0*
+*Mise à jour : 15 décembre 2025 (Phase 7 Google Calendar)*
+*Version : 1.1*

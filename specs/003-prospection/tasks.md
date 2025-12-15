@@ -1,8 +1,8 @@
 # Tâches : Module Prospection
 
 **Feature** : 003-prospection
-**Total** : 32 tâches
-**Statut** : 87% (28/32) - Phases 1-6 complètes, Phase 0 en attente (action utilisateur Airtable)
+**Total** : 44 tâches
+**Statut** : 95% (40/44) - Phases 1-7 complètes, Phase 0 en attente (action utilisateur Airtable)
 
 ---
 
@@ -11,7 +11,7 @@
 ### T0.1 - Créer champ "Statut Prospection" sur T2-Contacts
 - [ ] Ouvrir T2-Contacts dans Airtable
 - [ ] Ajouter champ Single Select "Statut Prospection"
-- [ ] Options : À appeler, Appelé - pas répondu, Rappeler, Qualifié, Non qualifié, Perdu
+- [ ] Options : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
 - [ ] Noter le Field ID
 
 ### T0.2 - Créer champ "Date Rappel" sur T2-Contacts
@@ -233,6 +233,52 @@
 
 ---
 
+## Phase 7 : Intégration Google Calendar [COMPLETE]
+
+### T7.1 - Setup NextAuth.js avec Google OAuth
+- [x] Installer `next-auth@beta`
+- [x] Créer `src/lib/auth.ts` avec Google provider + calendar scope
+- [x] Créer `src/app/api/auth/[...nextauth]/route.ts`
+- [x] Créer `src/providers/session-provider.tsx`
+- [x] Modifier `src/app/layout.tsx` pour wrapper avec SessionProvider
+- [x] Configurer variables env (AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET)
+
+### T7.2 - API Routes Calendar
+- [x] Créer `src/app/api/calendar/events/route.ts`
+- [x] Implémenter GET : liste events (date range)
+- [x] Implémenter POST : créer event
+
+### T7.3 - Hooks Google Calendar
+- [x] Créer `src/hooks/use-google-calendar.ts`
+- [x] Implémenter `useCalendarEvents(start, end)`
+- [x] Implémenter `useCreateCalendarEvent()`
+- [x] Implémenter `useGoogleCalendarStatus()`
+
+### T7.4 - Composants UI Agenda
+- [x] Créer `src/components/prospection/agenda/GoogleAuthButton.tsx`
+- [x] Créer `src/components/prospection/agenda/EventCard.tsx`
+- [x] Créer `src/components/prospection/agenda/WeekCalendar.tsx`
+- [x] Créer `src/components/prospection/agenda/CreateEventDialog.tsx`
+- [x] Créer `src/components/prospection/agenda/AgendaTab.tsx`
+- [x] Pré-remplissage event avec infos du lead
+
+### T7.5 - Intégration dans CallResultDialog
+- [x] Ajouter 5ème onglet "Agenda" dans CallResultDialog
+- [x] Renommer onglet "Appel" → "Résultat"
+- [x] Passer props prospect à AgendaTab
+
+### T7.6 - Nouveau statut "RDV planifié"
+- [x] Ajouter "RDV planifié" dans PROSPECT_STATUTS (types + schemas)
+- [x] Ajouter badge violet pour "RDV planifié"
+- [x] Masquer champ Notes quand "RDV planifié" sélectionné
+- [x] Masquer et décocher checkbox "Créer interaction" pour "RDV planifié"
+
+### T7.7 - Fix rafraîchissement UI
+- [x] Utiliser `refetchQueries` au lieu de `invalidateQueries` dans useUpdateProspectStatus
+- [x] Invalider aussi `prospection-kpis` après mise à jour statut
+
+---
+
 ## Résumé par phase
 
 | Phase | Tâches | Effort |
@@ -244,8 +290,10 @@
 | Phase 4 : Import CSV | 6 | 4h |
 | Phase 5 : Conversion | 3 | 2h |
 | Phase 6 : Polish | 4 | 2h |
-| **Total** | **33** | **~15h** |
+| Phase 7 : Google Calendar | 7 | 8h |
+| **Total** | **40** | **~27h** |
 
 ---
 
 *Tâches créées le 15 décembre 2025*
+*Mise à jour : 15 décembre 2025 (Phase 7 Google Calendar)*
