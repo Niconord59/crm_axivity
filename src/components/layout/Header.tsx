@@ -6,22 +6,31 @@ import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "./Sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SearchCommand, NotificationPanel } from "@/components/shared";
+import { TourTrigger } from "@/components/onboarding";
+import { useOnboarding } from "@/providers/onboarding-provider";
 
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const { startTour, hasCompletedTour, isInitialized } = useOnboarding();
 
-  // Keyboard shortcut for search (Cmd+K or Ctrl+K)
+  // Keyboard shortcuts
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K for search
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setSearchOpen((open) => !open);
+      }
+      // "?" for tour (only when not typing in an input)
+      if (e.key === "?" && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        startTour();
       }
     };
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [startTour]);
 
   return (
     <>
@@ -34,6 +43,7 @@ export function Header() {
             variant="outline"
             className="relative w-full max-w-md justify-start text-sm text-muted-foreground"
             onClick={() => setSearchOpen(true)}
+            data-tour="search-button"
           >
             <Search className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Rechercher...</span>
@@ -46,8 +56,18 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Tour trigger */}
+          {isInitialized && (
+            <TourTrigger
+              onClick={startTour}
+              hasCompletedTour={hasCompletedTour}
+            />
+          )}
+
           {/* Notifications */}
-          <NotificationPanel />
+          <div data-tour="notifications">
+            <NotificationPanel />
+          </div>
 
           {/* User avatar */}
           <Avatar className="h-8 w-8">

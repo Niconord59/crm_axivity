@@ -2,6 +2,7 @@
 
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { OnboardingProvider } from "@/providers/onboarding-provider";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,14 +10,16 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-auto bg-muted/30 p-4 lg:p-6">
-          {children}
-        </main>
+    <OnboardingProvider>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-auto bg-muted/30 p-4 lg:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </OnboardingProvider>
   );
 }
