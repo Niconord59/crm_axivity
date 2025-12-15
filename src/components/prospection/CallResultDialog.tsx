@@ -255,8 +255,7 @@ export function CallResultDialog({
                   <StatusBadge status={prospect.statutProspection} />
                 </div>
 
-                <InfoRow icon={User} label="Prénom" value={prospect.prenom} />
-                <InfoRow icon={User} label="Nom" value={prospect.nom} />
+                <InfoRow icon={User} label="Nom complet" value={fullName} />
                 <InfoRow icon={Briefcase} label="Poste" value={prospect.poste} />
                 <Separator className="my-2" />
 

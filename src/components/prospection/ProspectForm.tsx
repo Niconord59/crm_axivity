@@ -55,6 +55,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
         prenom: data.prenom || undefined,
         email: data.email,
         telephone: data.telephone || undefined,
+        role: data.role || undefined,
         sourceLead: data.sourceLead,
         notesProspection: data.notesProspection || undefined,
       });
@@ -156,15 +157,25 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
             )}
           </div>
 
-          {/* Phone */}
-          <div className="space-y-2">
-            <Label htmlFor="telephone">Téléphone</Label>
-            <Input
-              id="telephone"
-              type="tel"
-              placeholder="+33 6 00 00 00 00"
-              {...form.register("telephone")}
-            />
+          {/* Phone & Role (2 columns) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="telephone">Téléphone</Label>
+              <Input
+                id="telephone"
+                type="tel"
+                placeholder="+33 6 00 00 00 00"
+                {...form.register("telephone")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Rôle</Label>
+              <Input
+                id="role"
+                placeholder="Directeur, CEO, CTO..."
+                {...form.register("role")}
+              />
+            </div>
           </div>
 
           {/* Source */}

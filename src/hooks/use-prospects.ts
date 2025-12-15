@@ -6,15 +6,13 @@ import type { Contact, Client, ProspectStatus, ProspectSource } from "@/types";
 
 // Field names for T2-Contacts (Airtable)
 interface ContactFields {
-  "Nom"?: string;
-  "Prénom"?: string;
+  "Nom Complet"?: string;
   "Email"?: string;
   "Téléphone"?: string;
-  "Poste"?: string;
-  "Est Principal"?: boolean;
+  "Rôle"?: string;
   "Notes"?: string;
   "LinkedIn"?: string;
-  // Prospection fields (must be created in Airtable first)
+  // Prospection fields
   "Statut Prospection"?: string;
   "Date Rappel"?: string;
   "Source Lead"?: string;
@@ -43,14 +41,19 @@ export interface ProspectFilters {
 }
 
 function mapRecordToContact(record: { id: string; fields: ContactFields }): Contact {
+  const nomComplet = record.fields["Nom Complet"] || "";
+  // Split "Nom Complet" into prenom and nom (first word = prenom, rest = nom)
+  const parts = nomComplet.trim().split(/\s+/);
+  const prenom = parts.length > 1 ? parts[0] : undefined;
+  const nom = parts.length > 1 ? parts.slice(1).join(" ") : nomComplet;
+
   return {
     id: record.id,
-    nom: record.fields["Nom"] || "",
-    prenom: record.fields["Prénom"],
+    nom: nom,
+    prenom: prenom,
     email: record.fields["Email"],
     telephone: record.fields["Téléphone"],
-    poste: record.fields["Poste"],
-    estPrincipal: record.fields["Est Principal"],
+    poste: record.fields["Rôle"],
     notes: record.fields["Notes"],
     linkedin: record.fields["LinkedIn"],
     statutProspection: record.fields["Statut Prospection"] as ProspectStatus,
@@ -129,7 +132,7 @@ export function useProspects(filters?: ProspectFilters) {
       if (filters?.search) {
         const searchTerm = filters.search.toLowerCase();
         filterParts.push(
-          `OR(FIND('${searchTerm}', LOWER({Nom})), FIND('${searchTerm}', LOWER({Prénom})), FIND('${searchTerm}', LOWER({Email})))`
+          `OR(FIND('${searchTerm}', LOWER({Nom Complet})), FIND('${searchTerm}', LOWER({Email})))`
         );
       }
 
@@ -279,6 +282,7 @@ export function useCreateProspect() {
       prenom,
       email,
       telephone,
+      role,
       sourceLead,
       notesProspection,
     }: {
@@ -287,6 +291,7 @@ export function useCreateProspect() {
       prenom?: string;
       email: string;
       telephone?: string;
+      role?: string;
       sourceLead: ProspectSource;
       notesProspection?: string;
     }) => {
@@ -316,11 +321,12 @@ export function useCreateProspect() {
       }
 
       // 2. Create contact with prospection fields
+      const nomComplet = prenom ? `${prenom} ${nom}` : nom;
       const contactFields: Partial<ContactFields> = {
-        "Nom": nom,
-        "Prénom": prenom || undefined,
+        "Nom Complet": nomComplet,
         "Email": email,
         "Téléphone": telephone || undefined,
+        "Rôle": role || undefined,
         "Client": [clientId],
         "Statut Prospection": "À appeler",
         "Source Lead": sourceLead,

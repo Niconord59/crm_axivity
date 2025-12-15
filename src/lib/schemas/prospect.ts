@@ -52,6 +52,13 @@ export const prospectSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  // Rôle / Poste (optionnel)
+  role: z
+    .string()
+    .max(100, "Le rôle ne peut pas dépasser 100 caractères")
+    .optional()
+    .or(z.literal("")),
+
   // Entreprise (nom du client)
   entreprise: z
     .string()
@@ -79,6 +86,7 @@ export const prospectDefaultValues: Partial<ProspectFormData> = {
   prenom: "",
   email: "",
   telephone: "",
+  role: "",
   entreprise: "",
   sourceLead: "LinkedIn",
   notesProspection: "",
