@@ -8,16 +8,13 @@ interface EquipeFields {
   "Nom du Membre"?: string;
   "Email"?: string;
   "Rôle"?: string;
-  "Actif"?: boolean;
-  "Taux Horaire"?: number;
   "Capacité Hebdo (h)"?: number;
-  "Avatar"?: { url: string; filename: string }[];
-  "Téléphone"?: string;
   "Charge Prévue (Semaine)"?: number;
   "% Capacité Atteinte"?: number;
-  "Tâches Assignées"?: string[];
-  "Projets"?: string[];
+  "Tâches"?: string[];
+  "Connaissances"?: string[];
   "Accomplissements"?: string[];
+  "Demandes d'Évolution"?: string[];
 }
 
 function mapRecordToMembreEquipe(
@@ -28,36 +25,22 @@ function mapRecordToMembreEquipe(
     nom: record.fields["Nom du Membre"] || "",
     email: record.fields["Email"],
     role: record.fields["Rôle"] as TeamRole,
-    actif: record.fields["Actif"],
-    tauxHoraire: record.fields["Taux Horaire"],
     capaciteHebdo: record.fields["Capacité Hebdo (h)"],
-    avatar: record.fields["Avatar"],
-    telephone: record.fields["Téléphone"],
     heuresSemaine: record.fields["Charge Prévue (Semaine)"],
     chargeActuelle: record.fields["% Capacité Atteinte"],
-    tachesAssignees: record.fields["Tâches Assignées"],
-    projetsParticipant: record.fields["Projets"],
+    tachesAssignees: record.fields["Tâches"],
     accomplissements: record.fields["Accomplissements"],
   };
 }
 
-export function useEquipe(options?: { actifOnly?: boolean; role?: TeamRole }) {
+export function useEquipe(options?: { role?: TeamRole }) {
   return useQuery({
     queryKey: ["equipe", options],
     queryFn: async () => {
       let filterByFormula: string | undefined;
-      const filters: string[] = [];
 
-      if (options?.actifOnly !== false) {
-        filters.push("{Actif} = TRUE()");
-      }
       if (options?.role) {
-        filters.push(`{Rôle} = '${options.role}'`);
-      }
-
-      if (filters.length > 0) {
-        filterByFormula =
-          filters.length === 1 ? filters[0] : `AND(${filters.join(", ")})`;
+        filterByFormula = `{Rôle} = '${options.role}'`;
       }
 
       const records = await airtable.getRecords<EquipeFields>(
@@ -95,7 +78,6 @@ export function useChargeEquipe() {
       const records = await airtable.getRecords<EquipeFields>(
         AIRTABLE_TABLES.EQUIPE,
         {
-          filterByFormula: "{Actif} = TRUE()",
           sort: [{ field: "% Capacité Atteinte", direction: "desc" }],
         }
       );
@@ -114,10 +96,7 @@ export function useCreateMembreEquipe() {
         "Nom du Membre": data.nom,
         "Email": data.email,
         "Rôle": data.role,
-        "Actif": data.actif ?? true,
-        "Taux Horaire": data.tauxHoraire,
         "Capacité Hebdo (h)": data.capaciteHebdo,
-        "Téléphone": data.telephone,
       };
 
       const record = await airtable.createRecord<EquipeFields>(
@@ -148,10 +127,7 @@ export function useUpdateMembreEquipe() {
       if (data.nom !== undefined) fields["Nom du Membre"] = data.nom;
       if (data.email !== undefined) fields["Email"] = data.email;
       if (data.role !== undefined) fields["Rôle"] = data.role;
-      if (data.actif !== undefined) fields["Actif"] = data.actif;
-      if (data.tauxHoraire !== undefined) fields["Taux Horaire"] = data.tauxHoraire;
       if (data.capaciteHebdo !== undefined) fields["Capacité Hebdo (h)"] = data.capaciteHebdo;
-      if (data.telephone !== undefined) fields["Téléphone"] = data.telephone;
 
       const record = await airtable.updateRecord<EquipeFields>(
         AIRTABLE_TABLES.EQUIPE,

@@ -284,17 +284,12 @@ export interface MembreEquipe extends BaseEntity {
   nom: string;
   email?: string;
   role?: TeamRole;
-  actif?: boolean;
-  tauxHoraire?: number;
   capaciteHebdo?: number;
-  avatar?: { url: string; filename: string }[];
-  telephone?: string;
-  // Calculated fields
+  // Calculated fields (rollup/formula)
   heuresSemaine?: number;
   chargeActuelle?: number;
   // Linked records
   tachesAssignees?: string[];
-  projetsParticipant?: string[];
   accomplissements?: string[];
 }
 

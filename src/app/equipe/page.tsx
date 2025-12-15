@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Mail, Phone, Clock, BarChart3 } from "lucide-react";
+import { Plus, Mail, Clock, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
@@ -102,12 +101,6 @@ export default function EquipePage() {
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-14 w-14">
-                      {membre.avatar?.[0]?.url && (
-                        <AvatarImage
-                          src={membre.avatar[0].url}
-                          alt={membre.nom}
-                        />
-                      )}
                       <AvatarFallback className="text-lg">
                         {membre.nom
                           .split(" ")
@@ -120,16 +113,6 @@ export default function EquipePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold truncate">{membre.nom}</h3>
-                        {membre.actif ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-green-100 text-green-800"
-                          >
-                            Actif
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Inactif</Badge>
-                        )}
                       </div>
                       {membre.role && (
                         <p className="text-sm text-muted-foreground">
@@ -149,12 +132,6 @@ export default function EquipePage() {
                         >
                           {membre.email}
                         </a>
-                      </div>
-                    )}
-                    {membre.telephone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        <span>{membre.telephone}</span>
                       </div>
                     )}
                   </div>
@@ -193,27 +170,13 @@ export default function EquipePage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Tâches</p>
-                      <p className="font-medium">
-                        {membre.tachesAssignees?.length || 0}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Projets</p>
-                      <p className="font-medium">
-                        {membre.projetsParticipant?.length || 0}
-                      </p>
-                    </div>
+                  <div className="mt-4 text-sm">
+                    <p className="text-muted-foreground">Tâches</p>
+                    <p className="font-medium">
+                      {membre.tachesAssignees?.length || 0}
+                    </p>
                   </div>
 
-                  {membre.tauxHoraire && (
-                    <div className="mt-4 text-sm">
-                      <p className="text-muted-foreground">Taux horaire</p>
-                      <p className="font-medium">{membre.tauxHoraire}€/h</p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             );

@@ -77,8 +77,8 @@ export default function ChargeEquipePage() {
     return <PageLoading />;
   }
 
-  // Only active members
-  const membresActifs = equipe?.filter((m) => m.actif !== false) || [];
+  // All team members (no "Actif" field exists in Airtable)
+  const membresActifs = equipe || [];
 
   // Calculate statistics
   const totalCapacite = membresActifs.reduce(
@@ -220,12 +220,6 @@ export default function ChargeEquipePage() {
                     className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
                   >
                     <Avatar className="h-10 w-10">
-                      {membre.avatar?.[0]?.url && (
-                        <AvatarImage
-                          src={membre.avatar[0].url}
-                          alt={membre.nom}
-                        />
-                      )}
                       <AvatarFallback>
                         {membre.nom
                           .split(" ")
@@ -324,12 +318,6 @@ export default function ChargeEquipePage() {
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        {membre.avatar?.[0]?.url && (
-                          <AvatarImage
-                            src={membre.avatar[0].url}
-                            alt={membre.nom}
-                          />
-                        )}
                         <AvatarFallback className="text-xs">
                           {membre.nom
                             .split(" ")

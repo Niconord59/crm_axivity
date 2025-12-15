@@ -93,7 +93,7 @@ export default function RapportsPage() {
         t.statut !== "Terminé" && t.dateEcheance && isOverdue(t.dateEcheance)
     ) || [];
 
-  const membresActifs = equipe?.filter((m) => m.actif) || [];
+  const membresActifs = equipe || [];
   const chargeEquipeMoyenne =
     membresActifs.length > 0
       ? membresActifs.reduce((sum, m) => {
