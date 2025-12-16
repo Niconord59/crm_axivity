@@ -13,29 +13,24 @@ import {
   LeadImportDialog,
   PastRdvNotifications,
 } from "@/components/prospection";
-import { OpportuniteForm } from "@/components/forms";
 import {
   useProspectsWithClients,
   useUpdateProspectStatus,
   type ProspectFilters,
   type Prospect,
 } from "@/hooks/use-prospects";
-import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import type { OpportuniteFormData } from "@/lib/schemas/opportunite";
 
 export default function ProspectionPage() {
   const [filters, setFilters] = useState<ProspectFilters>({});
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [opportunityDialogOpen, setOpportunityDialogOpen] = useState(false);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
   const queryClient = useQueryClient();
   const { data: prospects, isLoading } = useProspectsWithClients(filters);
   const updateStatus = useUpdateProspectStatus();
-  const convertToOpportunity = useConvertToOpportunity();
 
   // Filter out qualified/non-qualified/lost prospects by default
   const activeProspects = useMemo(() => {
@@ -65,34 +60,6 @@ export default function ProspectionPage() {
     setCallDialogOpen(true);
   };
 
-  const handleOpportunitySuccess = async (opportuniteId: string) => {
-    if (!selectedProspect || !selectedProspect.client?.[0]) return;
-
-    try {
-      // Update contact status to "Qualifié" and client status to "Actif"
-      await convertToOpportunity.mutateAsync({
-        contactId: selectedProspect.id,
-        clientId: selectedProspect.client[0],
-      });
-
-      toast.success("Opportunité créée avec succès !", {
-        description: "Le lead a été qualifié.",
-        action: {
-          label: "Voir",
-          onClick: () => {
-            window.location.href = "/opportunites";
-          },
-        },
-      });
-
-      // Close dialog and reset
-      setOpportunityDialogOpen(false);
-      setSelectedProspect(null);
-    } catch {
-      toast.error("Erreur lors de la mise à jour du lead");
-    }
-  };
-
   const handleNotQualified = async (prospect: Prospect) => {
     try {
       await updateStatus.mutateAsync({
@@ -116,17 +83,6 @@ export default function ProspectionPage() {
       toast.error("Erreur lors de la mise à jour");
     }
   };
-
-  // Prepare initial data for OpportuniteForm based on selected prospect
-  const opportunityInitialData: Partial<OpportuniteFormData> | undefined =
-    selectedProspect
-      ? {
-          clientId: selectedProspect.client?.[0] || "",
-          source: selectedProspect.sourceLead || "",
-          notes: selectedProspect.notesProspection || "",
-          statut: "Qualifié",
-        }
-      : undefined;
 
   if (isLoading) {
     return <PageLoading />;
@@ -206,17 +162,6 @@ export default function ProspectionPage() {
           queryClient.invalidateQueries({ queryKey: ["prospects-with-clients"] });
           queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
         }}
-      />
-
-      {/* Opportunity Creation Dialog (for lead conversion) */}
-      <OpportuniteForm
-        open={opportunityDialogOpen}
-        onOpenChange={(open) => {
-          setOpportunityDialogOpen(open);
-          if (!open) setSelectedProspect(null);
-        }}
-        initialData={opportunityInitialData}
-        onSuccess={handleOpportunitySuccess}
       />
     </div>
   );
