@@ -100,6 +100,7 @@ export interface Client extends BaseEntity {
   secteurActivite?: string;
   statut?: ClientStatus;
   siteWeb?: string;
+  telephone?: string;
   notes?: string;
   dateCreation?: string;
   // Billing / Address fields

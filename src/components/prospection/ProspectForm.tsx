@@ -148,6 +148,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     nom: string;
     secteurActivite?: string;
     siteWeb?: string;
+    telephone?: string;
   }) => {
     form.setValue("clientId", client.id);
     form.setValue("entreprise", client.nom);
@@ -157,6 +158,9 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     }
     if (client.siteWeb) {
       form.setValue("siteWeb", client.siteWeb);
+    }
+    if (client.telephone) {
+      form.setValue("telephoneEntreprise", client.telephone);
     }
     setSearchValue(client.nom);
     setComboboxOpen(false);

@@ -9,6 +9,7 @@ interface ClientFields {
   "Secteur d'activité"?: string;
   "Statut"?: string;
   "Site Web"?: string;
+  "Téléphone"?: string;
   "Notes"?: string;
   "Date de Création"?: string;
   // Billing / Address fields
@@ -34,6 +35,7 @@ function mapRecordToClient(record: { id: string; fields: ClientFields }): Client
     secteurActivite: record.fields["Secteur d'activité"],
     statut: record.fields["Statut"] as Client["statut"],
     siteWeb: record.fields["Site Web"],
+    telephone: record.fields["Téléphone"],
     notes: record.fields["Notes"],
     dateCreation: record.fields["Date de Création"],
     // Billing / Address fields
@@ -110,6 +112,7 @@ export function useCreateClient() {
         "Secteur d'activité": data.secteurActivite,
         "Statut": data.statut,
         "Site Web": data.siteWeb,
+        "Téléphone": data.telephone,
         "Notes": data.notes,
       };
 
@@ -136,6 +139,7 @@ export function useUpdateClient() {
       if (data.secteurActivite !== undefined) fields["Secteur d'activité"] = data.secteurActivite;
       if (data.statut !== undefined) fields["Statut"] = data.statut;
       if (data.siteWeb !== undefined) fields["Site Web"] = data.siteWeb;
+      if (data.telephone !== undefined) fields["Téléphone"] = data.telephone;
       if (data.notes !== undefined) fields["Notes"] = data.notes;
 
       const record = await airtable.updateRecord<ClientFields>(
