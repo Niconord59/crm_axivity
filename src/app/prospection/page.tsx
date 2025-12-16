@@ -122,16 +122,8 @@ export default function ProspectionPage() {
         <EmptyState
           icon={PhoneIcon}
           title="Aucun lead à prospecter"
-          description="Importez vos premiers leads ou créez-en un manuellement."
-        >
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Importer un fichier
-            </Button>
-            <ProspectForm />
-          </div>
-        </EmptyState>
+          description="Importez vos premiers leads via le bouton 'Importer' ou créez-en un manuellement via 'Nouveau lead' ci-dessus."
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {activeProspects.map((prospect) => (
