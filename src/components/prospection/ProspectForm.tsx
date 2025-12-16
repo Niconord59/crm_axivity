@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -10,6 +11,7 @@ import {
   UserPlus,
   Building2,
   User,
+  Users,
   Check,
   ChevronsUpDown,
   PlusCircle,
@@ -17,6 +19,8 @@ import {
   CalendarIcon,
   Clock,
   CheckCircle2,
+  AlertTriangle,
+  Mail,
 } from "lucide-react";
 import {
   Dialog,
@@ -42,6 +46,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import type { Contact, ProspectStatus } from "@/types";
 import {
   Tabs,
   TabsContent,
@@ -74,6 +82,16 @@ import { useCreateProspect, useUpdateProspectStatus, type Prospect } from "@/hoo
 import { useClients } from "@/hooks/use-clients";
 import { useCreateInteraction } from "@/hooks/use-interactions";
 import { AgendaTab } from "./agenda";
+
+// Interface pour les champs contacts Airtable
+interface ContactFields {
+  "Nom Complet"?: string;
+  "Email"?: string;
+  "Téléphone"?: string;
+  "Rôle"?: string;
+  "Statut Prospection"?: string;
+  "Client"?: string[];
+}
 
 interface ProspectFormProps {
   trigger?: React.ReactNode;
@@ -124,6 +142,36 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const form = useForm<ProspectFormData>({
     resolver: zodResolver(prospectSchema),
     defaultValues: prospectDefaultValues,
+  });
+
+  // Récupérer l'ID client sélectionné
+  const selectedClientId = form.watch("clientId");
+
+  // Fetch contacts existants pour le client sélectionné
+  const { data: existingContacts, isLoading: isLoadingContacts } = useQuery({
+    queryKey: ["client-contacts", selectedClientId],
+    queryFn: async () => {
+      if (!selectedClientId) return [];
+
+      // Récupérer les contacts liés à ce client
+      const records = await airtable.getRecords<ContactFields>(
+        AIRTABLE_TABLES.CONTACTS,
+        {
+          filterByFormula: `FIND('${selectedClientId}', ARRAYJOIN({Client}))`,
+          sort: [{ field: "Nom Complet", direction: "asc" }],
+        }
+      );
+
+      return records.map((record) => ({
+        id: record.id,
+        nom: record.fields["Nom Complet"] || "",
+        email: record.fields["Email"],
+        telephone: record.fields["Téléphone"],
+        role: record.fields["Rôle"],
+        statutProspection: record.fields["Statut Prospection"] as ProspectStatus | undefined,
+      }));
+    },
+    enabled: !!selectedClientId,
   });
 
   // Filter clients based on search
@@ -477,6 +525,84 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                   />
                 </div>
               </div>
+
+              {/* Contacts existants pour le client sélectionné */}
+              {selectedClientId && (
+                <div className="space-y-3 pt-2">
+                  <Separator />
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      Contacts existants
+                      {existingContacts && existingContacts.length > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {existingContacts.length}
+                        </Badge>
+                      )}
+                    </span>
+                  </div>
+
+                  {isLoadingContacts ? (
+                    <p className="text-sm text-muted-foreground">Chargement...</p>
+                  ) : existingContacts && existingContacts.length > 0 ? (
+                    <>
+                      <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                        {existingContacts.map((contact) => (
+                          <div
+                            key={contact.id}
+                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <div className="truncate">
+                                <span className="font-medium">{contact.nom}</span>
+                                {contact.role && (
+                                  <span className="text-muted-foreground ml-1">
+                                    ({contact.role})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {contact.email && (
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                              )}
+                              {contact.telephone && (
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                              )}
+                              {contact.statutProspection && (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-xs",
+                                    contact.statutProspection === "Qualifié" && "border-green-500 text-green-600",
+                                    contact.statutProspection === "RDV planifié" && "border-purple-500 text-purple-600",
+                                    contact.statutProspection === "À appeler" && "border-blue-500 text-blue-600"
+                                  )}
+                                >
+                                  {contact.statutProspection}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Warning pour éviter les doublons */}
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-amber-700">
+                          Vérifiez que votre contact n'existe pas déjà avant de le créer.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Aucun contact pour cette entreprise.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end pt-4">
                 <Button
