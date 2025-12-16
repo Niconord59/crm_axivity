@@ -17,7 +17,6 @@ import {
   ExportButton,
 } from "@/components/shared";
 import { opportuniteExportColumns } from "@/lib/export";
-import { OpportuniteForm } from "@/components/forms";
 import { PipelineChart } from "@/components/charts";
 import {
   useOpportunitesParStatut,
@@ -73,15 +72,12 @@ export default function OpportunitesPage() {
         title="Pipeline Commercial"
         description={`Valeur pondérée totale: ${formatCurrency(totalPipeline)}`}
       >
-        <div className="flex items-center gap-2">
-          <ExportButton
-            data={allOpportunites}
-            columns={opportuniteExportColumns}
-            filename="opportunites"
-            sheetName="Pipeline"
-          />
-          <OpportuniteForm />
-        </div>
+        <ExportButton
+          data={allOpportunites}
+          columns={opportuniteExportColumns}
+          filename="opportunites"
+          sheetName="Pipeline"
+        />
       </PageHeader>
 
       {/* Toggle Chart Button */}
