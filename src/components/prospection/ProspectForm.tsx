@@ -143,9 +143,21 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     );
   }, [clients, searchValue]);
 
-  const handleSelectClient = (client: { id: string; nom: string }) => {
+  const handleSelectClient = (client: {
+    id: string;
+    nom: string;
+    secteurActivite?: string;
+    siteWeb?: string;
+  }) => {
     form.setValue("clientId", client.id);
     form.setValue("entreprise", client.nom);
+    // Pré-remplir les champs entreprise avec les données existantes
+    if (client.secteurActivite) {
+      form.setValue("secteurActivite", client.secteurActivite);
+    }
+    if (client.siteWeb) {
+      form.setValue("siteWeb", client.siteWeb);
+    }
     setSearchValue(client.nom);
     setComboboxOpen(false);
   };
@@ -153,6 +165,10 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const handleCreateNewClient = () => {
     form.setValue("clientId", undefined);
     form.setValue("entreprise", searchValue);
+    // Réinitialiser les champs entreprise pour une nouvelle entreprise
+    form.setValue("secteurActivite", "");
+    form.setValue("siteWeb", "");
+    form.setValue("telephoneEntreprise", "");
     setComboboxOpen(false);
   };
 
