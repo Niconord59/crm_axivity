@@ -1,8 +1,8 @@
 # Tâches : Module Prospection
 
 **Feature** : 003-prospection
-**Total** : 52 tâches
-**Statut** : 100% (52/52) - Toutes les phases complètes ✅
+**Total** : 57 tâches
+**Statut** : 100% (57/57) - Toutes les phases complètes ✅
 
 ---
 
@@ -335,6 +335,34 @@
 
 ---
 
+## Phase 9 : Champs de facturation Clients [COMPLETE]
+
+### T9.1 - Créer champs Airtable sur T1-Clients
+- [x] Créer champ "SIRET" (Single Line Text) via MCP Rube
+- [x] Créer champ "Adresse" (Single Line Text)
+- [x] Créer champ "Code Postal" (Single Line Text)
+- [x] Créer champ "Ville" (Single Line Text)
+- [x] Créer champ "Pays" (Single Line Text)
+
+### T9.2 - Mettre à jour types et hooks
+- [x] Ajouter champs dans interface Client (types/index.ts)
+- [x] Mettre à jour ClientFields et mapRecordToClient (use-clients.ts)
+
+### T9.3 - Étendre import CSV
+- [x] Ajouter nouveaux champs dans ColumnMapping interface
+- [x] Ajouter nouveaux champs dans ParsedLead interface
+- [x] Mettre à jour mapping options (17 champs au lieu de 8)
+- [x] Mettre à jour logique création/update client avec nouveaux champs
+
+### T9.4 - Afficher dans CallResultDialog
+- [x] Afficher SIRET dans onglet "Entreprise"
+- [x] Afficher adresse complète (rue, CP, ville, pays)
+
+### T9.5 - Créer modèle CSV
+- [x] Créer fichier modele_import_leads.csv avec les 15 colonnes
+
+---
+
 ## Résumé par phase
 
 | Phase | Tâches | Effort |
@@ -348,9 +376,10 @@
 | Phase 6 : Polish | 4 | 2h |
 | Phase 7 : Google Calendar | 7 | 8h |
 | Phase 8 : Gmail Integration | 8 | 4h |
-| **Total** | **52** | **~31h** |
+| Phase 9 : Champs facturation | 5 | 1h |
+| **Total** | **57** | **~32h** |
 
 ---
 
 *Tâches créées le 15 décembre 2025*
-*Mise à jour : 16 décembre 2025 (Phase 8 Gmail Integration)*
+*Mise à jour : 16 décembre 2025 (Phase 9 Champs facturation)*

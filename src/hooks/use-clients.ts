@@ -11,8 +11,16 @@ interface ClientFields {
   "Site Web"?: string;
   "Notes"?: string;
   "Date de Création"?: string;
+  // Billing / Address fields
+  "SIRET"?: string;
+  "Adresse"?: string;
+  "Code Postal"?: string;
+  "Ville"?: string;
+  "Pays"?: string;
+  // Calculated fields
   "Santé du Client"?: string;
   "CA Total Encaissé"?: number;
+  // Linked records
   "Contacts"?: string[];
   "Projets"?: string[];
   "Opportunités"?: string[];
@@ -28,8 +36,16 @@ function mapRecordToClient(record: { id: string; fields: ClientFields }): Client
     siteWeb: record.fields["Site Web"],
     notes: record.fields["Notes"],
     dateCreation: record.fields["Date de Création"],
+    // Billing / Address fields
+    siret: record.fields["SIRET"],
+    adresse: record.fields["Adresse"],
+    codePostal: record.fields["Code Postal"],
+    ville: record.fields["Ville"],
+    pays: record.fields["Pays"],
+    // Calculated fields
     santeClient: record.fields["Santé du Client"],
     caTotal: record.fields["CA Total Encaissé"],
+    // Linked records
     contacts: record.fields["Contacts"],
     projets: record.fields["Projets"],
     opportunites: record.fields["Opportunités"],

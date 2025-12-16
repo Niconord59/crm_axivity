@@ -713,6 +713,73 @@ Message de prévisualisation de l'interaction mis à jour en temps réel.
 
 ---
 
+## Phase 9 : Champs de facturation Clients (IMPLEMENTÉE)
+
+### US-008: Importer et afficher les informations de facturation (P1)
+
+**En tant que** commercial
+**Je veux** importer et stocker les informations de facturation des entreprises
+**Afin de** générer des devis et factures conformes sans ressaisie
+
+#### Acceptance Criteria
+
+1. **Given** l'utilisateur importe un CSV, **When** il mappe les colonnes, **Then** il peut mapper SIRET, Adresse, Code Postal, Ville, Pays vers les champs clients
+2. **Given** l'utilisateur ouvre un CallResultDialog, **When** il consulte l'onglet "Entreprise", **Then** il voit le SIRET et l'adresse complète
+3. **Given** un client existant est importé avec de nouvelles infos, **When** l'import se termine, **Then** les champs de facturation sont mis à jour
+
+### Nouveaux champs Airtable (T1-Clients)
+
+| Champ | Type | Field ID | Description |
+|-------|------|----------|-------------|
+| `SIRET` | Single Line Text | fldZgaJF1qX8ET6rB | Numéro SIRET (14 chiffres) |
+| `Adresse` | Single Line Text | fldqMSAyY8HpixRYR | Adresse postale |
+| `Code Postal` | Single Line Text | fldCiJH5siBzOG76C | Code postal |
+| `Ville` | Single Line Text | fldjqFUUbbdu6qBIy | Ville |
+| `Pays` | Single Line Text | flddcrsO7cVZDECMi | Pays (défaut: France) |
+
+### Mapping CSV étendu
+
+Le mapping CSV supporte maintenant 17 champs :
+
+**Champs Client (7):**
+- Entreprise* (obligatoire)
+- SIRET
+- Adresse
+- Code Postal
+- Ville
+- Pays
+- Secteur d'activité
+- Site Web
+
+**Champs Contact (8):**
+- Nom Complet* (obligatoire)
+- Email* (obligatoire)
+- Téléphone
+- Rôle / Poste
+- LinkedIn
+- Source Lead
+- Notes Prospection
+
+### Fichier modèle CSV
+
+Un fichier `modele_import_leads.csv` est disponible à la racine du projet Interface avec les colonnes :
+
+```csv
+Entreprise,SIRET,Adresse,Code Postal,Ville,Pays,Secteur activite,Site Web,Nom Complet,Email,Telephone,Role,LinkedIn,Source Lead,Notes Prospection
+```
+
+### Affichage dans CallResultDialog
+
+L'onglet "Entreprise" affiche maintenant :
+- Nom de l'entreprise
+- **SIRET** (nouveau)
+- Secteur d'activité
+- Site web
+- **Adresse complète** (nouveau) : Adresse, CP Ville, Pays (si différent de France)
+- CA Total, Santé client, etc.
+
+---
+
 *Spec créée le 15 décembre 2025*
-*Mise à jour : 16 décembre 2025 (Phase 8 Gmail Integration)*
-*Version : 1.2*
+*Mise à jour : 16 décembre 2025 (Phase 9 Champs facturation)*
+*Version : 1.3*

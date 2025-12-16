@@ -483,6 +483,7 @@ export function CallResultDialog({
                   </div>
 
                   <InfoRow icon={Building2} label="Nom" value={client.nom} />
+                  <InfoRow icon={FileText} label="SIRET" value={client.siret} />
                   <InfoRow icon={Briefcase} label="Secteur d'activité" value={client.secteurActivite} />
                   <InfoRow
                     icon={Globe}
@@ -491,6 +492,25 @@ export function CallResultDialog({
                     href={client.siteWeb?.startsWith("http") ? client.siteWeb : `https://${client.siteWeb}`}
                   />
                   <Separator className="my-2" />
+
+                  {/* Adresse */}
+                  {(client.adresse || client.ville) && (
+                    <>
+                      <div className="flex items-start gap-3 py-2">
+                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground">Adresse</p>
+                          <p className="text-sm">
+                            {client.adresse && <span>{client.adresse}<br /></span>}
+                            {client.codePostal && <span>{client.codePostal} </span>}
+                            {client.ville && <span>{client.ville}</span>}
+                            {client.pays && client.pays !== "France" && <span><br />{client.pays}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <Separator className="my-2" />
+                    </>
+                  )}
 
                   {client.caTotal !== undefined && client.caTotal > 0 && (
                     <InfoRow

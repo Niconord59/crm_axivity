@@ -7,22 +7,42 @@ import type { ProspectSource } from "@/types";
 
 // Field mapping for CSV import
 export interface ColumnMapping {
+  // Client fields
   entreprise: string;
+  siret?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
+  pays?: string;
+  secteurActivite?: string;
+  siteWeb?: string;
+  // Contact fields
   nom: string;
   email: string;
-  prenom?: string;
   telephone?: string;
+  role?: string;
+  linkedin?: string;
   source?: string;
   notes?: string;
 }
 
 // Parsed lead from CSV
 export interface ParsedLead {
+  // Client info
   entreprise: string;
+  siret?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
+  pays?: string;
+  secteurActivite?: string;
+  siteWeb?: string;
+  // Contact info
   nom: string;
   email: string;
-  prenom?: string;
   telephone?: string;
+  role?: string;
+  linkedin?: string;
   sourceLead?: ProspectSource;
   notesProspection?: string;
 }
@@ -134,11 +154,21 @@ export function useImportLeads() {
 
       for (const row of state.rawData.slice(0, 5)) {
         const lead: ParsedLead = {
+          // Client fields
           entreprise: row[mapping.entreprise]?.trim() || "",
+          siret: mapping.siret ? row[mapping.siret]?.trim() : undefined,
+          adresse: mapping.adresse ? row[mapping.adresse]?.trim() : undefined,
+          codePostal: mapping.codePostal ? row[mapping.codePostal]?.trim() : undefined,
+          ville: mapping.ville ? row[mapping.ville]?.trim() : undefined,
+          pays: mapping.pays ? row[mapping.pays]?.trim() : undefined,
+          secteurActivite: mapping.secteurActivite ? row[mapping.secteurActivite]?.trim() : undefined,
+          siteWeb: mapping.siteWeb ? row[mapping.siteWeb]?.trim() : undefined,
+          // Contact fields
           nom: row[mapping.nom]?.trim() || "",
           email: row[mapping.email]?.trim().toLowerCase() || "",
-          prenom: mapping.prenom ? row[mapping.prenom]?.trim() : undefined,
           telephone: mapping.telephone ? row[mapping.telephone]?.trim() : undefined,
+          role: mapping.role ? row[mapping.role]?.trim() : undefined,
+          linkedin: mapping.linkedin ? row[mapping.linkedin]?.trim() : undefined,
           notesProspection: mapping.notes ? row[mapping.notes]?.trim() : undefined,
         };
 
@@ -214,11 +244,21 @@ export function useImportLeads() {
 
       for (const row of batch) {
         const lead: ParsedLead = {
+          // Client fields
           entreprise: row[mapping.entreprise]?.trim() || "",
+          siret: mapping.siret ? row[mapping.siret]?.trim() : undefined,
+          adresse: mapping.adresse ? row[mapping.adresse]?.trim() : undefined,
+          codePostal: mapping.codePostal ? row[mapping.codePostal]?.trim() : undefined,
+          ville: mapping.ville ? row[mapping.ville]?.trim() : undefined,
+          pays: mapping.pays ? row[mapping.pays]?.trim() : undefined,
+          secteurActivite: mapping.secteurActivite ? row[mapping.secteurActivite]?.trim() : undefined,
+          siteWeb: mapping.siteWeb ? row[mapping.siteWeb]?.trim() : undefined,
+          // Contact fields
           nom: row[mapping.nom]?.trim() || "",
           email: row[mapping.email]?.trim().toLowerCase() || "",
-          prenom: mapping.prenom ? row[mapping.prenom]?.trim() : undefined,
           telephone: mapping.telephone ? row[mapping.telephone]?.trim() : undefined,
+          role: mapping.role ? row[mapping.role]?.trim() : undefined,
+          linkedin: mapping.linkedin ? row[mapping.linkedin]?.trim() : undefined,
           notesProspection: mapping.notes ? row[mapping.notes]?.trim() : undefined,
         };
 
@@ -259,9 +299,10 @@ export function useImportLeads() {
             // Update existing contact
             const contactId = existingContacts[0].id;
             await airtable.updateRecord(AIRTABLE_TABLES.CONTACTS, contactId, {
-              "Nom": lead.nom,
-              "Prénom": lead.prenom,
+              "Nom Complet": lead.nom,
               "Téléphone": lead.telephone,
+              "Rôle": lead.role,
+              "LinkedIn": lead.linkedin,
               "Notes Prospection": lead.notesProspection,
               "Source Lead": lead.sourceLead,
               "Statut Prospection":
@@ -286,12 +327,32 @@ export function useImportLeads() {
 
             if (existingClients.length > 0) {
               clientId = existingClients[0].id;
+              // Update existing client with new info if provided
+              const clientUpdateFields: Record<string, unknown> = {};
+              if (lead.siret) clientUpdateFields["SIRET"] = lead.siret;
+              if (lead.adresse) clientUpdateFields["Adresse"] = lead.adresse;
+              if (lead.codePostal) clientUpdateFields["Code Postal"] = lead.codePostal;
+              if (lead.ville) clientUpdateFields["Ville"] = lead.ville;
+              if (lead.pays) clientUpdateFields["Pays"] = lead.pays;
+              if (lead.secteurActivite) clientUpdateFields["Secteur d'activité"] = lead.secteurActivite;
+              if (lead.siteWeb) clientUpdateFields["Site Web"] = lead.siteWeb;
+
+              if (Object.keys(clientUpdateFields).length > 0) {
+                await airtable.updateRecord(AIRTABLE_TABLES.CLIENTS, clientId, clientUpdateFields);
+              }
             } else {
               const newClient = await airtable.createRecord(
                 AIRTABLE_TABLES.CLIENTS,
                 {
                   "Nom du Client": lead.entreprise,
-                  Statut: "Prospect",
+                  "Statut": "Prospect",
+                  "SIRET": lead.siret,
+                  "Adresse": lead.adresse,
+                  "Code Postal": lead.codePostal,
+                  "Ville": lead.ville,
+                  "Pays": lead.pays || "France",
+                  "Secteur d'activité": lead.secteurActivite,
+                  "Site Web": lead.siteWeb,
                 }
               );
               clientId = newClient.id;
@@ -299,10 +360,11 @@ export function useImportLeads() {
 
             // Create contact
             await airtable.createRecord(AIRTABLE_TABLES.CONTACTS, {
-              "Nom": lead.nom,
-              "Prénom": lead.prenom,
+              "Nom Complet": lead.nom,
               "Email": lead.email,
               "Téléphone": lead.telephone,
+              "Rôle": lead.role,
+              "LinkedIn": lead.linkedin,
               "Client": [clientId],
               "Statut Prospection": "À appeler",
               "Source Lead": lead.sourceLead,

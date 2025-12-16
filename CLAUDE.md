@@ -99,6 +99,12 @@ npm start       # Production server
   - "Notes Prospection" (Long Text)
   - "Type RDV" (Single Select) : Visio, Présentiel
   - "Lien Visio" (URL)
+- **Champs Airtable** (T1-Clients) ✅ - Ajoutés le 16 déc. 2025 :
+  - "SIRET" (Single Line Text) : Numéro SIRET entreprise
+  - "Adresse" (Single Line Text) : Adresse postale
+  - "Code Postal" (Single Line Text)
+  - "Ville" (Single Line Text)
+  - "Pays" (Single Line Text) : Défaut "France"
 - **Variables d'environnement Google**:
   - `AUTH_SECRET` : Secret NextAuth (openssl rand -base64 32)
   - `AUTH_GOOGLE_ID` : Google OAuth Client ID
@@ -179,6 +185,10 @@ npm start       # Production server
   - Résumé dynamique des actions (voicemail + email) sous checkbox interaction
 - **Champs Airtable ajoutés** (T2-Contacts) : "Type RDV" (Visio/Présentiel), "Lien Visio" (URL)
 - **Onglet "RDV en cours"** : Pour les visio, affiche lien Meet + prise de notes en direct
+- **Champs Airtable Clients (Phase 9)** : Ajout SIRET, Adresse, Code Postal, Ville, Pays (16 déc. 2025)
+  - Import CSV enrichi avec 17 champs mappables (entreprise + contact)
+  - Affichage SIRET et adresse complète dans l'onglet "Entreprise" du CallResultDialog
+  - Modèle CSV disponible : `modele_import_leads.csv`
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

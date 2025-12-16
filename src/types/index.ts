@@ -101,6 +101,12 @@ export interface Client extends BaseEntity {
   siteWeb?: string;
   notes?: string;
   dateCreation?: string;
+  // Billing / Address fields
+  siret?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
+  pays?: string;
   // Calculated fields
   santeClient?: string;
   caTotal?: number;

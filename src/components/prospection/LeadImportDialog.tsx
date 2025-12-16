@@ -47,16 +47,28 @@ interface LeadImportDialogProps {
   onSuccess?: () => void;
 }
 
-// CRM fields for mapping
+// CRM fields for mapping - grouped by category
 const CRM_FIELDS = [
-  { value: "entreprise", label: "Entreprise *", required: true },
-  { value: "nom", label: "Nom *", required: true },
-  { value: "email", label: "Email *", required: true },
-  { value: "prenom", label: "Prénom", required: false },
-  { value: "telephone", label: "Téléphone", required: false },
-  { value: "source", label: "Source", required: false },
-  { value: "notes", label: "Notes", required: false },
-  { value: "_ignore", label: "-- Ignorer --", required: false },
+  // Required fields
+  { value: "entreprise", label: "Entreprise *", required: true, category: "client" },
+  { value: "nom", label: "Nom Complet *", required: true, category: "contact" },
+  { value: "email", label: "Email *", required: true, category: "contact" },
+  // Client fields
+  { value: "siret", label: "SIRET", required: false, category: "client" },
+  { value: "adresse", label: "Adresse", required: false, category: "client" },
+  { value: "codePostal", label: "Code Postal", required: false, category: "client" },
+  { value: "ville", label: "Ville", required: false, category: "client" },
+  { value: "pays", label: "Pays", required: false, category: "client" },
+  { value: "secteurActivite", label: "Secteur d'activité", required: false, category: "client" },
+  { value: "siteWeb", label: "Site Web", required: false, category: "client" },
+  // Contact fields
+  { value: "telephone", label: "Téléphone", required: false, category: "contact" },
+  { value: "role", label: "Rôle / Poste", required: false, category: "contact" },
+  { value: "linkedin", label: "LinkedIn", required: false, category: "contact" },
+  { value: "source", label: "Source Lead", required: false, category: "contact" },
+  { value: "notes", label: "Notes Prospection", required: false, category: "contact" },
+  // Ignore option
+  { value: "_ignore", label: "-- Ignorer --", required: false, category: "other" },
 ] as const;
 
 export function LeadImportDialog({
@@ -168,11 +180,22 @@ export function LeadImportDialog({
     };
 
     for (const [csvColumn, crmField] of Object.entries(columnMappings)) {
+      // Required fields
       if (crmField === "entreprise") mapping.entreprise = csvColumn;
       else if (crmField === "nom") mapping.nom = csvColumn;
       else if (crmField === "email") mapping.email = csvColumn;
-      else if (crmField === "prenom") mapping.prenom = csvColumn;
+      // Client fields
+      else if (crmField === "siret") mapping.siret = csvColumn;
+      else if (crmField === "adresse") mapping.adresse = csvColumn;
+      else if (crmField === "codePostal") mapping.codePostal = csvColumn;
+      else if (crmField === "ville") mapping.ville = csvColumn;
+      else if (crmField === "pays") mapping.pays = csvColumn;
+      else if (crmField === "secteurActivite") mapping.secteurActivite = csvColumn;
+      else if (crmField === "siteWeb") mapping.siteWeb = csvColumn;
+      // Contact fields
       else if (crmField === "telephone") mapping.telephone = csvColumn;
+      else if (crmField === "role") mapping.role = csvColumn;
+      else if (crmField === "linkedin") mapping.linkedin = csvColumn;
       else if (crmField === "source") mapping.source = csvColumn;
       else if (crmField === "notes") mapping.notes = csvColumn;
     }
@@ -343,18 +366,18 @@ export function LeadImportDialog({
             </div>
 
             <div className="pt-4 border-t">
-              <p className="text-sm">
-                <span className="font-medium">Champs obligatoires:</span>{" "}
+              <div className="text-sm flex flex-wrap items-center gap-2">
+                <span className="font-medium">Champs obligatoires:</span>
                 <Badge variant={columnMappings && Object.values(columnMappings).includes("entreprise") ? "default" : "outline"}>
                   Entreprise
-                </Badge>{" "}
+                </Badge>
                 <Badge variant={columnMappings && Object.values(columnMappings).includes("nom") ? "default" : "outline"}>
                   Nom
-                </Badge>{" "}
+                </Badge>
                 <Badge variant={columnMappings && Object.values(columnMappings).includes("email") ? "default" : "outline"}>
                   Email
                 </Badge>
-              </p>
+              </div>
             </div>
           </div>
         )}
@@ -374,11 +397,12 @@ export function LeadImportDialog({
             </div>
 
             {/* Preview table */}
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Entreprise</TableHead>
+                    <TableHead>Ville</TableHead>
                     <TableHead>Nom</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Téléphone</TableHead>
@@ -389,9 +413,8 @@ export function LeadImportDialog({
                   {preview.map((lead, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{lead.entreprise}</TableCell>
-                      <TableCell>
-                        {lead.prenom ? `${lead.prenom} ${lead.nom}` : lead.nom}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{lead.ville || "-"}</TableCell>
+                      <TableCell>{lead.nom}</TableCell>
                       <TableCell className="text-muted-foreground">{lead.email}</TableCell>
                       <TableCell>{lead.telephone || "-"}</TableCell>
                       <TableCell>
