@@ -426,9 +426,6 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
               </div>
 
               <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => setActiveTab("entreprise")}>
-                  Retour
-                </Button>
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Annuler
                 </Button>
