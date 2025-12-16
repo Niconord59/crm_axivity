@@ -200,7 +200,7 @@ export default function RapportsPage() {
             <CardTitle>Pipeline Commercial</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {["Lead", "Qualifié", "Proposition", "Négociation"].map((statut) => {
+            {["Qualifié", "Proposition", "Négociation"].map((statut) => {
               const oppsStatut = opportunites?.filter(
                 (o) => o.statut === statut
               ) || [];

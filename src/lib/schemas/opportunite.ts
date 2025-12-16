@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 // Statuts disponibles pour les opportunités
+// Note: "Lead" n'est plus un statut d'opportunité - les leads sont gérés dans /prospection
 export const OPPORTUNITE_STATUTS = [
-  "Lead",
   "Qualifié",
   "Proposition",
   "Négociation",
@@ -71,7 +71,7 @@ export const opportuniteDefaultValues: Partial<OpportuniteFormData> = {
   valeurEstimee: 0,
   probabilite: 50,
   dateClotureEstimee: "",
-  statut: "Lead",
+  statut: "Qualifié",
   source: "",
   notes: "",
 };

@@ -67,7 +67,7 @@ export function OpportuniteForm({
         valeurEstimee: opportunite.valeurEstimee || 0,
         probabilite: opportunite.probabilite || 50,
         dateClotureEstimee: opportunite.dateClotureEstimee || "",
-        statut: opportunite.statut || "Lead",
+        statut: opportunite.statut || "Qualifié",
         source: opportunite.source || "",
         notes: opportunite.notes || "",
       }

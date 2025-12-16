@@ -189,7 +189,7 @@ export default function DashboardPage() {
                     </Link>
                     <div className="flex items-center gap-2 mt-1">
                       <StatusBadge
-                        status={opp.statut || "Lead"}
+                        status={opp.statut || "Qualifié"}
                         type="opportunity"
                       />
                       <span className="text-xs text-muted-foreground">

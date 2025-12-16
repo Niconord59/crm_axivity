@@ -29,7 +29,6 @@ const STATUT_COLORS: Record<string, string> = {
 };
 
 const STATUT_ORDER: OpportunityStatus[] = [
-  "Lead",
   "Qualifié",
   "Proposition",
   "Négociation",
@@ -45,7 +44,7 @@ export function PipelineChart({ className, showLegend = true }: PipelineChartPro
 
     // Group by status
     const grouped = opportunites.reduce((acc, opp) => {
-      const statut = opp.statut || "Lead";
+      const statut = opp.statut || "Qualifié";
       if (!acc[statut]) {
         acc[statut] = { count: 0, value: 0 };
       }

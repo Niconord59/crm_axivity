@@ -93,7 +93,6 @@ export function useOpportunitesParStatut() {
 
       // Group by status for Kanban
       const grouped: Record<OpportunityStatus, Opportunite[]> = {
-        Lead: [],
         Qualifié: [],
         Proposition: [],
         Négociation: [],

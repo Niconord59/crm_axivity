@@ -42,10 +42,6 @@ const opportunityStatusConfig: Record<
   OpportunityStatus,
   { label: string; className: string }
 > = {
-  Lead: {
-    label: "Lead",
-    className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
-  },
   Qualifié: {
     label: "Qualifié",
     className: "bg-blue-100 text-blue-800 hover:bg-blue-100",

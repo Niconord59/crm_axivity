@@ -11,8 +11,8 @@ export type ClientType = (typeof CLIENT_TYPES)[number];
 export const CLIENT_STATUSES = ["Prospect", "Actif", "Inactif", "Churned"] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
+// Note: "Lead" n'est plus un statut d'opportunité - les leads sont gérés dans /prospection
 export const OPPORTUNITY_STATUSES = [
-  "Lead",
   "Qualifié",
   "Proposition",
   "Négociation",
