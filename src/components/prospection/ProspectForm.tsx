@@ -21,6 +21,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Mail,
+  History,
+  MessageSquare,
 } from "lucide-react";
 import {
   Dialog,
@@ -80,7 +82,7 @@ import {
 } from "@/lib/schemas/prospect";
 import { useCreateProspect, useUpdateProspectStatus, type Prospect } from "@/hooks/use-prospects";
 import { useClients } from "@/hooks/use-clients";
-import { useCreateInteraction } from "@/hooks/use-interactions";
+import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
 import { AgendaTab } from "./agenda";
 
 // Interface pour les champs contacts Airtable
@@ -177,6 +179,14 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
       }));
     },
     enabled: !!selectedClientId && !!selectedClientName,
+  });
+
+  // Déterminer si on a des contacts existants
+  const hasExistingContacts = existingContacts && existingContacts.length > 0;
+
+  // Fetch des interactions pour le client sélectionné (uniquement si contacts existants)
+  const { data: clientInteractions, isLoading: isLoadingInteractions } = useInteractions({
+    clientName: hasExistingContacts ? selectedClientName : undefined,
   });
 
   // Filter clients based on search
@@ -385,11 +395,20 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
 
         <form onSubmit={form.handleSubmit(handleSubmit)}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={cn(
+              "grid w-full",
+              hasExistingContacts ? "grid-cols-4" : "grid-cols-3"
+            )}>
               <TabsTrigger value="entreprise" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Entreprise
               </TabsTrigger>
+              {hasExistingContacts && (
+                <TabsTrigger value="historique" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Historique
+                </TabsTrigger>
+              )}
               <TabsTrigger
                 value="contact"
                 className="flex items-center gap-2"
@@ -619,6 +638,85 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                 </Button>
               </div>
             </TabsContent>
+
+            {/* ONGLET HISTORIQUE (conditionnel) */}
+            {hasExistingContacts && (
+              <TabsContent value="historique" className="mt-4">
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-4">
+                    {/* En-tête avec infos client */}
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {selectedClientName}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {existingContacts?.length} contact{existingContacts && existingContacts.length > 1 ? "s" : ""} • {clientInteractions?.length || 0} interaction{clientInteractions && clientInteractions.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+
+                    {/* Liste des interactions */}
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-medium flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Historique des interactions
+                      </h5>
+
+                      {isLoadingInteractions ? (
+                        <p className="text-sm text-muted-foreground py-4 text-center">
+                          Chargement...
+                        </p>
+                      ) : clientInteractions && clientInteractions.length > 0 ? (
+                        <div className="space-y-2">
+                          {clientInteractions.map((interaction) => (
+                            <div
+                              key={interaction.id}
+                              className="p-3 border rounded-lg space-y-1"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-sm">
+                                  {interaction.objet}
+                                </span>
+                                {interaction.type && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {interaction.type}
+                                  </Badge>
+                                )}
+                              </div>
+                              {interaction.date && (
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
+                                </p>
+                              )}
+                              {interaction.resume && (
+                                <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                                  {interaction.resume}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-8 text-center text-muted-foreground">
+                          <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Aucune interaction enregistrée</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </ScrollArea>
+
+                <div className="flex justify-end pt-4 border-t mt-4">
+                  <Button
+                    type="button"
+                    onClick={() => setActiveTab("contact")}
+                    disabled={!entrepriseValid}
+                  >
+                    Créer un nouveau contact
+                  </Button>
+                </div>
+              </TabsContent>
+            )}
 
             {/* ONGLET CONTACT */}
             <TabsContent value="contact" className="space-y-4 mt-4">
