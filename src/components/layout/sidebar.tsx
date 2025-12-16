@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -111,11 +112,15 @@ function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="text-sm font-bold">A</span>
-          </div>
-          <span className="text-lg">CRM Axivity</span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/images/logo-axivity.png"
+            alt="Axivity"
+            width={160}
+            height={48}
+            className="h-10 w-auto"
+            priority
+          />
         </Link>
       </div>
 
