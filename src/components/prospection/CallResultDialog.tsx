@@ -367,8 +367,8 @@ export function CallResultDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Appel - {fullName}
+            <User className="h-5 w-5" />
+            {fullName}
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />

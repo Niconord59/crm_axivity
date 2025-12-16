@@ -2,6 +2,7 @@
 
 import {
   Phone,
+  PhoneCall,
   Mail,
   Building2,
   Calendar,
@@ -10,6 +11,9 @@ import {
   XCircle,
   Clock,
   Copy,
+  ArrowRight,
+  FileText,
+  type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,6 +95,28 @@ function isOverdue(dateString: string | undefined): boolean {
   return dateString < today;
 }
 
+// Get dynamic action button based on prospect status
+function getActionButton(status: string | undefined): { label: string; icon: LucideIcon; variant?: "default" | "outline" | "secondary" } {
+  switch (status) {
+    case "À appeler":
+      return { label: "Appeler", icon: Phone, variant: "default" };
+    case "Appelé - pas répondu":
+      return { label: "Rappeler", icon: PhoneCall, variant: "default" };
+    case "Rappeler":
+      return { label: "Rappeler", icon: PhoneCall, variant: "default" };
+    case "RDV planifié":
+      return { label: "Voir RDV", icon: Calendar, variant: "secondary" };
+    case "Qualifié":
+      return { label: "Convertir", icon: ArrowRight, variant: "default" };
+    case "Non qualifié":
+      return { label: "Voir fiche", icon: FileText, variant: "outline" };
+    case "Perdu":
+      return { label: "Voir fiche", icon: FileText, variant: "outline" };
+    default:
+      return { label: "Voir fiche", icon: FileText, variant: "default" };
+  }
+}
+
 export function LeadCard({
   prospect,
   onCall,
@@ -101,6 +127,9 @@ export function LeadCard({
   const fullName = prospect.prenom
     ? `${prospect.prenom} ${prospect.nom}`
     : prospect.nom;
+
+  const actionButton = getActionButton(prospect.statutProspection);
+  const ActionIcon = actionButton.icon;
 
   const handleCopyPhone = () => {
     if (prospect.telephone) {
@@ -215,13 +244,13 @@ export function LeadCard({
         {/* Actions - Desktop */}
         <div className="hidden sm:flex items-center gap-2 pt-2 border-t">
           <Button
-            variant="default"
+            variant={actionButton.variant}
             size="sm"
             className="flex-1"
             onClick={() => onCall(prospect)}
           >
-            <Phone className="h-3.5 w-3.5 mr-1" />
-            Appeler
+            <ActionIcon className="h-3.5 w-3.5 mr-1" />
+            {actionButton.label}
           </Button>
           <Button
             variant="outline"
@@ -273,8 +302,8 @@ export function LeadCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => onCall(prospect)}>
-                <Phone className="h-4 w-4 mr-2" />
-                Appeler
+                <ActionIcon className="h-4 w-4 mr-2" />
+                {actionButton.label}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onQualify(prospect)}>
                 <CheckCircle2 className="h-4 w-4 mr-2" />
