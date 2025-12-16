@@ -303,7 +303,13 @@ export function useCreateProspect() {
 
   return useMutation({
     mutationFn: async ({
+      // Entreprise
       entreprise,
+      clientId: existingClientId,
+      secteurActivite,
+      siteWeb,
+      telephoneEntreprise,
+      // Contact
       nom,
       prenom,
       email,
@@ -312,52 +318,72 @@ export function useCreateProspect() {
       sourceLead,
       notesProspection,
     }: {
+      // Entreprise
       entreprise: string;
+      clientId?: string; // If selected from existing clients
+      secteurActivite?: string;
+      siteWeb?: string;
+      telephoneEntreprise?: string;
+      // Contact
       nom: string;
       prenom?: string;
-      email: string;
+      email?: string; // Now optional (email OR telephone required)
       telephone?: string;
       role?: string;
       sourceLead: ProspectSource;
       notesProspection?: string;
     }) => {
-      // 1. Check if client exists by name
       let clientId: string;
 
-      const existingClients = await airtable.getRecords<ClientFields>(
-        AIRTABLE_TABLES.CLIENTS,
-        {
-          filterByFormula: `{Nom du Client} = '${entreprise}'`,
-          maxRecords: 1,
-        }
-      );
-
-      if (existingClients.length > 0) {
-        clientId = existingClients[0].id;
+      // 1. Use existing client or create new one
+      if (existingClientId) {
+        clientId = existingClientId;
       } else {
-        // Create new client
-        const newClient = await airtable.createRecord(
+        // Check if client exists by name (in case user typed an existing name)
+        const existingClients = await airtable.getRecords<ClientFields>(
           AIRTABLE_TABLES.CLIENTS,
           {
-            "Nom du Client": entreprise,
-            "Statut": "Prospect",
+            filterByFormula: `{Nom du Client} = '${entreprise.replace(/'/g, "\\'")}'`,
+            maxRecords: 1,
           }
         );
-        clientId = newClient.id;
+
+        if (existingClients.length > 0) {
+          clientId = existingClients[0].id;
+        } else {
+          // Create new client with additional info
+          const clientFields: Record<string, unknown> = {
+            "Nom du Client": entreprise,
+            "Statut": "Prospect",
+          };
+
+          // Add optional fields if provided
+          if (secteurActivite) clientFields["Secteur d'Activité"] = secteurActivite;
+          if (siteWeb) clientFields["Site Web"] = siteWeb;
+          if (telephoneEntreprise) clientFields["Téléphone"] = telephoneEntreprise;
+
+          const newClient = await airtable.createRecord(
+            AIRTABLE_TABLES.CLIENTS,
+            clientFields
+          );
+          clientId = newClient.id;
+        }
       }
 
       // 2. Create contact with prospection fields
       const nomComplet = prenom ? `${prenom} ${nom}` : nom;
       const contactFields: Partial<ContactFields> = {
         "Nom Complet": nomComplet,
-        "Email": email,
-        "Téléphone": telephone || undefined,
-        "Rôle": role || undefined,
         "Client": [clientId],
         "Statut Prospection": "À appeler",
         "Source Lead": sourceLead,
-        "Notes Prospection": notesProspection || undefined,
       };
+
+      // Add optional contact fields
+      if (email) contactFields["Email"] = email;
+      if (telephone) contactFields["Téléphone"] = telephone;
+      if (role) contactFields["Rôle"] = role;
+      if (notesProspection) contactFields["Notes Prospection"] = notesProspection;
 
       const record = await airtable.createRecord<ContactFields>(
         AIRTABLE_TABLES.CONTACTS,

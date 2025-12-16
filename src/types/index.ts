@@ -62,6 +62,7 @@ export const PROSPECT_STATUSES = [
 export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
 
 export const PROSPECT_SOURCES = [
+  "Appel entrant",
   "LinkedIn",
   "Site web",
   "Salon",

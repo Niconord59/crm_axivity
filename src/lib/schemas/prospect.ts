@@ -16,6 +16,7 @@ export type ProspectStatut = (typeof PROSPECT_STATUTS)[number];
 
 // Sources de leads
 export const PROSPECT_SOURCES = [
+  "Appel entrant",
   "LinkedIn",
   "Site web",
   "Salon",
@@ -28,6 +29,36 @@ export type ProspectSource = (typeof PROSPECT_SOURCES)[number];
 
 // Schéma pour la création manuelle d'un prospect
 export const prospectSchema = z.object({
+  // === ENTREPRISE ===
+  // Nom de l'entreprise (obligatoire)
+  entreprise: z
+    .string()
+    .min(1, "Le nom de l'entreprise est requis")
+    .max(200, "Le nom ne peut pas dépasser 200 caractères"),
+
+  // ID client existant (si sélectionné dans le combobox)
+  clientId: z.string().optional(),
+
+  // Informations entreprise complémentaires (optionnelles)
+  secteurActivite: z
+    .string()
+    .max(100, "Le secteur ne peut pas dépasser 100 caractères")
+    .optional()
+    .or(z.literal("")),
+
+  siteWeb: z
+    .string()
+    .max(200, "L'URL ne peut pas dépasser 200 caractères")
+    .optional()
+    .or(z.literal("")),
+
+  telephoneEntreprise: z
+    .string()
+    .max(30, "Le téléphone ne peut pas dépasser 30 caractères")
+    .optional()
+    .or(z.literal("")),
+
+  // === CONTACT ===
   // Nom du contact (obligatoire)
   nom: z
     .string()
@@ -41,13 +72,14 @@ export const prospectSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  // Email (obligatoire pour dédoublonnage)
+  // Email (optionnel mais email OU téléphone requis)
   email: z
     .string()
-    .min(1, "L'email est requis")
-    .email("Veuillez entrer un email valide"),
+    .email("Veuillez entrer un email valide")
+    .optional()
+    .or(z.literal("")),
 
-  // Téléphone (optionnel)
+  // Téléphone (optionnel mais email OU téléphone requis)
   telephone: z
     .string()
     .max(30, "Le téléphone ne peut pas dépasser 30 caractères")
@@ -61,12 +93,6 @@ export const prospectSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  // Entreprise (nom du client)
-  entreprise: z
-    .string()
-    .min(1, "Le nom de l'entreprise est requis")
-    .max(200, "Le nom ne peut pas dépasser 200 caractères"),
-
   // Source du lead
   sourceLead: z.enum(PROSPECT_SOURCES, {
     errorMap: () => ({ message: "Veuillez sélectionner une source" }),
@@ -78,19 +104,36 @@ export const prospectSchema = z.object({
     .max(5000, "Les notes ne peuvent pas dépasser 5000 caractères")
     .optional()
     .or(z.literal("")),
-});
+}).refine(
+  (data) => {
+    // Au moins email OU téléphone requis
+    const hasEmail = data.email && data.email.trim() !== "";
+    const hasPhone = data.telephone && data.telephone.trim() !== "";
+    return hasEmail || hasPhone;
+  },
+  {
+    message: "Email ou téléphone requis",
+    path: ["telephone"], // Affiche l'erreur sur le champ téléphone
+  }
+);
 
 export type ProspectFormData = z.infer<typeof prospectSchema>;
 
 // Valeurs par défaut pour un nouveau prospect
 export const prospectDefaultValues: Partial<ProspectFormData> = {
+  // Entreprise
+  entreprise: "",
+  clientId: undefined,
+  secteurActivite: "",
+  siteWeb: "",
+  telephoneEntreprise: "",
+  // Contact
   nom: "",
   prenom: "",
   email: "",
   telephone: "",
   role: "",
-  entreprise: "",
-  sourceLead: "LinkedIn",
+  sourceLead: "Appel entrant",
   notesProspection: "",
 };
 
