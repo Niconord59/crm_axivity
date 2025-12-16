@@ -7,7 +7,6 @@ import {
   Building2,
   Calendar,
   MoreVertical,
-  CheckCircle2,
   XCircle,
   Clock,
   Copy,
@@ -38,7 +37,6 @@ import { formatDate } from "@/lib/utils";
 interface LeadCardProps {
   prospect: Prospect;
   onCall: (prospect: Prospect) => void;
-  onQualify: (prospect: Prospect) => void;
   onNotQualified: (prospect: Prospect) => void;
   onLost: (prospect: Prospect) => void;
 }
@@ -120,7 +118,6 @@ function getActionButton(status: string | undefined): { label: string; icon: Luc
 export function LeadCard({
   prospect,
   onCall,
-  onQualify,
   onNotQualified,
   onLost,
 }: LeadCardProps) {
@@ -252,14 +249,6 @@ export function LeadCard({
             <ActionIcon className="h-3.5 w-3.5 mr-1" />
             {actionButton.label}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-            onClick={() => onQualify(prospect)}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -304,10 +293,6 @@ export function LeadCard({
               <DropdownMenuItem onClick={() => onCall(prospect)}>
                 <ActionIcon className="h-4 w-4 mr-2" />
                 {actionButton.label}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onQualify(prospect)}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Qualifier
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleCopyPhone}>

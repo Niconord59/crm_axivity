@@ -65,12 +65,6 @@ export default function ProspectionPage() {
     setCallDialogOpen(true);
   };
 
-  const handleQualify = (prospect: Prospect) => {
-    // Open OpportuniteForm with pre-filled data
-    setSelectedProspect(prospect);
-    setOpportunityDialogOpen(true);
-  };
-
   const handleOpportunitySuccess = async (opportuniteId: string) => {
     if (!selectedProspect || !selectedProspect.client?.[0]) return;
 
@@ -189,7 +183,6 @@ export default function ProspectionPage() {
               key={prospect.id}
               prospect={prospect}
               onCall={handleCall}
-              onQualify={handleQualify}
               onNotQualified={handleNotQualified}
               onLost={handleLost}
             />
