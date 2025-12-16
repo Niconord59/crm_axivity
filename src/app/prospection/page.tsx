@@ -84,7 +84,8 @@ export default function ProspectionPage() {
     }
   };
 
-  if (isLoading) {
+  // Afficher le loading uniquement au chargement initial (pas lors des refetch)
+  if (isLoading && !prospects) {
     return <PageLoading />;
   }
 
