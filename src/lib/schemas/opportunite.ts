@@ -13,6 +13,8 @@ export const OPPORTUNITE_STATUTS = [
 export type OpportuniteStatut = (typeof OPPORTUNITE_STATUTS)[number];
 
 // Schéma pour la création/édition d'une opportunité
+// Les champs valeurEstimee, probabilite et statut ont des valeurs par défaut
+// et ne sont pas affichés à la création (formulaire simplifié)
 export const opportuniteSchema = z.object({
   // Nom de l'opportunité (obligatoire)
   nom: z
@@ -25,24 +27,24 @@ export const opportuniteSchema = z.object({
     .string()
     .min(1, "Veuillez sélectionner un client"),
 
-  // Valeur estimée en euros
-  valeurEstimee: z
-    .number({ invalid_type_error: "Veuillez entrer un nombre valide" })
-    .min(0, "La valeur doit être positive")
-    .max(10000000, "La valeur ne peut pas dépasser 10 000 000 €"),
-
-  // Probabilité de conversion (0-100%)
-  probabilite: z
-    .number({ invalid_type_error: "Veuillez entrer un nombre valide" })
-    .min(0, "La probabilité doit être entre 0 et 100")
-    .max(100, "La probabilité doit être entre 0 et 100"),
-
   // Date de clôture prévue
   dateClotureEstimee: z
     .string()
     .min(1, "La date de clôture est requise"),
 
-  // Statut pipeline
+  // Valeur estimée en euros (défaut 0, rempli plus tard)
+  valeurEstimee: z
+    .number({ invalid_type_error: "Veuillez entrer un nombre valide" })
+    .min(0, "La valeur doit être positive")
+    .max(10000000, "La valeur ne peut pas dépasser 10 000 000 €"),
+
+  // Probabilité de conversion (défaut 20%, rempli plus tard)
+  probabilite: z
+    .number({ invalid_type_error: "Veuillez entrer un nombre valide" })
+    .min(0, "La probabilité doit être entre 0 et 100")
+    .max(100, "La probabilité doit être entre 0 et 100"),
+
+  // Statut pipeline (défaut "Qualifié")
   statut: z.enum(OPPORTUNITE_STATUTS, {
     errorMap: () => ({ message: "Veuillez sélectionner un statut valide" }),
   }),
@@ -68,9 +70,9 @@ export type OpportuniteFormData = z.infer<typeof opportuniteSchema>;
 export const opportuniteDefaultValues: Partial<OpportuniteFormData> = {
   nom: "",
   clientId: "",
-  valeurEstimee: 0,
-  probabilite: 50,
   dateClotureEstimee: "",
+  valeurEstimee: 0,
+  probabilite: 20,
   statut: "Qualifié",
   source: "",
   notes: "",
