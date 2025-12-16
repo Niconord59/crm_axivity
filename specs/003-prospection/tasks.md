@@ -363,6 +363,46 @@
 
 ---
 
+## Phase 10 : UX Améliorée LeadCard et Sidebar [COMPLETE]
+
+### T10.1 - Logo Axivity dans la Sidebar
+- [x] Créer dossier `public/images/`
+- [x] Déplacer logo vers `public/images/logo-axivity.png`
+- [x] Remplacer texte "A CRM Axivity" par le logo
+- [x] Utiliser `next/image` pour optimisation
+
+### T10.2 - Bouton d'action dynamique LeadCard
+- [x] Créer fonction `getActionButton(status)` retournant label, icon, variant
+- [x] Implémenter mapping statut → bouton :
+  - À appeler → "Appeler" (Phone)
+  - Appelé - pas répondu → "Rappeler" (PhoneCall)
+  - Rappeler → "Rappeler" (PhoneCall)
+  - RDV planifié → "Voir RDV" (Calendar)
+  - Qualifié → "Convertir" (ArrowRight)
+  - Non qualifié / Perdu → "Voir fiche" (FileText)
+- [x] Appliquer au bouton desktop et menu mobile
+
+### T10.3 - Simplification UX LeadCard
+- [x] Supprimer bouton vert "Qualifier" (CheckCircle2)
+- [x] Supprimer prop `onQualify` et fonction `handleQualify`
+- [x] Supprimer imports inutilisés (CheckCircle2)
+
+### T10.4 - Nettoyage page Prospection
+- [x] Supprimer import `OpportuniteForm`
+- [x] Supprimer import `useConvertToOpportunity`
+- [x] Supprimer import `OpportuniteFormData`
+- [x] Supprimer state `opportunityDialogOpen`
+- [x] Supprimer hook `convertToOpportunity`
+- [x] Supprimer fonction `handleOpportunitySuccess`
+- [x] Supprimer constante `opportunityInitialData`
+- [x] Supprimer composant `<OpportuniteForm>` en bas de page
+
+### T10.5 - Simplification header CallResultDialog
+- [x] Remplacer icône Phone par User
+- [x] Retirer préfixe "Appel - " du titre
+
+---
+
 ## Résumé par phase
 
 | Phase | Tâches | Effort |
@@ -377,9 +417,10 @@
 | Phase 7 : Google Calendar | 7 | 8h |
 | Phase 8 : Gmail Integration | 8 | 4h |
 | Phase 9 : Champs facturation | 5 | 1h |
-| **Total** | **57** | **~32h** |
+| Phase 10 : UX Améliorée | 5 | 1h |
+| **Total** | **62** | **~33h** |
 
 ---
 
 *Tâches créées le 15 décembre 2025*
-*Mise à jour : 16 décembre 2025 (Phase 9 Champs facturation)*
+*Mise à jour : 16 décembre 2025 (Phase 10 UX Améliorée)*

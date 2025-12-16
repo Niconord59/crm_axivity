@@ -67,7 +67,7 @@ npm start       # Production server
   - A8. Gestion Équipe et Charge
 
 ### 003-prospection (Module Prospection - COMPLETE)
-- **Status**: 100% - 52/52 tasks
+- **Status**: 100% - 62/62 tasks
 - **Specs**: `specs/003-prospection/`
 - **Content**:
   - Page `/prospection` dédiée à la gestion des leads
@@ -189,6 +189,20 @@ npm start       # Production server
   - Import CSV enrichi avec 17 champs mappables (entreprise + contact)
   - Affichage SIRET et adresse complète dans l'onglet "Entreprise" du CallResultDialog
   - Modèle CSV disponible : `modele_import_leads.csv`
+- **Logo Axivity dans la sidebar** (16 déc. 2025)
+  - Logo déplacé vers `public/images/logo-axivity.png`
+  - Remplace le texte "A CRM Axivity" par le logo officiel
+  - Utilisation de `next/image` pour optimisation
+- **UX LeadCard améliorée (Phase 10)** (16 déc. 2025)
+  - Bouton d'action dynamique selon le statut du lead :
+    - À appeler → "Appeler" (Phone)
+    - Appelé - pas répondu / Rappeler → "Rappeler" (PhoneCall)
+    - RDV planifié → "Voir RDV" (Calendar)
+    - Qualifié → "Convertir" (ArrowRight)
+    - Non qualifié / Perdu → "Voir fiche" (FileText)
+  - Suppression du bouton "Qualifier" redondant (qualification via dialog)
+  - Header CallResultDialog simplifié : juste le nom avec icône User
+  - Suppression du formulaire OpportuniteForm de la page (conversion via CallResultDialog)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

@@ -780,6 +780,90 @@ L'onglet "Entreprise" affiche maintenant :
 
 ---
 
+## Phase 10 : UX Améliorée LeadCard et Sidebar (IMPLEMENTÉE)
+
+### US-009: Bouton d'action dynamique selon statut (P1)
+
+**En tant que** commercial
+**Je veux** voir un bouton d'action adapté au statut du lead
+**Afin de** savoir immédiatement quelle est la prochaine action à effectuer
+
+#### Acceptance Criteria
+
+1. **Given** un lead avec statut "À appeler", **When** la carte s'affiche, **Then** le bouton principal dit "Appeler" avec icône téléphone
+2. **Given** un lead avec statut "Rappeler", **When** la carte s'affiche, **Then** le bouton principal dit "Rappeler" avec icône téléphone sortant
+3. **Given** un lead avec statut "RDV planifié", **When** la carte s'affiche, **Then** le bouton principal dit "Voir RDV" avec icône calendrier
+4. **Given** un lead avec statut "Qualifié", **When** la carte s'affiche, **Then** le bouton principal dit "Convertir" avec icône flèche
+
+### Mapping bouton dynamique
+
+| Statut | Label | Icône | Variant |
+|--------|-------|-------|---------|
+| À appeler | "Appeler" | Phone | default |
+| Appelé - pas répondu | "Rappeler" | PhoneCall | default |
+| Rappeler | "Rappeler" | PhoneCall | default |
+| RDV planifié | "Voir RDV" | Calendar | secondary |
+| Qualifié | "Convertir" | ArrowRight | default |
+| Non qualifié | "Voir fiche" | FileText | outline |
+| Perdu | "Voir fiche" | FileText | outline |
+
+### Simplifications UX
+
+#### Suppression du bouton "Qualifier" sur LeadCard
+
+Le bouton vert avec icône check à côté du bouton principal a été supprimé car :
+- La qualification se fait dans le CallResultDialog (onglet Résultat)
+- Le flow complet est : sélectionner "Qualifié" → Remplir notes → Cliquer "Convertir en Opportunité"
+- Avoir un raccourci direct créait de la confusion
+
+#### Suppression du formulaire OpportuniteForm de la page
+
+Le dialog `OpportuniteForm` qui s'ouvrait depuis la page a été supprimé car :
+- Jamais ouvert (le trigger `handleQualify` avait déjà été supprimé)
+- Code mort : `opportunityDialogOpen`, `handleOpportunitySuccess`, `opportunityInitialData`
+- La conversion se fait désormais exclusivement via le bouton "Convertir en Opportunité" dans CallResultDialog
+
+#### Header CallResultDialog simplifié
+
+- **Avant** : "Appel - {Prénom} {Nom}" avec icône Phone
+- **Après** : "{Prénom} {Nom}" avec icône User
+
+Plus représentatif car le dialog est une fiche lead complète (pas juste un appel).
+
+### Logo Axivity dans la Sidebar
+
+Le logo Axivity a été ajouté à la sidebar :
+
+| Avant | Après |
+|-------|-------|
+| "A" (badge) + "CRM Axivity" (texte) | Logo `logo-axivity.png` |
+
+#### Structure fichiers
+
+```
+public/
+└── images/
+    └── logo-axivity.png
+```
+
+#### Implémentation
+
+```tsx
+// Sidebar.tsx
+import Image from "next/image";
+
+<Image
+  src="/images/logo-axivity.png"
+  alt="Axivity"
+  width={160}
+  height={48}
+  className="h-10 w-auto"
+  priority
+/>
+```
+
+---
+
 *Spec créée le 15 décembre 2025*
-*Mise à jour : 16 décembre 2025 (Phase 9 Champs facturation)*
-*Version : 1.3*
+*Mise à jour : 16 décembre 2025 (Phase 10 UX Améliorée)*
+*Version : 1.4*
