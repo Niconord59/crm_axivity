@@ -54,6 +54,7 @@ export const PROSPECT_STATUSES = [
   "Appelé - pas répondu",
   "Rappeler",
   "RDV planifié",
+  "RDV effectué",
   "Qualifié",
   "Non qualifié",
   "Perdu",
@@ -114,6 +115,10 @@ export interface Client extends BaseEntity {
 // T2 - CONTACTS
 // =============================================================================
 
+// Type de RDV
+export const RDV_TYPES = ["Visio", "Présentiel"] as const;
+export type RdvType = (typeof RDV_TYPES)[number];
+
 export interface Contact extends BaseEntity {
   nom: string;
   prenom?: string;
@@ -126,6 +131,9 @@ export interface Contact extends BaseEntity {
   // Prospection fields
   statutProspection?: ProspectStatus;
   dateRappel?: string;
+  dateRdvPrevu?: string;
+  typeRdv?: RdvType;
+  lienVisio?: string;
   sourceLead?: ProspectSource;
   notesProspection?: string;
   // Linked records

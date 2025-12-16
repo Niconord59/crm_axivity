@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
-import type { Contact, Client, ProspectStatus, ProspectSource } from "@/types";
+import type { Contact, Client, ProspectStatus, ProspectSource, RdvType } from "@/types";
 
 // Field names for T2-Contacts (Airtable)
 interface ContactFields {
@@ -15,6 +15,9 @@ interface ContactFields {
   // Prospection fields
   "Statut Prospection"?: string;
   "Date Rappel"?: string;
+  "Date RDV Prévu"?: string;
+  "Type RDV"?: string;
+  "Lien Visio"?: string;
   "Source Lead"?: string;
   "Notes Prospection"?: string;
   // Linked records
@@ -58,6 +61,9 @@ function mapRecordToContact(record: { id: string; fields: ContactFields }): Cont
     linkedin: record.fields["LinkedIn"],
     statutProspection: record.fields["Statut Prospection"] as ProspectStatus,
     dateRappel: record.fields["Date Rappel"],
+    dateRdvPrevu: record.fields["Date RDV Prévu"],
+    typeRdv: record.fields["Type RDV"] as RdvType,
+    lienVisio: record.fields["Lien Visio"],
     sourceLead: record.fields["Source Lead"] as ProspectSource,
     notesProspection: record.fields["Notes Prospection"],
     client: record.fields["Client"],
@@ -235,11 +241,17 @@ export function useUpdateProspectStatus() {
       id,
       statut,
       dateRappel,
+      dateRdvPrevu,
+      typeRdv,
+      lienVisio,
       notes,
     }: {
       id: string;
       statut: ProspectStatus;
       dateRappel?: string;
+      dateRdvPrevu?: string;
+      typeRdv?: RdvType;
+      lienVisio?: string;
       notes?: string;
     }) => {
       const fields: Partial<ContactFields> = {
@@ -248,6 +260,18 @@ export function useUpdateProspectStatus() {
 
       if (dateRappel !== undefined) {
         fields["Date Rappel"] = dateRappel || undefined;
+      }
+
+      if (dateRdvPrevu !== undefined) {
+        fields["Date RDV Prévu"] = dateRdvPrevu || undefined;
+      }
+
+      if (typeRdv !== undefined) {
+        fields["Type RDV"] = typeRdv || undefined;
+      }
+
+      if (lienVisio !== undefined) {
+        fields["Lien Visio"] = lienVisio || undefined;
       }
 
       if (notes !== undefined) {
@@ -395,6 +419,68 @@ export function useProspectionKPIs() {
       };
     },
     enabled: !!prospects,
+  });
+}
+
+/**
+ * Hook to fetch prospects with past RDV dates (for notifications)
+ * Returns prospects with status "RDV planifié" where dateRdvPrevu < today
+ */
+export function usePastRdvProspects() {
+  const { data: clients } = useClients();
+
+  return useQuery({
+    queryKey: ["prospects-past-rdv"],
+    queryFn: async () => {
+      const today = getToday();
+
+      // Filter: RDV planifié status AND dateRdvPrevu < today
+      const filterByFormula = `AND({Statut Prospection} = 'RDV planifié', {Date RDV Prévu} != '', {Date RDV Prévu} < '${today}')`;
+
+      const records = await airtable.getRecords<ContactFields>(
+        AIRTABLE_TABLES.CONTACTS,
+        {
+          filterByFormula,
+          sort: [{ field: "Date RDV Prévu", direction: "asc" }],
+        }
+      );
+
+      const prospects = records.map(mapRecordToContact);
+
+      // Fetch client names for each prospect
+      if (prospects.length > 0) {
+        const clientIds = [...new Set(
+          prospects
+            .flatMap(p => p.client || [])
+            .filter(Boolean)
+        )];
+
+        const clientMap = new Map<string, string>();
+
+        for (const clientId of clientIds) {
+          try {
+            const record = await airtable.getRecord<ClientFields>(
+              AIRTABLE_TABLES.CLIENTS,
+              clientId
+            );
+            clientMap.set(clientId, record.fields["Nom du Client"] || "");
+          } catch {
+            // Client might have been deleted
+          }
+        }
+
+        return prospects.map(prospect => ({
+          ...prospect,
+          clientNom: prospect.client?.[0]
+            ? clientMap.get(prospect.client[0])
+            : undefined,
+        }));
+      }
+
+      return prospects as Prospect[];
+    },
+    // Refresh every 5 minutes to catch newly past RDVs
+    refetchInterval: 5 * 60 * 1000,
   });
 }
 

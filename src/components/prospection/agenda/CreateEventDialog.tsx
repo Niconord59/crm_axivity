@@ -15,13 +15,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCalendarEvent } from "@/hooks/use-google-calendar";
 import { useCreateInteraction } from "@/hooks/use-interactions";
+import { useUpdateProspectStatus } from "@/hooks/use-prospects";
 import {
   formatEventTitle,
   formatEventDescription,
   DEFAULT_TIMEZONE,
+  type MeetingType,
 } from "@/lib/google-calendar";
 import { toast } from "sonner";
-import { Loader2, Calendar, Clock, User, FileText } from "lucide-react";
+import { Loader2, Calendar, Clock, User, FileText, Plus, X, Video, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -51,7 +53,8 @@ export function CreateEventDialog({
 }: CreateEventDialogProps) {
   const { mutate: createEvent, isPending: isCreatingEvent } = useCreateCalendarEvent();
   const { mutateAsync: createInteraction, isPending: isCreatingInteraction } = useCreateInteraction();
-  const isPending = isCreatingEvent || isCreatingInteraction;
+  const { mutateAsync: updateProspectStatus, isPending: isUpdatingProspect } = useUpdateProspectStatus();
+  const isPending = isCreatingEvent || isCreatingInteraction || isUpdatingProspect;
 
   // Default to 1 hour from initial date or now
   const getDefaultStartDate = () => {
@@ -95,7 +98,10 @@ export function CreateEventDialog({
   );
   const [startDateTime, setStartDateTime] = useState(formatDateTimeLocal(defaultStart));
   const [endDateTime, setEndDateTime] = useState(formatDateTimeLocal(defaultEnd));
-  const [attendeeEmail, setAttendeeEmail] = useState(prospect.email || "");
+  const [attendeeEmails, setAttendeeEmails] = useState<string[]>(prospect.email ? [prospect.email] : [""]);
+  const [newEmail, setNewEmail] = useState("");
+  const [meetingType, setMeetingType] = useState<MeetingType>("visio");
+  const [location, setLocation] = useState("");
 
   // Update form when dialog opens or prospect changes
   useEffect(() => {
@@ -113,9 +119,34 @@ export function CreateEventDialog({
       );
       setStartDateTime(formatDateTimeLocal(start));
       setEndDateTime(formatDateTimeLocal(end));
-      setAttendeeEmail(prospect.email || "");
+      setAttendeeEmails(prospect.email ? [prospect.email] : []);
+      setNewEmail("");
+      setMeetingType("visio");
+      setLocation("");
     }
   }, [open, prospect, initialDate]);
+
+  // Add a new attendee email
+  const handleAddEmail = () => {
+    const email = newEmail.trim();
+    if (email && !attendeeEmails.includes(email)) {
+      setAttendeeEmails([...attendeeEmails, email]);
+      setNewEmail("");
+    }
+  };
+
+  // Remove an attendee email
+  const handleRemoveEmail = (emailToRemove: string) => {
+    setAttendeeEmails(attendeeEmails.filter(email => email !== emailToRemove));
+  };
+
+  // Handle Enter key in email input
+  const handleEmailKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddEmail();
+    }
+  };
 
   // Update end time when start time changes
   const handleStartChange = (value: string) => {
@@ -154,31 +185,53 @@ export function CreateEventDialog({
         description,
         startDateTime: start.toISOString(),
         endDateTime: end.toISOString(),
-        attendeeEmail: attendeeEmail || undefined,
+        attendeeEmails: attendeeEmails.filter(e => e.trim()),
         timeZone: DEFAULT_TIMEZONE,
+        meetingType,
+        location: meetingType === "presentiel" ? location : undefined,
       },
       {
         onSuccess: async (event) => {
           // Create interaction in CRM if we have contact/client IDs
           console.log("Prospect data for interaction:", { id: prospect.id, clientId: prospect.clientId });
 
-          // Create interaction if we have a contact ID
+          // Build interaction resume with meeting details
+          const formattedDate = format(start, "PPP à HH:mm", { locale: fr });
+          const meetingInfo = meetingType === "visio"
+            ? event.hangoutLink
+              ? `\n\n🎥 Visio: ${event.hangoutLink}`
+              : "\n\n🎥 Visio (lien Meet en création...)"
+            : location
+              ? `\n\n📍 Lieu: ${location}`
+              : "";
+
+          // Create interaction and update prospect status if we have a contact ID
           // Note: Client field in Airtable is auto-populated via Contact lookup
           if (prospect.id) {
             try {
-              const formattedDate = format(start, "PPP à HH:mm", { locale: fr });
+              // 1. Create interaction
               await createInteraction({
                 objet: `RDV planifié - ${title}`,
                 type: "Réunion",
-                date: start.toISOString().split("T")[0],
-                resume: `RDV prévu le ${formattedDate}\n\n${description}${event.htmlLink ? `\n\nLien Google Calendar: ${event.htmlLink}` : ""}`,
+                date: start.toISOString(), // Full ISO with time
+                resume: `RDV prévu le ${formattedDate}${meetingInfo}\n\n${description}${event.htmlLink ? `\n\nLien Google Calendar: ${event.htmlLink}` : ""}`,
                 contact: [prospect.id],
                 // Client is auto-populated via Contact lookup in Airtable
               });
-              toast.success("Interaction ajoutée à l'historique");
+
+              // 2. Update prospect status to "RDV planifié" and save the RDV date, type and link
+              await updateProspectStatus({
+                id: prospect.id,
+                statut: "RDV planifié",
+                dateRdvPrevu: start.toISOString(), // Full ISO with time
+                typeRdv: meetingType === "visio" ? "Visio" : "Présentiel",
+                lienVisio: meetingType === "visio" ? event.hangoutLink : undefined,
+              });
+
+              toast.success("Statut mis à jour et historique enregistré");
             } catch (error) {
-              console.error("Failed to create interaction:", error);
-              toast.error("Erreur lors de l'ajout à l'historique", {
+              console.error("Failed to create interaction or update status:", error);
+              toast.error("Erreur lors de la mise à jour", {
                 description: error instanceof Error ? error.message : "Erreur inconnue",
               });
             }
@@ -189,15 +242,22 @@ export function CreateEventDialog({
             });
           }
 
-          toast.success("RDV créé avec succès", {
-            description: event.summary,
-            action: event.htmlLink
-              ? {
-                  label: "Voir",
-                  onClick: () => window.open(event.htmlLink, "_blank"),
-                }
-              : undefined,
-          });
+          // Show success with appropriate link
+          const meetLink = event.hangoutLink;
+          toast.success(
+            meetingType === "visio" && meetLink
+              ? "RDV visio créé avec lien Meet"
+              : "RDV créé avec succès",
+            {
+              description: event.summary,
+              action: meetLink || event.htmlLink
+                ? {
+                    label: meetLink ? "Rejoindre" : "Voir",
+                    onClick: () => window.open(meetLink || event.htmlLink, "_blank"),
+                  }
+                : undefined,
+            }
+          );
           onOpenChange(false);
         },
         onError: (error) => {
@@ -260,18 +320,102 @@ export function CreateEventDialog({
             </div>
           </div>
 
+          {/* Meeting type selector */}
           <div className="grid gap-2">
-            <Label htmlFor="attendee" className="flex items-center gap-2">
+            <Label>Type de RDV</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMeetingType("visio")}
+                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+                  meetingType === "visio"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-muted hover:border-muted-foreground/50"
+                }`}
+              >
+                <Video className="h-5 w-5" />
+                <span className="font-medium">Visio</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMeetingType("presentiel")}
+                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+                  meetingType === "presentiel"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-muted hover:border-muted-foreground/50"
+                }`}
+              >
+                <MapPin className="h-5 w-5" />
+                <span className="font-medium">Présentiel</span>
+              </button>
+            </div>
+            {meetingType === "visio" && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Video className="h-3 w-3" />
+                Un lien Google Meet sera créé et envoyé aux participants
+              </p>
+            )}
+            {meetingType === "presentiel" && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Adresse du lieu de RDV"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Email invité (optionnel)
+              Participants (optionnel)
             </Label>
-            <Input
-              id="attendee"
-              type="email"
-              value={attendeeEmail}
-              onChange={(e) => setAttendeeEmail(e.target.value)}
-              placeholder="email@exemple.com"
-            />
+
+            {/* List of added attendees */}
+            {attendeeEmails.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attendeeEmails.map((email) => (
+                  <div
+                    key={email}
+                    className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm"
+                  >
+                    <span>{email}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEmail(email)}
+                      className="hover:bg-primary/20 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Input to add new attendee */}
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={handleEmailKeyDown}
+                placeholder="email@exemple.com"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleAddEmail}
+                disabled={!newEmail.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Appuyez sur Entrée ou cliquez sur + pour ajouter
+            </p>
           </div>
 
           <div className="grid gap-2">

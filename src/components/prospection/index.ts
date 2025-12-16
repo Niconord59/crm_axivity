@@ -4,3 +4,5 @@ export { ProspectionFilters } from "./ProspectionFilters";
 export { CallResultDialog } from "./CallResultDialog";
 export { ProspectForm } from "./ProspectForm";
 export { LeadImportDialog } from "./LeadImportDialog";
+export { PastRdvNotifications } from "./PastRdvNotifications";
+export { EmailComposer } from "./EmailComposer";

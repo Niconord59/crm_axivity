@@ -609,6 +609,110 @@ Cela évite les doublons entre les détails du RDV (dans Google Calendar) et les
 
 ---
 
+## Phase 8 : Email de suivi Gmail (IMPLEMENTÉE)
+
+### US-007: Envoyer un email de suivi après "Pas répondu" (P1)
+
+**En tant que** commercial
+**Je veux** envoyer un email de suivi directement depuis la plateforme après un appel sans réponse
+**Afin de** maximiser mes chances de contact sans quitter le CRM
+
+#### Acceptance Criteria
+
+1. **Given** l'utilisateur sélectionne "Pas répondu" dans le CallResultDialog, **When** il voit les options, **Then** il peut indiquer s'il a laissé un message vocal
+2. **Given** l'utilisateur a sélectionné "Pas répondu", **When** il active "Envoyer un email de suivi", **Then** un composeur d'email apparaît avec un template pré-rempli
+3. **Given** le composeur d'email est affiché, **When** l'utilisateur clique "Envoyer", **Then** l'email est envoyé via Gmail API et une interaction de type "Email" est créée automatiquement
+4. **Given** un email a été envoyé, **When** l'utilisateur consulte l'onglet Historique, **Then** il peut relire le contenu complet de l'email (objet, destinataire, corps)
+5. **Given** l'utilisateur a envoyé un email, **When** il clique "Enregistrer", **Then** le résumé des actions affiche correctement ce qui a été fait (voicemail, email)
+
+### Architecture technique
+
+#### Gmail API Integration
+
+| Élément | Description |
+|---------|-------------|
+| **Scope OAuth** | `https://www.googleapis.com/auth/gmail.send` ajouté à NextAuth |
+| **Endpoint** | `POST /api/gmail/send` |
+| **Encoding** | RFC 2822 format, base64url pour Gmail API |
+
+#### Nouveaux fichiers
+
+| Fichier | Description |
+|---------|-------------|
+| `src/app/api/gmail/send/route.ts` | API route pour envoyer des emails via Gmail |
+| `src/hooks/use-gmail.ts` | Hook `useSendEmail` + fonction `generateFollowUpEmail` |
+| `src/components/prospection/EmailComposer.tsx` | Composant UI de composition d'email |
+| `src/components/ui/switch.tsx` | Composant Switch (shadcn/ui) |
+
+#### Composant EmailComposer
+
+```typescript
+interface EmailComposerProps {
+  prospectEmail: string;
+  prospectPrenom?: string;
+  prospectNom: string;
+  entreprise?: string;
+  leftVoicemail?: boolean;
+  onEmailSent?: (data: EmailSentData) => void;
+  onCancel?: () => void;
+}
+
+interface EmailSentData {
+  messageId: string;
+  to: string;
+  subject: string;
+  body: string;
+}
+```
+
+#### Template email pré-rempli
+
+```
+Objet: Suite à mon appel - {Entreprise}
+
+Bonjour {Prénom},
+
+Je viens d'essayer de vous joindre par téléphone sans succès.
+{Si voicemail: "Je vous ai également laissé un message vocal."}
+
+Je souhaitais échanger avec vous au sujet de nos solutions d'intelligence artificielle...
+
+Cordialement,
+L'équipe Axivity
+```
+
+### Stockage de l'email dans l'historique
+
+Quand un email est envoyé, une interaction de type "Email" est créée automatiquement avec :
+
+```
+📧 OBJET: {subject}
+
+📬 DESTINATAIRE: {to}
+
+📝 CONTENU:
+{body complet}
+```
+
+### Affichage dans l'onglet Historique
+
+Les interactions de type "Email" ont un style distinct :
+- **Fond** : bleu clair (`bg-blue-50/30`)
+- **Bordure** : bleu (`border-blue-200`)
+- **Badge** : "Email" en bleu
+- **Icône** : Mail au lieu de MessageSquare
+- **Contenu** : Zone blanche avec le texte complet de l'email
+
+### Résumé des actions "Pas répondu"
+
+Box bleue affichant dynamiquement :
+- ✓ Message vocal laissé (si activé)
+- ✓ Email de suivi envoyé (si envoyé)
+
+Message de prévisualisation de l'interaction mis à jour en temps réel.
+
+---
+
 *Spec créée le 15 décembre 2025*
-*Mise à jour : 15 décembre 2025 (Phase 7 Google Calendar)*
-*Version : 1.1*
+*Mise à jour : 16 décembre 2025 (Phase 8 Gmail Integration)*
+*Version : 1.2*

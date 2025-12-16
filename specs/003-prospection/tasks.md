@@ -1,8 +1,8 @@
 # Tâches : Module Prospection
 
 **Feature** : 003-prospection
-**Total** : 44 tâches
-**Statut** : 100% (44/44) - Toutes les phases complètes ✅
+**Total** : 52 tâches
+**Statut** : 100% (52/52) - Toutes les phases complètes ✅
 
 ---
 
@@ -279,6 +279,62 @@
 
 ---
 
+## Phase 8 : Email de suivi Gmail [COMPLETE]
+
+### T8.1 - Ajouter scope Gmail à NextAuth
+- [x] Modifier `src/lib/auth.ts`
+- [x] Ajouter scope `https://www.googleapis.com/auth/gmail.send`
+- [x] Tester que l'auth demande la nouvelle permission
+
+### T8.2 - Créer API route Gmail
+- [x] Créer `src/app/api/gmail/send/route.ts`
+- [x] Implémenter encoding email RFC 2822 + base64url
+- [x] Récupérer email utilisateur pour champ "From"
+- [x] Appeler Gmail API `/messages/send`
+- [x] Gérer erreurs (401, 403, 500)
+
+### T8.3 - Créer hook use-gmail
+- [x] Créer `src/hooks/use-gmail.ts`
+- [x] Implémenter `useSendEmail()` mutation
+- [x] Implémenter `generateFollowUpEmail()` template
+
+### T8.4 - Créer composant EmailComposer
+- [x] Créer `src/components/prospection/EmailComposer.tsx`
+- [x] Interface avec champs To, Subject, Body
+- [x] Template pré-rempli avec infos prospect
+- [x] Mention voicemail dynamique dans le template
+- [x] Preview dialog avant envoi
+- [x] État de succès après envoi
+- [x] Export dans index.ts
+
+### T8.5 - Intégrer dans CallResultDialog
+- [x] Ajouter composant Switch (shadcn/ui)
+- [x] États : leftVoicemail, wantToSendEmail, emailSent
+- [x] UI pour "Pas répondu" : toggle voicemail + toggle email
+- [x] Afficher EmailComposer si email activé
+- [x] Masquer si prospect sans email
+- [x] Reset états dans handleClose
+
+### T8.6 - Créer interaction Email automatique
+- [x] Créer interaction type "Email" à l'envoi
+- [x] Stocker contenu complet (objet, destinataire, corps)
+- [x] Format lisible avec emojis (📧📬📝)
+
+### T8.7 - Améliorer affichage Historique
+- [x] Style distinct pour interactions Email (fond bleu)
+- [x] Badge bleu pour type Email
+- [x] Icône Mail au lieu de MessageSquare
+- [x] Zone blanche pour contenu email
+- [x] Date avec heure précise
+
+### T8.8 - Résumé dynamique des actions
+- [x] Box "Actions effectuées" (bleu) si voicemail ou email
+- [x] Liste avec icônes des actions faites
+- [x] Prévisualisation message interaction mise à jour dynamique
+- [x] Message d'avertissement si aucune action tracée
+
+---
+
 ## Résumé par phase
 
 | Phase | Tâches | Effort |
@@ -291,9 +347,10 @@
 | Phase 5 : Conversion | 3 | 2h |
 | Phase 6 : Polish | 4 | 2h |
 | Phase 7 : Google Calendar | 7 | 8h |
-| **Total** | **40** | **~27h** |
+| Phase 8 : Gmail Integration | 8 | 4h |
+| **Total** | **52** | **~31h** |
 
 ---
 
 *Tâches créées le 15 décembre 2025*
-*Mise à jour : 15 décembre 2025 (Phase 7 Google Calendar)*
+*Mise à jour : 16 décembre 2025 (Phase 8 Gmail Integration)*

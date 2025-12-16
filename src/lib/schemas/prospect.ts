@@ -6,6 +6,7 @@ export const PROSPECT_STATUTS = [
   "Appelé - pas répondu",
   "Rappeler",
   "RDV planifié",
+  "RDV effectué",
   "Qualifié",
   "Non qualifié",
   "Perdu",
@@ -95,11 +96,13 @@ export const prospectDefaultValues: Partial<ProspectFormData> = {
 
 // Schéma pour le résultat d'un appel
 export const callResultSchema = z.object({
-  // Résultat de l'appel
+  // Résultat de l'appel ou du RDV
   resultat: z.enum([
     "Appelé - pas répondu",
     "Rappeler",
     "RDV planifié",
+    "RDV effectué",
+    "Reporter", // Action pour reporter un RDV (statut reste "RDV planifié")
     "Qualifié",
     "Non qualifié",
     "Perdu",
@@ -107,7 +110,7 @@ export const callResultSchema = z.object({
     errorMap: () => ({ message: "Veuillez sélectionner un résultat" }),
   }),
 
-  // Date de rappel (obligatoire si résultat = "Rappeler")
+  // Date de rappel/report (obligatoire si résultat = "Rappeler" ou "Reporter")
   dateRappel: z.string().optional(),
 
   // Notes de l'appel
@@ -121,14 +124,14 @@ export const callResultSchema = z.object({
   creerInteraction: z.boolean().default(true),
 }).refine(
   (data) => {
-    // Si résultat est "Rappeler", dateRappel est obligatoire
-    if (data.resultat === "Rappeler" && !data.dateRappel) {
+    // Si résultat est "Rappeler" ou "Reporter", dateRappel est obligatoire
+    if ((data.resultat === "Rappeler" || data.resultat === "Reporter") && !data.dateRappel) {
       return false;
     }
     return true;
   },
   {
-    message: "La date de rappel est requise",
+    message: "La date est requise",
     path: ["dateRappel"],
   }
 );

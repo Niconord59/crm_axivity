@@ -4,6 +4,7 @@ export interface CalendarEvent {
   id?: string;
   summary: string;
   description?: string;
+  location?: string;
   start: {
     dateTime: string;
     timeZone?: string;
@@ -14,7 +15,15 @@ export interface CalendarEvent {
   };
   attendees?: { email: string; displayName?: string }[];
   htmlLink?: string;
+  hangoutLink?: string;
   status?: string;
+  conferenceData?: {
+    createRequest?: {
+      requestId: string;
+      conferenceSolutionKey: { type: string };
+    };
+    entryPoints?: { entryPointType: string; uri: string }[];
+  };
   reminders?: {
     useDefault?: boolean;
     overrides?: { method: string; minutes: number }[];
@@ -28,13 +37,17 @@ export interface CalendarEventsResponse {
   timeZone?: string;
 }
 
+export type MeetingType = "visio" | "presentiel";
+
 export interface CreateEventInput {
   summary: string;
   description?: string;
   startDateTime: string;
   endDateTime: string;
-  attendeeEmail?: string;
+  attendeeEmails?: string[];
   timeZone?: string;
+  meetingType?: MeetingType;
+  location?: string;
 }
 
 // Default timezone for Paris
@@ -68,13 +81,34 @@ export function toISOStringWithTimezone(date: Date, timeZone: string = DEFAULT_T
   return date.toISOString();
 }
 
+// Generate unique request ID for conference creation
+function generateRequestId(): string {
+  return `meet-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
 // Create event payload for Google Calendar API
-export function createEventPayload(input: CreateEventInput): Omit<CalendarEvent, "id" | "htmlLink" | "status"> {
+export function createEventPayload(input: CreateEventInput): Omit<CalendarEvent, "id" | "htmlLink" | "hangoutLink" | "status"> {
   const timeZone = input.timeZone || DEFAULT_TIMEZONE;
+
+  // Convert email array to attendees format
+  const attendees = input.attendeeEmails?.length
+    ? input.attendeeEmails.filter(email => email.trim()).map(email => ({ email: email.trim() }))
+    : undefined;
+
+  // Create Google Meet conference if meeting type is visio
+  const conferenceData = input.meetingType === "visio"
+    ? {
+        createRequest: {
+          requestId: generateRequestId(),
+          conferenceSolutionKey: { type: "hangoutsMeet" },
+        },
+      }
+    : undefined;
 
   return {
     summary: input.summary,
     description: input.description,
+    location: input.meetingType === "presentiel" ? input.location : undefined,
     start: {
       dateTime: input.startDateTime,
       timeZone,
@@ -83,7 +117,8 @@ export function createEventPayload(input: CreateEventInput): Omit<CalendarEvent,
       dateTime: input.endDateTime,
       timeZone,
     },
-    attendees: input.attendeeEmail ? [{ email: input.attendeeEmail }] : undefined,
+    attendees,
+    conferenceData,
     reminders: {
       useDefault: true,
     },

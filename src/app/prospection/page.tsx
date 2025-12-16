@@ -11,6 +11,7 @@ import {
   CallResultDialog,
   ProspectForm,
   LeadImportDialog,
+  PastRdvNotifications,
 } from "@/components/prospection";
 import { OpportuniteForm } from "@/components/forms";
 import {
@@ -154,6 +155,14 @@ export default function ProspectionPage() {
 
       {/* KPIs */}
       <ProspectionKPIs />
+
+      {/* Past RDV Notifications */}
+      <PastRdvNotifications
+        onOpenProspect={(prospect) => {
+          setSelectedProspect(prospect);
+          setCallDialogOpen(true);
+        }}
+      />
 
       {/* Filters */}
       <ProspectionFilters filters={filters} onFiltersChange={setFilters} />

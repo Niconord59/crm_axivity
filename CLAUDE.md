@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-15
+Auto-generated from all feature plans. Last updated: 2025-12-16
 
 ## Active Technologies
 
@@ -12,14 +12,14 @@ Auto-generated from all feature plans. Last updated: 2025-12-15
 src/
 ├── app/                    # Next.js App Router pages
 ├── components/
-│   ├── ui/                 # Shadcn/UI components (27 installed)
+│   ├── ui/                 # Shadcn/UI components (28 installed)
 │   ├── layout/             # Sidebar, Header, AppLayout
 │   ├── shared/             # KPICard, StatusBadge, SearchCommand, etc.
 │   ├── forms/              # Formulaires CRUD
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (12 hooks)
+├── hooks/                  # React Query hooks (13 hooks)
 ├── lib/
 │   ├── airtable.ts         # API client
 │   ├── airtable-tables.ts  # Table IDs (21 tables)
@@ -67,7 +67,7 @@ npm start       # Production server
   - A8. Gestion Équipe et Charge
 
 ### 003-prospection (Module Prospection - COMPLETE)
-- **Status**: 100% - 44/44 tasks
+- **Status**: 100% - 52/52 tasks
 - **Specs**: `specs/003-prospection/`
 - **Content**:
   - Page `/prospection` dédiée à la gestion des leads
@@ -76,25 +76,30 @@ npm start       # Production server
   - Conversion Lead → Opportunité
   - KPIs de prospection (à appeler, rappels, taux qualification, retards)
   - **Intégration Google Calendar** (Phase 7) : Planifier des RDV depuis le CallResultDialog
+  - **Intégration Gmail** (Phase 8) : Envoyer des emails de suivi après "Pas répondu"
 - **Nouveaux composants**:
-  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog
+  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer
   - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, GoogleAuthButton
 - **Nouveaux hooks**:
   - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
   - `use-import-leads.ts` : useImportLeads (CSV parsing, mapping, batch import)
   - `use-convert-opportunity.ts` : useConvertToOpportunity
   - `use-google-calendar.ts` : useCalendarEvents, useCreateCalendarEvent, useGoogleCalendarStatus
-- **Auth Google Calendar**:
-  - `lib/auth.ts` : Configuration NextAuth.js v5 avec Google OAuth + calendar scope
+  - `use-gmail.ts` : useSendEmail, generateFollowUpEmail
+- **Auth Google (Calendar + Gmail)**:
+  - `lib/auth.ts` : Configuration NextAuth.js v5 avec Google OAuth + calendar + gmail.send scopes
   - `app/api/auth/[...nextauth]/route.ts` : Handler NextAuth
   - `app/api/calendar/events/route.ts` : API GET/POST events
+  - `app/api/gmail/send/route.ts` : API POST pour envoyer des emails
   - `providers/session-provider.tsx` : SessionProvider wrapper
 - **Champs Airtable** (T2-Contacts) ✅:
   - "Statut Prospection" (Single Select) : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
   - "Date Rappel" (Date)
   - "Source Lead" (Single Select)
   - "Notes Prospection" (Long Text)
-- **Variables d'environnement Google Calendar**:
+  - "Type RDV" (Single Select) : Visio, Présentiel
+  - "Lien Visio" (URL)
+- **Variables d'environnement Google**:
   - `AUTH_SECRET` : Secret NextAuth (openssl rand -base64 32)
   - `AUTH_GOOGLE_ID` : Google OAuth Client ID
   - `AUTH_GOOGLE_SECRET` : Google OAuth Client Secret
@@ -164,6 +169,16 @@ npm start       # Production server
   - Onglet "Appel" renommé en "Résultat"
   - Notes et checkbox masqués pour "RDV planifié" (évite doublons)
   - Rafraîchissement automatique de la liste après mise à jour statut
+- **Gmail Integration (Phase 8)** : Envoi d'emails de suivi (16 déc. 2025)
+  - Option "Message vocal laissé" pour "Pas répondu"
+  - Toggle "Envoyer un email de suivi" avec EmailComposer intégré
+  - Template email pré-rempli avec infos prospect + mention voicemail
+  - Envoi via Gmail API (scope gmail.send)
+  - Interaction Email créée automatiquement avec contenu complet
+  - Historique enrichi : emails affichés avec style distinct (fond bleu)
+  - Résumé dynamique des actions (voicemail + email) sous checkbox interaction
+- **Champs Airtable ajoutés** (T2-Contacts) : "Type RDV" (Visio/Présentiel), "Lien Visio" (URL)
+- **Onglet "RDV en cours"** : Pour les visio, affiche lien Meet + prise de notes en direct
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

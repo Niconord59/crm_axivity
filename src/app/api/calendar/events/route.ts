@@ -82,26 +82,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(
-      `${GOOGLE_CALENDAR_API}/calendars/primary/events`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-          "Content-Type": "application/json",
+    // Build URL with conferenceDataVersion if conference is requested
+    const url = new URL(`${GOOGLE_CALENDAR_API}/calendars/primary/events`);
+    if (body.conferenceData) {
+      url.searchParams.set("conferenceDataVersion", "1");
+    }
+    // Send email notifications to attendees
+    if (body.attendees?.length) {
+      url.searchParams.set("sendUpdates", "all");
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: body.summary,
+        description: body.description,
+        location: body.location,
+        start: body.start,
+        end: body.end,
+        attendees: body.attendees,
+        conferenceData: body.conferenceData,
+        reminders: body.reminders || {
+          useDefault: true,
         },
-        body: JSON.stringify({
-          summary: body.summary,
-          description: body.description,
-          start: body.start,
-          end: body.end,
-          attendees: body.attendees,
-          reminders: body.reminders || {
-            useDefault: true,
-          },
-        }),
-      }
-    );
+      }),
+    });
 
     if (!response.ok) {
       const error = await response.json();
