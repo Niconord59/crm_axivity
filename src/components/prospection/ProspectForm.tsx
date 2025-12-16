@@ -144,20 +144,25 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     defaultValues: prospectDefaultValues,
   });
 
-  // Récupérer l'ID client sélectionné
+  // Récupérer l'ID et le nom du client sélectionné
   const selectedClientId = form.watch("clientId");
+  const selectedClientName = form.watch("entreprise");
 
   // Fetch contacts existants pour le client sélectionné
+  // Note: Dans Airtable, {Client} retourne le nom (primary field), pas l'ID
   const { data: existingContacts, isLoading: isLoadingContacts } = useQuery({
-    queryKey: ["client-contacts", selectedClientId],
+    queryKey: ["client-contacts", selectedClientId, selectedClientName],
     queryFn: async () => {
-      if (!selectedClientId) return [];
+      if (!selectedClientId || !selectedClientName) return [];
 
-      // Récupérer les contacts liés à ce client
+      // Échapper les apostrophes pour la formule Airtable
+      const escapedName = selectedClientName.replace(/'/g, "''");
+
+      // Récupérer les contacts liés à ce client (filtrer par nom car {Client} retourne le primary field)
       const records = await airtable.getRecords<ContactFields>(
         AIRTABLE_TABLES.CONTACTS,
         {
-          filterByFormula: `FIND('${selectedClientId}', ARRAYJOIN({Client}))`,
+          filterByFormula: `FIND('${escapedName}', ARRAYJOIN({Client}))`,
           sort: [{ field: "Nom Complet", direction: "asc" }],
         }
       );
@@ -171,7 +176,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
         statutProspection: record.fields["Statut Prospection"] as ProspectStatus | undefined,
       }));
     },
-    enabled: !!selectedClientId,
+    enabled: !!selectedClientId && !!selectedClientName,
   });
 
   // Filter clients based on search
