@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   DragDropContext,
   Droppable,
@@ -17,7 +17,6 @@ import {
   ExportButton,
 } from "@/components/shared";
 import { opportuniteExportColumns } from "@/lib/export";
-import { LeadImportDialog } from "@/components/opportunites";
 import { OpportuniteForm } from "@/components/forms";
 import { PipelineChart } from "@/components/charts";
 import {
@@ -35,7 +34,6 @@ const KANBAN_COLUMNS: { status: OpportunityStatus; title: string; color: string 
 ];
 
 export default function OpportunitesPage() {
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showChart, setShowChart] = useState(false);
   const { data: opportunitesGroupees, isLoading } = useOpportunitesParStatut();
   const updateStatut = useUpdateOpportuniteStatut();
@@ -83,10 +81,6 @@ export default function OpportunitesPage() {
             filename="opportunites"
             sheetName="Pipeline"
           />
-          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importer
-          </Button>
           <OpportuniteForm />
         </div>
       </PageHeader>
@@ -252,12 +246,6 @@ export default function OpportunitesPage() {
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </DragDropContext>
-
-      {/* Lead Import Dialog */}
-      <LeadImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-      />
     </div>
   );
 }
