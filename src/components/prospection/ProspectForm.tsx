@@ -159,7 +159,11 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent
+        className="sm:max-w-[550px]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
