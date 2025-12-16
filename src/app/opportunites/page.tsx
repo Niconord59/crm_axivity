@@ -27,7 +27,6 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { type OpportunityStatus } from "@/types";
 
 const KANBAN_COLUMNS: { status: OpportunityStatus; title: string; color: string }[] = [
-  { status: "Lead", title: "Leads", color: "bg-gray-100" },
   { status: "Qualifié", title: "Qualifiés", color: "bg-blue-100" },
   { status: "Proposition", title: "Proposition", color: "bg-purple-100" },
   { status: "Négociation", title: "Négociation", color: "bg-orange-100" },
