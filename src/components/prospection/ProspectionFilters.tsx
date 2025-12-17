@@ -21,6 +21,20 @@ export function ProspectionFilters({
   filters,
   onFiltersChange,
 }: ProspectionFiltersProps) {
+  // Le filtre date de rappel n'est pertinent que pour le statut "Rappeler"
+  const showDateRappelFilter = filters.statut === "Rappeler";
+
+  const handleStatusChange = (value: string) => {
+    const newStatut = value === "all" ? undefined : value as ProspectFilters["statut"];
+
+    // Réinitialiser le filtre dateRappel si on change de statut
+    onFiltersChange({
+      ...filters,
+      statut: newStatut,
+      dateRappel: newStatut === "Rappeler" ? filters.dateRappel : undefined,
+    });
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       {/* Search */}
@@ -38,13 +52,8 @@ export function ProspectionFilters({
 
       {/* Status filter */}
       <Select
-        value={filters.statut as string || "all"}
-        onValueChange={(value) =>
-          onFiltersChange({
-            ...filters,
-            statut: value === "all" ? undefined : value as ProspectFilters["statut"],
-          })
-        }
+        value={typeof filters.statut === "string" ? filters.statut : "all"}
+        onValueChange={handleStatusChange}
       >
         <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Statut" />
@@ -82,26 +91,28 @@ export function ProspectionFilters({
         </SelectContent>
       </Select>
 
-      {/* Date rappel filter */}
-      <Select
-        value={filters.dateRappel || "all"}
-        onValueChange={(value) =>
-          onFiltersChange({
-            ...filters,
-            dateRappel: value === "all" ? undefined : value as ProspectFilters["dateRappel"],
-          })
-        }
-      >
-        <SelectTrigger className="w-full sm:w-[160px]">
-          <SelectValue placeholder="Rappel" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Tous les rappels</SelectItem>
-          <SelectItem value="today">Aujourd&apos;hui</SelectItem>
-          <SelectItem value="this_week">Cette semaine</SelectItem>
-          <SelectItem value="overdue">En retard</SelectItem>
-        </SelectContent>
-      </Select>
+      {/* Date rappel filter - seulement visible pour le statut "Rappeler" */}
+      {showDateRappelFilter && (
+        <Select
+          value={filters.dateRappel || "all"}
+          onValueChange={(value) =>
+            onFiltersChange({
+              ...filters,
+              dateRappel: value === "all" ? undefined : value as ProspectFilters["dateRappel"],
+            })
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Quand ?" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous</SelectItem>
+            <SelectItem value="today">Aujourd&apos;hui</SelectItem>
+            <SelectItem value="this_week">Cette semaine</SelectItem>
+            <SelectItem value="overdue">En retard</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }
