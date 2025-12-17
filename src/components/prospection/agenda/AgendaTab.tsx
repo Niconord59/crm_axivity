@@ -77,17 +77,17 @@ export function AgendaTab({ prospect }: AgendaTabProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header with actions */}
-      <div className="flex items-center justify-between pb-4">
+      <div className="flex items-center justify-between pb-3 gap-2 flex-wrap">
         <GoogleAuthButton />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button onClick={handleCreateClick}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nouveau RDV
+          <Button size="sm" onClick={handleCreateClick}>
+            <Plus className="mr-1 h-4 w-4" />
+            Nouveau
           </Button>
         </div>
       </div>

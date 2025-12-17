@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,7 +80,7 @@ import {
   prospectDefaultValues,
   PROSPECT_SOURCES,
 } from "@/lib/schemas/prospect";
-import { useCreateProspect, useUpdateProspectStatus, type Prospect } from "@/hooks/use-prospects";
+import { useCreateProspect, useUpdateProspectStatus } from "@/hooks/use-prospects";
 import { useClients } from "@/hooks/use-clients";
 import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
 import { AgendaTab } from "./agenda";
@@ -100,9 +100,8 @@ interface ProspectFormProps {
   onSuccess?: () => void;
 }
 
-// Options de résultat pour appel entrant
+// Options de résultat pour appel entrant (pas de "Pas répondu" car c'est un appel entrant)
 const CALL_RESULTS = [
-  { value: "Appelé - pas répondu", label: "Pas répondu", description: "Le contact n'a pas décroché" },
   { value: "Rappeler", label: "Rappeler", description: "Planifier un rappel" },
   { value: "RDV planifié", label: "RDV planifié", description: "Un rendez-vous a été programmé" },
   { value: "Qualifié", label: "Qualifié", description: "Le lead est qualifié" },
@@ -118,7 +117,10 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
-  // État pour le prospect créé (permet d'accéder à l'onglet Résultat)
+  // État pour les données validées du formulaire (avant création dans Airtable)
+  const [validatedFormData, setValidatedFormData] = useState<ProspectFormData | null>(null);
+
+  // État pour le lead créé (après création dans Airtable)
   const [createdProspect, setCreatedProspect] = useState<{
     id: string;
     clientId: string;
@@ -129,6 +131,9 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     entreprise: string;
   } | null>(null);
 
+  // Sous-onglet actif dans l'onglet Résultat
+  const [resultSubTab, setResultSubTab] = useState<"call" | "agenda">("call");
+
   // États pour le formulaire de résultat d'appel
   const [selectedResult, setSelectedResult] = useState<CallResult | null>(null);
   const [dateRappel, setDateRappel] = useState<Date | undefined>(undefined);
@@ -136,8 +141,11 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const [creerInteraction, setCreerInteraction] = useState(true);
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
 
+  // Ref pour bloquer la fermeture du Dialog immédiatement (sans attendre le re-render)
+  const keepDialogOpenRef = useRef(false);
+
   const createProspect = useCreateProspect();
-  const updateStatus = useUpdateProspectStatus();
+  const updateProspectStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
   const { data: clients, isLoading: isLoadingClients } = useClients();
 
@@ -145,6 +153,13 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     resolver: zodResolver(prospectSchema),
     defaultValues: prospectDefaultValues,
   });
+
+  // Quand les données sont validées, passer automatiquement à l'onglet Résultat
+  useEffect(() => {
+    if (validatedFormData) {
+      setActiveTab("resultat");
+    }
+  }, [validatedFormData]);
 
   // Récupérer l'ID et le nom du client sélectionné
   const selectedClientId = form.watch("clientId");
@@ -239,77 +254,150 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     setComboboxOpen(false);
   };
 
+  // Valider les données du formulaire et passer à l'onglet Résultat
+  // Le lead sera créé uniquement quand l'utilisateur choisira le résultat de l'appel
   const handleSubmit = async (data: ProspectFormData) => {
+    // Stocker les données validées pour les utiliser lors de la création
+    // Le useEffect se charge de passer à l'onglet "resultat" automatiquement
+    setValidatedFormData(data);
+  };
+
+  // Créer le lead pour l'accès à l'Agenda (statut "RDV planifié" par défaut)
+  const createLeadForAgenda = async () => {
+    if (!validatedFormData || createdProspect) return;
+
+    setIsSubmittingResult(true);
+    keepDialogOpenRef.current = true;
+
     try {
       const result = await createProspect.mutateAsync({
         // Entreprise
-        entreprise: data.entreprise,
-        clientId: data.clientId,
-        secteurActivite: data.secteurActivite || undefined,
-        siteWeb: data.siteWeb || undefined,
-        telephoneEntreprise: data.telephoneEntreprise || undefined,
+        entreprise: validatedFormData.entreprise,
+        clientId: validatedFormData.clientId,
+        secteurActivite: validatedFormData.secteurActivite || undefined,
+        siteWeb: validatedFormData.siteWeb || undefined,
+        telephoneEntreprise: validatedFormData.telephoneEntreprise || undefined,
         // Contact
-        nom: data.nom,
-        prenom: data.prenom || undefined,
-        email: data.email || undefined,
-        telephone: data.telephone || undefined,
-        role: data.role || undefined,
-        sourceLead: data.sourceLead,
-        notesProspection: data.notesProspection || undefined,
+        nom: validatedFormData.nom,
+        prenom: validatedFormData.prenom || undefined,
+        email: validatedFormData.email || undefined,
+        telephone: validatedFormData.telephone || undefined,
+        role: validatedFormData.role || undefined,
+        sourceLead: validatedFormData.sourceLead,
+        notesProspection: validatedFormData.notesProspection || undefined,
+        // Statut RDV planifié par défaut pour l'agenda
+        statutProspection: "RDV planifié",
       });
 
-      toast.success("Lead créé avec succès", {
-        description: `${data.prenom ? data.prenom + " " : ""}${data.nom} - ${data.entreprise}`,
-      });
-
-      // Stocker les infos du prospect créé pour l'onglet Résultat
+      // Stocker le lead créé
       setCreatedProspect({
         id: result.id,
-        clientId: data.clientId || result.client?.[0] || "",
-        nom: data.nom,
-        prenom: data.prenom || undefined,
-        email: data.email || undefined,
-        telephone: data.telephone || undefined,
-        entreprise: data.entreprise,
+        clientId: result.clientId!,
+        nom: validatedFormData.nom,
+        prenom: validatedFormData.prenom,
+        email: validatedFormData.email,
+        telephone: validatedFormData.telephone,
+        entreprise: validatedFormData.entreprise,
       });
 
-      // Passer à l'onglet Résultat
-      setActiveTab("resultat");
+      // Sélectionner automatiquement "RDV planifié" comme résultat
+      setSelectedResult("RDV planifié");
 
-      onSuccess?.();
+      toast.success("Lead créé", {
+        description: "Vous pouvez maintenant planifier le RDV",
+      });
     } catch (error) {
       toast.error("Erreur lors de la création du lead");
       console.error(error);
+      keepDialogOpenRef.current = false;
+    } finally {
+      setIsSubmittingResult(false);
     }
   };
 
-  // Soumettre le résultat de l'appel
+  // Gérer le changement de sous-onglet dans Résultat
+  const handleResultSubTabChange = async (value: string) => {
+    if (value === "agenda" && !createdProspect && validatedFormData) {
+      // Créer le lead avant d'accéder à l'agenda
+      await createLeadForAgenda();
+    }
+    setResultSubTab(value as "call" | "agenda");
+  };
+
+  // Créer ou mettre à jour le lead avec le résultat de l'appel choisi
   const handleSubmitResult = async () => {
-    if (!createdProspect || !selectedResult) return;
+    if (!validatedFormData || !selectedResult) return;
 
     setIsSubmittingResult(true);
-    try {
-      // 1. Mettre à jour le statut du prospect
-      await updateStatus.mutateAsync({
-        id: createdProspect.id,
-        statut: selectedResult,
-        dateRappel: selectedResult === "Rappeler" && dateRappel
-          ? dateRappel.toISOString()
-          : undefined,
-        notes: notesAppel
-          ? `[${format(new Date(), "dd/MM/yyyy HH:mm")}] ${notesAppel}`
-          : undefined,
-      });
+    keepDialogOpenRef.current = true;
 
-      // 2. Créer l'interaction si demandé
-      if (creerInteraction && createdProspect.clientId) {
-        const now = format(new Date(), "dd/MM/yyyy 'à' HH:mm", { locale: fr });
+    try {
+      // Construire les notes avec le résultat de l'appel
+      let notesFinales = validatedFormData.notesProspection || "";
+      if (notesAppel) {
+        const timestamp = format(new Date(), "dd/MM/yyyy HH:mm");
+        notesFinales = notesFinales
+          ? `${notesFinales}\n\n[${timestamp}] ${notesAppel}`
+          : `[${timestamp}] ${notesAppel}`;
+      }
+
+      let leadId: string;
+      let clientId: string;
+
+      if (createdProspect) {
+        // Le lead existe déjà (créé via Agenda), on met à jour le statut
+        leadId = createdProspect.id;
+        clientId = createdProspect.clientId;
+
+        await updateProspectStatus.mutateAsync({
+          id: leadId,
+          statut: selectedResult,
+          dateRappel: selectedResult === "Rappeler" && dateRappel
+            ? dateRappel.toISOString()
+            : undefined,
+          notes: notesAppel || undefined,
+        });
+      } else {
+        // Créer le lead avec le statut choisi directement
+        const result = await createProspect.mutateAsync({
+          // Entreprise
+          entreprise: validatedFormData.entreprise,
+          clientId: validatedFormData.clientId,
+          secteurActivite: validatedFormData.secteurActivite || undefined,
+          siteWeb: validatedFormData.siteWeb || undefined,
+          telephoneEntreprise: validatedFormData.telephoneEntreprise || undefined,
+          // Contact
+          nom: validatedFormData.nom,
+          prenom: validatedFormData.prenom || undefined,
+          email: validatedFormData.email || undefined,
+          telephone: validatedFormData.telephone || undefined,
+          role: validatedFormData.role || undefined,
+          sourceLead: validatedFormData.sourceLead,
+          notesProspection: notesFinales || undefined,
+          // Statut initial basé sur le résultat de l'appel
+          statutProspection: selectedResult,
+          dateRappel: selectedResult === "Rappeler" && dateRappel
+            ? dateRappel.toISOString()
+            : undefined,
+        });
+
+        leadId = result.id;
+        clientId = result.clientId!;
+      }
+
+      // Créer l'interaction si demandé
+      // - Pour un nouveau lead : toujours créer l'interaction
+      // - Pour un lead existant (créé via Agenda) : créer seulement si notes fournies
+      const shouldCreateInteraction = creerInteraction && clientId && (
+        !createdProspect || // Nouveau lead
+        (createdProspect && notesAppel) // Lead existant avec notes
+      );
+
+      if (shouldCreateInteraction) {
         let interactionResume: string;
 
-        if (selectedResult === "Appelé - pas répondu") {
-          interactionResume = `Appel entrant le ${now} - pas de réponse`;
-        } else if (selectedResult === "RDV planifié") {
-          interactionResume = "RDV planifié - voir Google Calendar pour les détails";
+        if (selectedResult === "RDV planifié") {
+          interactionResume = notesAppel || "RDV planifié - voir Google Calendar pour les détails";
         } else {
           interactionResume = notesAppel || `Appel entrant - Résultat: ${selectedResult}`;
         }
@@ -319,43 +407,50 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
           type: "Appel",
           date: new Date().toISOString(),
           resume: interactionResume,
-          contact: [createdProspect.id],
-          client: [createdProspect.clientId],
+          contact: [leadId],
+          client: [clientId],
         });
       }
 
-      toast.success("Résultat enregistré", {
-        description: `Statut: ${selectedResult}`,
+      toast.success(createdProspect ? "Statut mis à jour" : "Lead créé avec succès", {
+        description: `${validatedFormData.prenom ? validatedFormData.prenom + " " : ""}${validatedFormData.nom} - Statut: ${selectedResult}`,
       });
+
+      onSuccess?.();
 
       // Fermer et réinitialiser
       handleClose();
     } catch (error) {
-      toast.error("Erreur lors de l'enregistrement du résultat");
+      toast.error("Erreur lors de la sauvegarde");
       console.error(error);
+      keepDialogOpenRef.current = false;
     } finally {
       setIsSubmittingResult(false);
     }
   };
 
   const handleClose = () => {
+    // Désactiver le blocage de fermeture
+    keepDialogOpenRef.current = false;
+
+    // Fermer le dialog
+    setOpen(false);
+
+    // Réinitialiser tous les états après la fermeture
     form.reset();
     setSearchValue("");
     setActiveTab("entreprise");
-    // Réinitialiser les états du résultat d'appel
+    setValidatedFormData(null);
     setCreatedProspect(null);
+    setResultSubTab("call");
     setSelectedResult(null);
     setDateRappel(undefined);
     setNotesAppel("");
     setCreerInteraction(true);
-    setOpen(false);
   };
 
-  // Fermer sans enregistrer le résultat (skip)
+  // Fermer sans créer le lead (annuler)
   const handleSkipResult = () => {
-    toast.info("Lead créé", {
-      description: "Le résultat de l'appel n'a pas été enregistré",
-    });
     handleClose();
   };
 
@@ -367,8 +462,18 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   // Check if we can proceed to contact tab
   const entrepriseValid = form.watch("entreprise")?.trim().length > 0;
 
+  // Gérer l'ouverture/fermeture du Dialog
+  // Empêcher la fermeture automatique quand on est sur l'onglet Résultat
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && (keepDialogOpenRef.current || validatedFormData)) {
+      // On est sur l'onglet Résultat, ne pas fermer le Dialog
+      return;
+    }
+    setOpen(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button>
@@ -379,7 +484,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
       </DialogTrigger>
 
       <DialogContent
-        className="sm:max-w-[550px]"
+        className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -399,33 +504,33 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
               "grid w-full",
               hasExistingContacts ? "grid-cols-4" : "grid-cols-3"
             )}>
-              <TabsTrigger value="entreprise" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
+              <TabsTrigger value="entreprise" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                <Building2 className="h-4 w-4 hidden sm:block" />
                 Entreprise
               </TabsTrigger>
               {hasExistingContacts && (
-                <TabsTrigger value="historique" className="flex items-center gap-2">
-                  <History className="h-4 w-4" />
+                <TabsTrigger value="historique" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                  <History className="h-4 w-4 hidden sm:block" />
                   Historique
                 </TabsTrigger>
               )}
               <TabsTrigger
                 value="contact"
-                className="flex items-center gap-2"
+                className="flex items-center gap-1.5 text-xs sm:text-sm"
                 disabled={!entrepriseValid}
               >
-                <User className="h-4 w-4" />
+                <User className="h-4 w-4 hidden sm:block" />
                 Contact
               </TabsTrigger>
               <TabsTrigger
                 value="resultat"
-                className="flex items-center gap-2"
-                disabled={!createdProspect}
+                className="flex items-center gap-1.5 text-xs sm:text-sm"
+                disabled={!validatedFormData}
               >
-                {createdProspect ? (
+                {validatedFormData ? (
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                 ) : (
-                  <Phone className="h-4 w-4" />
+                  <Phone className="h-4 w-4 hidden sm:block" />
                 )}
                 Résultat
               </TabsTrigger>
@@ -830,197 +935,233 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Annuler
                 </Button>
-                <Button type="submit" disabled={createProspect.isPending}>
-                  {createProspect.isPending ? "Création..." : "Créer le lead"}
+                <Button type="submit">
+                  Suivant
                 </Button>
               </DialogFooter>
             </TabsContent>
 
             {/* ONGLET RÉSULTAT */}
             <TabsContent value="resultat" className="mt-4">
-              {createdProspect && (
-                <Tabs defaultValue="call" className="w-full">
+              {validatedFormData && (
+                <Tabs value={resultSubTab} onValueChange={handleResultSubTabChange} className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="call">Résultat</TabsTrigger>
-                    <TabsTrigger value="agenda">Agenda</TabsTrigger>
+                    <TabsTrigger value="agenda" disabled={isSubmittingResult}>
+                      {isSubmittingResult && resultSubTab !== "agenda" ? "Création..." : "Agenda"}
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* Sous-onglet Résultat */}
                   <TabsContent value="call" className="mt-4">
-                    <ScrollArea className="h-[350px] pr-4">
-                      <div className="space-y-6">
-                        {/* Confirmation du lead créé */}
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                          <div>
-                            <p className="font-medium text-green-800">
-                              Lead créé : {createdProspect.prenom ? `${createdProspect.prenom} ` : ""}{createdProspect.nom}
-                            </p>
-                            <p className="text-sm text-green-600">{createdProspect.entreprise}</p>
-                          </div>
-                        </div>
+                    <div className="space-y-4">
+                      {/* Confirmation des données validées ou lead créé */}
+                      <div className={cn(
+                        "p-2.5 rounded-lg flex items-center gap-2",
+                        createdProspect
+                          ? "bg-green-50 border border-green-200"
+                          : "bg-blue-50 border border-blue-200"
+                      )}>
+                        <CheckCircle2 className={cn(
+                          "h-4 w-4 shrink-0",
+                          createdProspect ? "text-green-600" : "text-blue-600"
+                        )} />
+                        <p className={cn(
+                          "text-sm font-medium",
+                          createdProspect ? "text-green-800" : "text-blue-800"
+                        )}>
+                          {createdProspect ? "Lead créé : " : ""}
+                          {validatedFormData.prenom ? `${validatedFormData.prenom} ` : ""}{validatedFormData.nom}
+                          <span className={cn(
+                            "font-normal ml-1",
+                            createdProspect ? "text-green-600" : "text-blue-600"
+                          )}>
+                            ({validatedFormData.entreprise})
+                          </span>
+                        </p>
+                      </div>
 
-                        {/* Sélection du résultat */}
-                        <div className="space-y-3">
-                          <Label>Résultat de l&apos;appel</Label>
+                      {/* Layout deux colonnes */}
+                      <div className="grid grid-cols-5 gap-4 min-h-[240px]">
+                        {/* Colonne gauche : Options */}
+                        <div className="col-span-2 space-y-2">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Résultat</Label>
                           <RadioGroup
                             value={selectedResult ?? ""}
                             onValueChange={(value) => setSelectedResult(value as CallResult)}
-                            className="space-y-2"
+                            className="space-y-1"
                           >
                             {CALL_RESULTS.map((result) => (
                               <label
                                 key={result.value}
                                 htmlFor={`result-${result.value}`}
                                 className={cn(
-                                  "flex items-start space-x-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                  "flex items-center space-x-2 rounded-md border px-3 py-2 cursor-pointer transition-colors",
                                   selectedResult === result.value
-                                    ? "border-primary bg-primary/5"
+                                    ? "border-primary bg-primary/5 ring-1 ring-primary"
                                     : "hover:bg-muted/50"
                                 )}
                               >
-                                <RadioGroupItem value={result.value} id={`result-${result.value}`} className="mt-0.5" />
-                                <div className="flex-1">
-                                  <span className="font-medium">{result.label}</span>
-                                  <p className="text-sm text-muted-foreground">{result.description}</p>
-                                </div>
+                                <RadioGroupItem value={result.value} id={`result-${result.value}`} />
+                                <span className={cn(
+                                  "text-sm",
+                                  selectedResult === result.value && "font-medium"
+                                )}>{result.label}</span>
                               </label>
                             ))}
                           </RadioGroup>
                         </div>
 
-                        {/* Date de rappel */}
-                        {showDatePicker && (
-                          <div className="space-y-2">
-                            <Label>Date et heure de rappel *</Label>
-                            <div className="flex gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    className={cn(
-                                      "flex-1 justify-start text-left font-normal",
-                                      !dateRappel && "text-muted-foreground"
-                                    )}
-                                  >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateRappel
-                                      ? format(dateRappel, "PPP", { locale: fr })
-                                      : "Sélectionner une date"}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={dateRappel}
-                                    onSelect={(date) => {
-                                      if (date) {
-                                        // Préserver l'heure existante ou défaut 9h
-                                        if (dateRappel) {
-                                          date.setHours(dateRappel.getHours(), dateRappel.getMinutes(), 0, 0);
-                                        } else {
-                                          date.setHours(9, 0, 0, 0);
-                                        }
-                                      }
-                                      setDateRappel(date);
-                                    }}
-                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <input
-                                  type="time"
-                                  className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-                                  value={dateRappel ? format(dateRappel, "HH:mm") : "09:00"}
-                                  onChange={(e) => {
-                                    if (dateRappel) {
-                                      const newDate = new Date(dateRappel);
-                                      const [hours, minutes] = e.target.value.split(":").map(Number);
-                                      newDate.setHours(hours, minutes, 0, 0);
-                                      setDateRappel(newDate);
-                                    }
-                                  }}
-                                  disabled={!dateRappel}
-                                />
-                              </div>
+                        {/* Colonne droite : Paramètres dynamiques */}
+                        <div className="col-span-3 space-y-4 border-l pl-4">
+                          {!selectedResult ? (
+                            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                              <p>← Sélectionnez un résultat</p>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <>
+                              {/* Date de rappel */}
+                              {showDatePicker && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">Date et heure de rappel *</Label>
+                                  <div className="flex gap-2">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className={cn(
+                                            "flex-1 justify-start text-left font-normal",
+                                            !dateRappel && "text-muted-foreground"
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {dateRappel
+                                            ? format(dateRappel, "dd/MM/yyyy", { locale: fr })
+                                            : "Date"}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          selected={dateRappel}
+                                          onSelect={(date) => {
+                                            if (date) {
+                                              if (dateRappel) {
+                                                date.setHours(dateRappel.getHours(), dateRappel.getMinutes(), 0, 0);
+                                              } else {
+                                                date.setHours(9, 0, 0, 0);
+                                              }
+                                            }
+                                            setDateRappel(date);
+                                          }}
+                                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                    <div className="flex items-center">
+                                      <input
+                                        type="time"
+                                        className="h-9 px-2 rounded-md border border-input bg-background text-sm w-[90px]"
+                                        value={dateRappel ? format(dateRappel, "HH:mm") : "09:00"}
+                                        onChange={(e) => {
+                                          if (dateRappel) {
+                                            const newDate = new Date(dateRappel);
+                                            const [hours, minutes] = e.target.value.split(":").map(Number);
+                                            newDate.setHours(hours, minutes, 0, 0);
+                                            setDateRappel(newDate);
+                                          }
+                                        }}
+                                        disabled={!dateRappel}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
-                        {/* Notes */}
-                        {showNotes && (
-                          <div className="space-y-2">
-                            <Label htmlFor="notesAppel">Notes de l&apos;appel</Label>
-                            <Textarea
-                              id="notesAppel"
-                              placeholder="Résumé de la conversation..."
-                              value={notesAppel}
-                              onChange={(e) => setNotesAppel(e.target.value)}
-                              rows={3}
-                            />
-                          </div>
-                        )}
+                              {/* Info pour RDV planifié */}
+                              {selectedResult === "RDV planifié" && !createdProspect && (
+                                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                  <p className="text-sm text-purple-700">
+                                    💡 Pour planifier le RDV, utilisez l&apos;onglet <strong>Agenda</strong> ci-dessus.
+                                  </p>
+                                </div>
+                              )}
 
-                        {/* Checkbox interaction */}
-                        {showInteractionCheckbox && (
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="creerInteractionResult"
-                              checked={creerInteraction}
-                              onCheckedChange={(checked) => setCreerInteraction(checked as boolean)}
-                            />
-                            <Label htmlFor="creerInteractionResult" className="text-sm cursor-pointer">
-                              Créer une interaction dans le CRM
-                            </Label>
-                          </div>
-                        )}
+                              {/* Notes */}
+                              {showNotes && (
+                                <div className="space-y-2">
+                                  <Label htmlFor="notesAppel" className="text-sm">Notes de l&apos;appel</Label>
+                                  <Textarea
+                                    id="notesAppel"
+                                    placeholder="Résumé de la conversation..."
+                                    value={notesAppel}
+                                    onChange={(e) => setNotesAppel(e.target.value)}
+                                    rows={3}
+                                    className="text-sm"
+                                  />
+                                </div>
+                              )}
 
-                        {/* Info pour RDV planifié */}
-                        {selectedResult === "RDV planifié" && (
-                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-blue-700">
-                              💡 Pour planifier le RDV, utilisez l&apos;onglet <strong>Agenda</strong> ci-dessus.
-                              Les détails seront automatiquement enregistrés dans Google Calendar.
-                            </p>
-                          </div>
-                        )}
+                              {/* Checkbox interaction */}
+                              {showInteractionCheckbox && !createdProspect && (
+                                <div className="flex items-center space-x-2 pt-2">
+                                  <Checkbox
+                                    id="creerInteractionResult"
+                                    checked={creerInteraction}
+                                    onCheckedChange={(checked) => setCreerInteraction(checked as boolean)}
+                                  />
+                                  <Label htmlFor="creerInteractionResult" className="text-sm cursor-pointer">
+                                    Créer une interaction dans le CRM
+                                  </Label>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </ScrollArea>
+                    </div>
 
-                    <DialogFooter className="pt-4 border-t mt-4">
+                    <DialogFooter className="pt-3 border-t mt-3">
                       <Button type="button" variant="ghost" onClick={handleSkipResult}>
-                        Passer
+                        Annuler
                       </Button>
                       <Button
                         type="button"
                         onClick={handleSubmitResult}
                         disabled={!selectedResult || isSubmittingResult || (selectedResult === "Rappeler" && !dateRappel)}
                       >
-                        {isSubmittingResult ? "Enregistrement..." : "Enregistrer le résultat"}
+                        {isSubmittingResult ? "Enregistrement..." : createdProspect ? "Terminer" : "Créer le lead"}
                       </Button>
                     </DialogFooter>
                   </TabsContent>
 
                   {/* Sous-onglet Agenda */}
                   <TabsContent value="agenda" className="mt-4">
-                    <div className="h-[400px]">
-                      <AgendaTab
-                        prospect={{
-                          id: createdProspect.id,
-                          prenom: createdProspect.prenom,
-                          nom: createdProspect.nom,
-                          email: createdProspect.email,
-                          telephone: createdProspect.telephone,
-                          entreprise: createdProspect.entreprise,
-                          clientId: createdProspect.clientId,
-                        }}
-                      />
-                    </div>
+                    {createdProspect ? (
+                      <div className="h-[320px]">
+                        <AgendaTab
+                          prospect={{
+                            id: createdProspect.id,
+                            prenom: createdProspect.prenom,
+                            nom: createdProspect.nom,
+                            email: createdProspect.email,
+                            telephone: createdProspect.telephone,
+                            entreprise: createdProspect.entreprise,
+                            clientId: createdProspect.clientId,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-[320px] flex items-center justify-center">
+                        <div className="text-center text-muted-foreground">
+                          <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Création du lead en cours...</p>
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               )}

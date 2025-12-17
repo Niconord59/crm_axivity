@@ -78,24 +78,24 @@ export function WeekCalendar({ onSlotClick, className }: WeekCalendarProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header with navigation */}
-      <div className="flex items-center justify-between pb-4 border-b">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
+      <div className="flex items-center justify-between pb-2 border-b gap-2">
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPreviousWeek}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={goToNextWeek}>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToNextWeek}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={goToToday}>
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={goToToday}>
             Aujourd&apos;hui
           </Button>
         </div>
-        <h3 className="font-semibold">{formatWeekRange()}</h3>
+        <h3 className="font-medium text-sm">{formatWeekRange()}</h3>
       </div>
 
       {/* Calendar grid */}
-      <ScrollArea className="flex-1 mt-4">
-        <div className="min-w-[600px]">
+      <ScrollArea className="flex-1 mt-2">
+        <div className="min-w-[450px]">
           {/* Days header */}
           <div className="grid grid-cols-8 border-b sticky top-0 bg-background z-10">
             <div className="p-2 text-sm text-muted-foreground" /> {/* Empty cell for hours */}

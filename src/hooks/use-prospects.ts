@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
 import type { Contact, Client, ProspectStatus, ProspectSource, RdvType } from "@/types";
 
@@ -227,6 +227,9 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
       }));
     },
     enabled: !!prospects && prospects.length > 0,
+    // Garder les données précédentes pendant le refetch pour éviter
+    // que les composants (comme ProspectForm) soient unmount
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -317,6 +320,9 @@ export function useCreateProspect() {
       role,
       sourceLead,
       notesProspection,
+      // Statut initial (optionnel, défaut "À appeler")
+      statutProspection,
+      dateRappel,
     }: {
       // Entreprise
       entreprise: string;
@@ -332,6 +338,9 @@ export function useCreateProspect() {
       role?: string;
       sourceLead: ProspectSource;
       notesProspection?: string;
+      // Statut initial
+      statutProspection?: ProspectStatus;
+      dateRappel?: string;
     }) => {
       let clientId: string;
 
@@ -375,7 +384,7 @@ export function useCreateProspect() {
       const contactFields: Partial<ContactFields> = {
         "Nom Complet": nomComplet,
         "Client": [clientId],
-        "Statut Prospection": "À appeler",
+        "Statut Prospection": statutProspection || "À appeler",
         "Source Lead": sourceLead,
       };
 
@@ -384,13 +393,14 @@ export function useCreateProspect() {
       if (telephone) contactFields["Téléphone"] = telephone;
       if (role) contactFields["Rôle"] = role;
       if (notesProspection) contactFields["Notes Prospection"] = notesProspection;
+      if (dateRappel) contactFields["Date Rappel"] = dateRappel;
 
       const record = await airtable.createRecord<ContactFields>(
         AIRTABLE_TABLES.CONTACTS,
         contactFields
       );
 
-      return mapRecordToContact(record);
+      return { ...mapRecordToContact(record), clientId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
