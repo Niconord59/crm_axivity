@@ -134,12 +134,33 @@ npm start       # Production server
 - **Roadmap Phase 2**: `Documentation/Ameliorations_Phase2_Roadmap.md`
 - **Guide construction Airtable**: `Documentation/Guide de Construction _ Base Airtable pour Agence IA.md`
 
-## Airtable Integration
+## Supabase Integration (NEW)
+
+- **URL**: `https://supabase.axivity.cloud`
+- **Client**: `lib/supabase.ts`
+- **Migrations**: `supabase/migrations/` (4 fichiers SQL)
+- **Déploiement**: Coolify (template Supabase intégré)
+- **Variables d'environnement**:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Rôles utilisateur Supabase
+
+| Rôle | Description |
+|------|-------------|
+| `admin` | Accès total |
+| `manager` | Gestion équipe + clients |
+| `commercial` | Pipeline + prospects |
+| `membre` | Ses tâches + projets assignés |
+| `client` | Portail client (lecture seule) |
+
+## Airtable Integration (LEGACY - Migration en cours)
 
 - **Base ID**: `appEf6JtWFdfLwsU6`
 - **API Key**: `.env.local` (`NEXT_PUBLIC_AIRTABLE_API_KEY`)
 - **Tables**: 21 tables (voir `lib/airtable-tables.ts`)
 - **Rate Limit**: 5 req/sec, batch max 10 records
+- **Status**: Migration vers Supabase en cours
 
 ## Gates (Non-négociables)
 
@@ -203,6 +224,12 @@ npm start       # Production server
   - Suppression du bouton "Qualifier" redondant (qualification via dialog)
   - Header CallResultDialog simplifié : juste le nom avec icône User
   - Suppression du formulaire OpportuniteForm de la page (conversion via CallResultDialog)
+- **Migration Supabase** (17 déc. 2025)
+  - Déploiement Supabase self-hosted via Coolify
+  - Client Supabase configuré (`lib/supabase.ts`)
+  - Migrations SQL prêtes (21 tables, RLS, triggers)
+  - 5 rôles utilisateur (admin, manager, commercial, membre, client)
+  - Variables d'environnement ajoutées
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
