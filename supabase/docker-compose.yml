@@ -12,8 +12,7 @@ services:
     image: supabase/postgres:15.6.1.143
     container_name: supabase-db
     restart: unless-stopped
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    # Pas de ports exposés - communication interne uniquement
     environment:
       POSTGRES_HOST: /var/run/postgresql
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
