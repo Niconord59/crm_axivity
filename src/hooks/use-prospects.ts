@@ -492,9 +492,8 @@ export function useRdvAujourdhui() {
         .from("contacts")
         .select("*")
         .eq("statut_prospection", "RDV planifié")
-        .gte("date_rdv_prevu", today)
-        .lt("date_rdv_prevu", today + "T23:59:59")
-        .order("date_rdv_prevu", { ascending: true });
+        .eq("date_rdv_prevu", today)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
