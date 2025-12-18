@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/providers/session-provider";
 import { QueryProvider } from "@/providers/query-provider";
+import { AuthProvider } from "@/providers/auth-provider";
 import { AppLayout } from "@/components/layout";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <SessionProvider>
           <QueryProvider>
-            <AppLayout>{children}</AppLayout>
+            <AuthProvider>
+              <AppLayout>{children}</AppLayout>
+            </AuthProvider>
           </QueryProvider>
         </SessionProvider>
       </body>
