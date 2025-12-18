@@ -197,14 +197,14 @@ export function LeadCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden transition-all duration-200",
+        "group relative overflow-hidden transition-all duration-200 h-full flex flex-col",
         "hover:shadow-md hover:-translate-y-0.5",
         "border-l-4",
         statusConfig.border,
         isUrgent && "ring-2 ring-red-200 ring-offset-1"
       )}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4 flex flex-col flex-1">
         {/* Header avec Avatar */}
         <div className="flex items-start gap-3 mb-3">
           <Avatar className={cn("h-10 w-10 shrink-0", statusConfig.avatar)}>
@@ -386,11 +386,14 @@ export function LeadCard({
           </p>
         )}
 
-        {/* Bouton d'action principal */}
+        {/* Spacer pour pousser le bouton en bas */}
+        <div className="flex-1" />
+
+        {/* Bouton d'action principal - toujours en bas */}
         <Button
           variant={actionButton.variant}
           size="sm"
-          className="w-full h-8 text-xs font-medium"
+          className="w-full h-8 text-xs font-medium mt-auto"
           onClick={() => onCall(prospect)}
         >
           <ActionIcon className="h-3.5 w-3.5 mr-1.5" />
