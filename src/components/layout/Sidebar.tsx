@@ -14,6 +14,7 @@ import {
   UsersRound,
   BarChart3,
   Menu,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface NavItem {
   title: string;
@@ -80,6 +82,14 @@ const secondaryNavItems: NavItem[] = [
   },
 ];
 
+const adminNavItems: NavItem[] = [
+  {
+    title: "Utilisateurs",
+    href: "/admin/users",
+    icon: Shield,
+  },
+];
+
 function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
   const pathname = usePathname();
   const isActive = pathname === item.href ||
@@ -107,7 +117,7 @@ function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
   );
 }
 
-function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
+function SidebarContent({ onLinkClick, isAdmin }: { onLinkClick?: () => void; isAdmin?: boolean }) {
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
@@ -139,6 +149,21 @@ function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
             <NavLink key={item.href} item={item} onClick={onLinkClick} />
           ))}
         </nav>
+
+        {/* Admin Section */}
+        {isAdmin && (
+          <>
+            <Separator className="my-4" />
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Administration
+            </p>
+            <nav className="flex flex-col gap-1">
+              {adminNavItems.map((item) => (
+                <NavLink key={item.href} item={item} onClick={onLinkClick} />
+              ))}
+            </nav>
+          </>
+        )}
       </ScrollArea>
 
       {/* Footer */}
@@ -152,15 +177,18 @@ function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
 }
 
 export function Sidebar() {
+  const { isAdmin } = useAuth();
+
   return (
     <aside className="hidden w-64 border-r bg-card lg:block">
-      <SidebarContent />
+      <SidebarContent isAdmin={isAdmin()} />
     </aside>
   );
 }
 
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
+  const { isAdmin } = useAuth();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -174,7 +202,7 @@ export function MobileSidebar() {
         <SheetHeader className="sr-only">
           <SheetTitle>Menu de navigation</SheetTitle>
         </SheetHeader>
-        <SidebarContent onLinkClick={() => setOpen(false)} />
+        <SidebarContent onLinkClick={() => setOpen(false)} isAdmin={isAdmin()} />
       </SheetContent>
     </Sheet>
   );

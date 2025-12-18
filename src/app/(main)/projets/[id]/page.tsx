@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Edit, Calendar, Clock, Euro, Users } from "lucide-react";
+import { ArrowLeft, Edit, Calendar, Clock, Euro, Users, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge, PageLoading } from "@/components/shared";
 import { AppBreadcrumb } from "@/components/layout";
 import { useProjet } from "@/hooks/use-projets";
 import { useTaches } from "@/hooks/use-taches";
+import { useProfiles } from "@/hooks/use-profiles";
 import { formatCurrency, formatDate, formatPercentage } from "@/lib/utils";
 
 export default function ProjetDetailPage() {
@@ -18,6 +20,13 @@ export default function ProjetDetailPage() {
   const id = params.id as string;
   const { data: projet, isLoading: loadingProjet } = useProjet(id);
   const { data: taches, isLoading: loadingTaches } = useTaches({ projetId: id });
+  const { data: profiles } = useProfiles();
+
+  // Récupérer le responsable du projet
+  const projetWithOwner = projet as (typeof projet & { ownerId?: string }) | undefined;
+  const owner = projetWithOwner?.ownerId
+    ? profiles?.find(p => p.id === projetWithOwner.ownerId)
+    : null;
 
   const isLoading = loadingProjet || loadingTaches;
 
@@ -67,6 +76,20 @@ export default function ProjetDetailPage() {
             </div>
             {projet.briefProjet && projet.nomProjet && (
               <p className="text-muted-foreground mt-1">{projet.briefProjet}</p>
+            )}
+            {/* Responsable du projet */}
+            {owner && (
+              <div className="flex items-center gap-2 mt-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs">
+                    {owner.prenom?.[0] || owner.nom[0]}
+                    {owner.nom[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  Responsable : <span className="font-medium text-foreground">{owner.prenom ? `${owner.prenom} ${owner.nom}` : owner.nom}</span>
+                </span>
+              </div>
             )}
           </div>
         </div>

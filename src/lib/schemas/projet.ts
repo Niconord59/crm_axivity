@@ -24,10 +24,16 @@ export const projetSchema = z.object({
     .min(1, "Le brief du projet est requis")
     .max(500, "Le brief ne peut pas dépasser 500 caractères"),
 
-  // Lien vers Client (ID Airtable)
+  // Lien vers Client (ID Supabase)
   clientId: z
     .string()
     .min(1, "Veuillez sélectionner un client"),
+
+  // Responsable du projet (ID utilisateur)
+  ownerId: z
+    .string()
+    .optional()
+    .or(z.literal("")),
 
   // Budget total en euros
   budget: z
@@ -77,6 +83,7 @@ export type ProjetFormData = z.infer<typeof projetSchema>;
 export const projetDefaultValues: Partial<ProjetFormData> = {
   briefProjet: "",
   clientId: "",
+  ownerId: "",
   budget: 0,
   dateDebut: "",
   dateFinPrevue: "",

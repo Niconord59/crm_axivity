@@ -29,6 +29,7 @@ import {
 } from "@/lib/schemas/projet";
 import { useClients } from "@/hooks/use-clients";
 import { useCreateProjet, useUpdateProjet } from "@/hooks/use-projets";
+import { useAssignableUsers } from "@/hooks/use-profiles";
 import type { Projet } from "@/types";
 
 interface ProjetFormProps {
@@ -49,25 +50,33 @@ export function ProjetForm({
   trigger,
 }: ProjetFormProps) {
   const { data: clients, isLoading: isLoadingClients } = useClients();
+  const { data: users, isLoading: isLoadingUsers } = useAssignableUsers();
   const createProjet = useCreateProjet();
   const updateProjet = useUpdateProjet();
 
   const isEditing = !!projet;
 
-  const defaultValues: ProjetFormData = projet
+  // Cast projet to include ownerId
+  const projetWithOwner = projet as (Projet & { ownerId?: string }) | undefined;
+
+  const defaultValues: ProjetFormData = projetWithOwner
     ? {
-        briefProjet: projet.briefProjet || "",
-        clientId: projet.client?.[0] || "",
-        budget: projet.budget || 0,
-        dateDebut: projet.dateDebut || "",
-        dateFinPrevue: projet.dateFinPrevue || "",
-        statut: (projet.statut as ProjetFormData["statut"]) || "Cadrage",
-        priorite: (projet.priorite as ProjetFormData["priorite"]) || "Moyenne",
-        notes: projet.notes || "",
+        briefProjet: projetWithOwner.briefProjet || "",
+        clientId: projetWithOwner.client?.[0] || "",
+        ownerId: projetWithOwner.ownerId || "",
+        budget: projetWithOwner.budget || 0,
+        dateDebut: projetWithOwner.dateDebut || "",
+        dateFinPrevue: projetWithOwner.dateFinPrevue || "",
+        statut: (projetWithOwner.statut as ProjetFormData["statut"]) || "Cadrage",
+        priorite: (projetWithOwner.priorite as ProjetFormData["priorite"]) || "Moyenne",
+        notes: projetWithOwner.notes || "",
       }
     : (projetDefaultValues as ProjetFormData);
 
   const handleSubmit = async (data: ProjetFormData) => {
+    // Convertir "__none__" en undefined pour l'ownerId
+    const ownerId = data.ownerId === "__none__" || !data.ownerId ? undefined : data.ownerId;
+
     if (isEditing && projet) {
       await updateProjet.mutateAsync({
         id: projet.id,
@@ -79,6 +88,7 @@ export function ProjetForm({
           statut: data.statut,
           priorite: data.priorite || undefined,
           notes: data.notes || undefined,
+          ownerId: ownerId,
         },
       });
     } else {
@@ -91,6 +101,7 @@ export function ProjetForm({
         statut: data.statut,
         priorite: data.priorite || undefined,
         notes: data.notes || undefined,
+        ownerId: ownerId,
       });
     }
   };
@@ -125,7 +136,9 @@ export function ProjetForm({
         <ProjetFormFields
           form={form}
           clients={clients || []}
+          users={users || []}
           isLoadingClients={isLoadingClients}
+          isLoadingUsers={isLoadingUsers}
           isEditing={isEditing}
         />
       )}
@@ -136,12 +149,16 @@ export function ProjetForm({
 function ProjetFormFields({
   form,
   clients,
+  users,
   isLoadingClients,
+  isLoadingUsers,
   isEditing,
 }: {
   form: UseFormReturn<ProjetFormData>;
   clients: { id: string; nom: string }[];
+  users: { id: string; nom: string; prenom: string | null; email: string }[];
   isLoadingClients: boolean;
+  isLoadingUsers: boolean;
   isEditing: boolean;
 }) {
   return (
@@ -192,6 +209,37 @@ function ProjetFormFields({
           )}
         />
       )}
+
+      {/* Responsable du projet */}
+      <FormField
+        control={form.control}
+        name="ownerId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Responsable</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      isLoadingUsers ? "Chargement..." : "Sélectionner un responsable"
+                    }
+                  />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="__none__">Aucun responsable</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.prenom ? `${user.prenom} ${user.nom}` : user.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         {/* Budget */}

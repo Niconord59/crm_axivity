@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type { Projet, ProjectStatus } from "@/types";
 
 // Mapper Supabase -> Projet type
-function mapToProjet(record: Record<string, unknown>): Projet {
+function mapToProjet(record: Record<string, unknown>): Projet & { ownerId?: string } {
   return {
     id: record.id as string,
     idProjet: record.id_projet as number | undefined,
@@ -22,6 +22,7 @@ function mapToProjet(record: Record<string, unknown>): Projet {
     totalHeuresEstimees: record.heures_estimees as number | undefined,
     totalHeuresPassees: record.heures_passees as number | undefined,
     client: record.client_id ? [record.client_id as string] : undefined,
+    ownerId: record.owner_id as string | undefined,
   };
 }
 
@@ -88,8 +89,8 @@ export function useCreateProjet() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Partial<Projet>) => {
-      const insertData = {
+    mutationFn: async (data: Partial<Projet> & { ownerId?: string }) => {
+      const insertData: Record<string, unknown> = {
         brief: data.briefProjet,
         nom: data.nomProjet || data.briefProjet,
         statut: data.statut || "Cadrage",
@@ -99,6 +100,11 @@ export function useCreateProjet() {
         notes: data.notes,
         client_id: data.client?.[0],
       };
+
+      // Ajouter owner_id si fourni
+      if (data.ownerId) {
+        insertData.owner_id = data.ownerId;
+      }
 
       const { data: record, error } = await supabase
         .from("projets")
@@ -119,7 +125,7 @@ export function useUpdateProjet() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Projet> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Projet> & { ownerId?: string } }) => {
       const updateData: Record<string, unknown> = {};
 
       if (data.briefProjet !== undefined) updateData.brief = data.briefProjet;
@@ -131,6 +137,7 @@ export function useUpdateProjet() {
       if (data.budget !== undefined) updateData.budget_initial = data.budget;
       if (data.notes !== undefined) updateData.notes = data.notes;
       if (data.priorite !== undefined) updateData.priorite = data.priorite;
+      if (data.ownerId !== undefined) updateData.owner_id = data.ownerId || null;
 
       const { data: record, error } = await supabase
         .from("projets")

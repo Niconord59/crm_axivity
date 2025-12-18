@@ -38,7 +38,7 @@ export function useAuth() {
         email: email,
         nom: email.split("@")[0],
         prenom: null,
-        role: "membre" as UserRole,
+        role: "client" as UserRole,
         avatarUrl: null,
       };
     }
@@ -119,9 +119,9 @@ export function useAuth() {
     return hasRole("admin");
   }, [hasRole]);
 
-  // Check if user is admin or manager
+  // Check if user is admin or developpeur
   const isManager = useCallback((): boolean => {
-    return hasRole(["admin", "manager"]);
+    return hasRole(["admin", "developpeur_nocode", "developpeur_automatisme"]);
   }, [hasRole]);
 
   return {
