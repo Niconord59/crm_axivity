@@ -58,20 +58,11 @@ function ProspectionContent() {
   }, [leadIdFromUrl, prospectFromUrl, router]);
   const updateStatus = useUpdateProspectStatus();
 
-  // Filter out qualified/non-qualified/lost prospects by default
+  // "Tous les statuts" = vraiment tous les statuts
   const activeProspects = useMemo(() => {
     if (!prospects) return [];
-    // If no status filter is set, hide completed statuses
-    if (!filters.statut) {
-      return prospects.filter(
-        (p) =>
-          p.statutProspection !== "Qualifié" &&
-          p.statutProspection !== "Non qualifié" &&
-          p.statutProspection !== "Perdu"
-      );
-    }
     return prospects;
-  }, [prospects, filters.statut]);
+  }, [prospects]);
 
   const handleCall = async (prospect: Prospect) => {
     // Copy phone to clipboard

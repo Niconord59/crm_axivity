@@ -142,11 +142,12 @@ export function useProspect(id: string | undefined) {
  * Hook to get prospects with client names (for display)
  */
 export function useProspectsWithClients(filters?: ProspectFilters) {
-  const { data: prospects } = useProspects(filters);
+  const { data: prospects, isLoading: prospectsLoading } = useProspects(filters);
 
   return useQuery({
-    queryKey: ["prospects-with-clients", filters, prospects?.map(p => p.id)],
+    queryKey: ["prospects-with-clients", filters],
     queryFn: async (): Promise<Prospect[]> => {
+      // Return empty array if no prospects (important for filters!)
       if (!prospects || prospects.length === 0) return [];
 
       // Get unique client IDs
@@ -181,8 +182,8 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
           : undefined,
       }));
     },
-    enabled: !!prospects && prospects.length > 0,
-    placeholderData: keepPreviousData,
+    // Enable when prospects query is done (even if empty)
+    enabled: !prospectsLoading && prospects !== undefined,
   });
 }
 
