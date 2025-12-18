@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Bell, Check, AlertTriangle, FileText, FolderKanban, Clock } from "lucide-react";
+import { Bell, Check, AlertTriangle, FileText, FolderKanban, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -27,12 +27,45 @@ interface Notification {
   date?: string;
 }
 
+const DISMISSED_KEY = "crm-notifications-dismissed";
+
 export function NotificationPanel() {
   const [open, setOpen] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const { data: tachesEnRetard } = useTachesEnRetard();
   const { data: facturesImpayees } = useFacturesImpayees();
   const { data: projetsActifs } = useProjetsActifs();
+
+  // Load dismissed notifications from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(DISMISSED_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setDismissedIds(new Set(parsed));
+      } catch {
+        // Invalid data, reset
+        localStorage.removeItem(DISMISSED_KEY);
+      }
+    }
+  }, []);
+
+  // Dismiss a notification
+  const dismissNotification = useCallback((id: string) => {
+    setDismissedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  // Clear all dismissed (reset)
+  const clearDismissed = useCallback(() => {
+    setDismissedIds(new Set());
+    localStorage.removeItem(DISMISSED_KEY);
+  }, []);
 
   // Build notifications from real data
   const notifications: Notification[] = [];
@@ -79,8 +112,13 @@ export function NotificationPanel() {
       });
     });
 
-  const notificationCount = notifications.length;
+  // Filter out dismissed notifications
+  const visibleNotifications = notifications.filter(
+    (n) => !dismissedIds.has(n.id)
+  );
+  const notificationCount = visibleNotifications.length;
   const hasNotifications = notificationCount > 0;
+  const hasDismissed = dismissedIds.size > 0;
 
   const getIcon = (type: Notification["type"]) => {
     switch (type) {
@@ -122,49 +160,80 @@ export function NotificationPanel() {
               <Check className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm font-medium">Tout est à jour</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Aucune notification pour le moment
+                {hasDismissed
+                  ? "Toutes les notifications ont été lues"
+                  : "Aucune notification pour le moment"}
               </p>
+              {hasDismissed && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-xs"
+                  onClick={clearDismissed}
+                >
+                  Restaurer les notifications
+                </Button>
+              )}
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notification) => (
-                <Link
+              {visibleNotifications.map((notification) => (
+                <div
                   key={notification.id}
-                  href={notification.href}
-                  onClick={() => setOpen(false)}
                   className={cn(
-                    "flex gap-3 p-4 hover:bg-muted/50 transition-colors",
+                    "flex gap-3 p-4 hover:bg-muted/50 transition-colors relative group",
                     notification.isUrgent && "bg-destructive/5"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      notification.isUrgent
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-muted text-muted-foreground"
-                    )}
+                  <Link
+                    href={notification.href}
+                    onClick={() => {
+                      dismissNotification(notification.id);
+                      setOpen(false);
+                    }}
+                    className="flex gap-3 flex-1 min-w-0"
                   >
-                    {notification.isUrgent ? (
-                      <AlertTriangle className="h-4 w-4" />
-                    ) : (
-                      getIcon(notification.type)
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {notification.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {notification.description}
-                    </p>
-                    {notification.date && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Échéance: {formatDate(notification.date)}
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                        notification.isUrgent
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {notification.isUrgent ? (
+                        <AlertTriangle className="h-4 w-4" />
+                      ) : (
+                        getIcon(notification.type)
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {notification.title}
                       </p>
-                    )}
-                  </div>
-                </Link>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {notification.description}
+                      </p>
+                      {notification.date && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Échéance: {formatDate(notification.date)}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissNotification(notification.id);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                    <span className="sr-only">Masquer</span>
+                  </Button>
+                </div>
               ))}
             </div>
           )}
