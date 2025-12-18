@@ -65,7 +65,6 @@ export function useProspects(filters?: ProspectFilters) {
         .from("contacts")
         .select("*")
         .not("statut_prospection", "is", null)
-        .neq("statut_prospection", "")
         .order("date_rappel", { ascending: true, nullsFirst: false })
         .order("statut_prospection", { ascending: true });
 
