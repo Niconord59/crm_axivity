@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Upload, Phone as PhoneIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,16 @@ import {
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
+// Wrapper component to handle Suspense boundary for useSearchParams
 export default function ProspectionPage() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <ProspectionContent />
+    </Suspense>
+  );
+}
+
+function ProspectionContent() {
   const [filters, setFilters] = useState<ProspectFilters>({});
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);

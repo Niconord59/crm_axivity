@@ -24,6 +24,14 @@ import {
   ArrowRight,
   Video,
   Loader2,
+  History,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  PhoneCall,
+  Users,
+  TrendingUp,
+  Copy,
 } from "lucide-react";
 import {
   Dialog,
@@ -48,6 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { callResultSchema, type CallResultFormData } from "@/lib/schemas/prospect";
@@ -70,41 +79,80 @@ interface CallResultDialogProps {
 
 // Options pour un appel classique (avant RDV)
 const CALL_RESULTS = [
-  { value: "Appelé - pas répondu", label: "Pas répondu", description: "Le contact n'a pas décroché" },
-  { value: "Rappeler", label: "Rappeler", description: "Planifier un rappel" },
-  { value: "RDV planifié", label: "RDV planifié", description: "Un rendez-vous a été programmé" },
-  { value: "Qualifié", label: "Qualifié", description: "Le lead est qualifié, créer une opportunité" },
-  { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas" },
-  { value: "Perdu", label: "Perdu", description: "Le lead n'est plus intéressé" },
+  { value: "Appelé - pas répondu", label: "Pas répondu", description: "Le contact n'a pas décroché", icon: PhoneCall, color: "text-slate-500" },
+  { value: "Rappeler", label: "Rappeler", description: "Planifier un rappel", icon: Clock, color: "text-orange-500" },
+  { value: "RDV planifié", label: "RDV planifié", description: "Un rendez-vous a été programmé", icon: CalendarIcon, color: "text-violet-500" },
+  { value: "Qualifié", label: "Qualifié", description: "Le lead est qualifié, créer une opportunité", icon: CheckCircle2, color: "text-emerald-500" },
+  { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas", icon: AlertCircle, color: "text-amber-500" },
+  { value: "Perdu", label: "Perdu", description: "Le lead n'est plus intéressé", icon: XCircle, color: "text-red-500" },
 ] as const;
 
 // Options pour le résultat d'un RDV (quand statut = "RDV planifié")
 const RDV_RESULTS = [
-  { value: "RDV effectué", label: "RDV effectué", description: "Le rendez-vous a eu lieu" },
-  { value: "Reporter", label: "Reporter le RDV", description: "Décaler le rendez-vous à une autre date" },
-  { value: "Qualifié", label: "Qualifié", description: "Lead qualifié suite au RDV, créer une opportunité" },
-  { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas à nos critères" },
-  { value: "Perdu", label: "Perdu", description: "Le prospect n'est plus intéressé" },
+  { value: "RDV effectué", label: "RDV effectué", description: "Le rendez-vous a eu lieu", icon: CheckCircle2, color: "text-indigo-500" },
+  { value: "Reporter", label: "Reporter le RDV", description: "Décaler le rendez-vous à une autre date", icon: Clock, color: "text-orange-500" },
+  { value: "Qualifié", label: "Qualifié", description: "Lead qualifié suite au RDV, créer une opportunité", icon: Target, color: "text-emerald-500" },
+  { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas à nos critères", icon: AlertCircle, color: "text-amber-500" },
+  { value: "Perdu", label: "Perdu", description: "Le prospect n'est plus intéressé", icon: XCircle, color: "text-red-500" },
 ] as const;
 
-function InfoRow({
+// Configuration des couleurs par statut (cohérent avec LeadCard)
+function getStatusConfig(status: string | undefined) {
+  switch (status) {
+    case "À appeler":
+      return { badge: "bg-blue-100 text-blue-800 border-blue-200", avatar: "bg-blue-100 text-blue-700" };
+    case "Appelé - pas répondu":
+      return { badge: "bg-slate-100 text-slate-700 border-slate-200", avatar: "bg-slate-100 text-slate-600" };
+    case "Rappeler":
+      return { badge: "bg-orange-100 text-orange-800 border-orange-200", avatar: "bg-orange-100 text-orange-700" };
+    case "RDV planifié":
+      return { badge: "bg-violet-100 text-violet-800 border-violet-200", avatar: "bg-violet-100 text-violet-700" };
+    case "RDV effectué":
+      return { badge: "bg-indigo-100 text-indigo-800 border-indigo-200", avatar: "bg-indigo-100 text-indigo-700" };
+    case "Qualifié":
+      return { badge: "bg-emerald-100 text-emerald-800 border-emerald-200", avatar: "bg-emerald-100 text-emerald-700" };
+    case "Non qualifié":
+      return { badge: "bg-amber-100 text-amber-800 border-amber-200", avatar: "bg-amber-100 text-amber-700" };
+    case "Perdu":
+      return { badge: "bg-red-100 text-red-800 border-red-200", avatar: "bg-red-100 text-red-700" };
+    case "Prospect":
+    case "Actif":
+      return { badge: "bg-green-100 text-green-800 border-green-200", avatar: "bg-green-100 text-green-700" };
+    case "Inactif":
+    case "Churned":
+      return { badge: "bg-gray-100 text-gray-700 border-gray-200", avatar: "bg-gray-100 text-gray-600" };
+    default:
+      return { badge: "bg-gray-100 text-gray-700 border-gray-200", avatar: "bg-gray-100 text-gray-600" };
+  }
+}
+
+function InfoCard({
   icon: Icon,
   label,
   value,
   href,
+  copyable,
 }: {
   icon: React.ElementType;
   label: string;
   value?: string | null;
   href?: string;
+  copyable?: boolean;
 }) {
   if (!value) return null;
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value);
+    toast.success("Copié dans le presse-papier");
+  };
+
   return (
-    <div className="flex items-start gap-3 py-2">
-      <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+    <div className="group flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+      <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center shrink-0 shadow-sm">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground font-medium">{label}</p>
         {href ? (
           <a
             href={href}
@@ -112,39 +160,46 @@ function InfoRow({
             rel="noopener noreferrer"
             className="text-sm text-primary hover:underline flex items-center gap-1"
           >
-            {value}
-            <ExternalLink className="h-3 w-3" />
+            <span className="truncate">{value}</span>
+            <ExternalLink className="h-3 w-3 shrink-0" />
           </a>
         ) : (
-          <p className="text-sm break-words">{value}</p>
+          <p className="text-sm font-medium truncate">{value}</p>
         )}
       </div>
+      {copyable && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={handleCopy}
+        >
+          <Copy className="h-3 w-3" />
+        </Button>
+      )}
     </div>
   );
 }
 
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-
-  const colorMap: Record<string, string> = {
-    "À appeler": "bg-blue-100 text-blue-800",
-    "Appelé - pas répondu": "bg-yellow-100 text-yellow-800",
-    "Rappeler": "bg-orange-100 text-orange-800",
-    "RDV planifié": "bg-purple-100 text-purple-800",
-    "RDV effectué": "bg-indigo-100 text-indigo-800",
-    "Qualifié": "bg-green-100 text-green-800",
-    "Non qualifié": "bg-gray-100 text-gray-800",
-    "Perdu": "bg-red-100 text-red-800",
-    "Prospect": "bg-blue-100 text-blue-800",
-    "Actif": "bg-green-100 text-green-800",
-    "Inactif": "bg-gray-100 text-gray-800",
-    "Churned": "bg-red-100 text-red-800",
-  };
-
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color = "text-primary",
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  color?: string;
+}) {
   return (
-    <Badge className={cn("font-normal", colorMap[status] || "bg-gray-100 text-gray-800")}>
-      {status}
-    </Badge>
+    <div className="text-center p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-xl border">
+      <div className={cn("flex items-center justify-center mb-2", color)}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
   );
 }
 
@@ -202,7 +257,6 @@ export function CallResultDialog({
   const showInteractionCheckbox = selectedResult !== "RDV planifié" && selectedResult !== "Reporter";
 
   // Auto-uncheck interaction creation for "RDV planifié" (details are in calendar)
-  // Auto-check interaction creation for "Reporter" (we'll create it automatically)
   useEffect(() => {
     if (selectedResult === "RDV planifié" || selectedResult === "Reporter") {
       form.setValue("creerInteraction", false);
@@ -216,14 +270,12 @@ export function CallResultDialog({
     try {
       // Special handling for "Reporter" - keep status as "RDV planifié" but update date
       if (data.resultat === "Reporter") {
-        // Update only the RDV date, keeping status as "RDV planifié"
         await updateStatus.mutateAsync({
           id: prospect.id,
           statut: "RDV planifié",
-          dateRdvPrevu: data.dateRappel, // Use the new date for the RDV
+          dateRdvPrevu: data.dateRappel,
         });
 
-        // Create interaction to record the rescheduling
         if (prospect.client?.[0]) {
           const newDate = data.dateRappel ? format(new Date(data.dateRappel), "PPP 'à' HH:mm", { locale: fr }) : "";
           await createInteraction.mutateAsync({
@@ -250,7 +302,6 @@ export function CallResultDialog({
         id: prospect.id,
         statut: data.resultat,
         dateRappel: data.resultat === "Rappeler" ? data.dateRappel : undefined,
-        // Clear dateRdvPrevu if RDV is done or lead is qualified/lost
         dateRdvPrevu: ["RDV effectué", "Qualifié", "Non qualifié", "Perdu"].includes(data.resultat)
           ? undefined
           : undefined,
@@ -261,19 +312,14 @@ export function CallResultDialog({
 
       // 2. Create interaction if checked
       if (data.creerInteraction && prospect.client?.[0]) {
-        // Use specific messages for certain statuses
         const now = format(new Date(), "dd/MM/yyyy 'à' HH:mm", { locale: fr });
         let interactionResume: string;
         if (data.resultat === "RDV planifié") {
           interactionResume = "RDV planifié - voir Google Calendar pour les détails";
         } else if (data.resultat === "Appelé - pas répondu") {
           const parts = [`Tentative d'appel le ${now} - pas de réponse`];
-          if (leftVoicemail) {
-            parts.push("Message vocal laissé");
-          }
-          if (emailSent) {
-            parts.push("Email de suivi envoyé");
-          }
+          if (leftVoicemail) parts.push("Message vocal laissé");
+          if (emailSent) parts.push("Email de suivi envoyé");
           interactionResume = parts.join(". ");
         } else {
           interactionResume = data.notes || `Résultat: ${data.resultat}`;
@@ -282,7 +328,7 @@ export function CallResultDialog({
         await createInteraction.mutateAsync({
           objet: isRdvContext ? `RDV - ${data.resultat}` : `Appel prospection - ${data.resultat}`,
           type: isRdvContext ? "Réunion" : "Appel",
-          date: new Date().toISOString(), // Full ISO with time
+          date: new Date().toISOString(),
           resume: interactionResume,
           contact: [prospect.id],
           client: prospect.client,
@@ -293,11 +339,9 @@ export function CallResultDialog({
         description: `Statut mis à jour: ${data.resultat}`,
       });
 
-      // Reset form and close
       form.reset();
       onOpenChange(false);
 
-      // If qualified, suggest creating opportunity
       if (data.resultat === "Qualifié") {
         toast.info("Lead qualifié !", {
           description: "Pensez à créer une opportunité pour ce lead.",
@@ -321,7 +365,6 @@ export function CallResultDialog({
     onOpenChange(false);
   };
 
-  // Save live notes during meeting
   const handleSaveLiveNotes = async () => {
     if (!prospect || !liveNotes.trim()) return;
 
@@ -334,7 +377,7 @@ export function CallResultDialog({
 
       await updateStatus.mutateAsync({
         id: prospect.id,
-        statut: "RDV planifié", // Keep status unchanged
+        statut: "RDV planifié",
         notes: newNotes,
       });
 
@@ -354,77 +397,143 @@ export function CallResultDialog({
     ? `${prospect.prenom} ${prospect.nom}`
     : prospect.nom;
 
+  const initials = prospect.prenom
+    ? `${prospect.prenom[0]}${prospect.nom[0]}`
+    : prospect.nom.slice(0, 2);
+
+  const statusConfig = getStatusConfig(prospect.statutProspection);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="sm:max-w-[700px] max-h-[90vh]"
+        className="sm:max-w-[750px] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            {fullName}
-          </DialogTitle>
-          <DialogDescription className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            {prospect.clientNom || "Entreprise inconnue"}
-            {prospect.telephone && (
-              <>
-                <span className="mx-2">•</span>
-                <span className="text-primary font-medium">{prospect.telephone}</span>
-              </>
-            )}
-          </DialogDescription>
-        </DialogHeader>
+        {/* Header amélioré - fixe */}
+        <div className="shrink-0 p-6 pb-4 pr-14 border-b bg-gradient-to-r from-muted/30 to-transparent">
+          <div className="flex items-start gap-4">
+            <Avatar className={cn("h-14 w-14 shrink-0 ring-2 ring-background shadow-lg", statusConfig.avatar)}>
+              <AvatarFallback className={cn("text-lg font-bold", statusConfig.avatar)}>
+                {initials.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <DialogTitle className="text-xl font-bold">{fullName}</DialogTitle>
+                <Badge variant="outline" className={cn("shrink-0", statusConfig.badge)}>
+                  {prospect.statutProspection || "N/A"}
+                </Badge>
+              </div>
+              <DialogDescription className="flex items-center gap-2 mt-1">
+                <Building2 className="h-4 w-4" />
+                <span>{prospect.clientNom || "Entreprise inconnue"}</span>
+              </DialogDescription>
+              {/* Contact rapide */}
+              <div className="flex items-center gap-4 mt-3">
+                {prospect.telephone && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(prospect.telephone!);
+                      toast.success("Numéro copié");
+                    }}
+                  >
+                    <Phone className="h-3 w-3 mr-1.5" />
+                    {prospect.telephone}
+                  </Button>
+                )}
+                {prospect.email && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground"
+                    onClick={() => {
+                      navigator.clipboard.writeText(prospect.email!);
+                      toast.success("Email copié");
+                    }}
+                  >
+                    <Mail className="h-3 w-3 mr-1.5" />
+                    <span className="truncate max-w-[150px]">{prospect.email}</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
 
-        {/* Progress Stepper */}
-        <ProspectProgressStepper currentStatus={prospect.statutProspection} className="py-2" />
+          {/* Progress Stepper */}
+          <ProspectProgressStepper currentStatus={prospect.statutProspection} className="mt-4" />
+        </div>
 
-        <Tabs defaultValue={isVisioRdv ? "meeting" : "lead"} className="w-full">
-          <TabsList className={cn(
-            "grid w-full",
-            isVisioRdv ? "grid-cols-5" : isRdvContext ? "grid-cols-4" : "grid-cols-5"
-          )}>
-            <TabsTrigger value="lead">Lead</TabsTrigger>
-            <TabsTrigger value="company">Entreprise</TabsTrigger>
-            <TabsTrigger value="history">Historique</TabsTrigger>
-            {!isRdvContext && <TabsTrigger value="agenda">Agenda</TabsTrigger>}
-            {isVisioRdv && <TabsTrigger value="meeting">RDV en cours</TabsTrigger>}
-            <TabsTrigger value="call">{isRdvContext ? "Résultat RDV" : "Résultat"}</TabsTrigger>
-          </TabsList>
+        {/* Tabs avec icônes - flex pour remplir l'espace */}
+        <Tabs defaultValue={isVisioRdv ? "meeting" : "lead"} className="flex-1 flex flex-col min-h-0">
+          <div className="shrink-0 px-6 pt-2 border-b">
+            <TabsList className={cn(
+              "grid w-full h-10",
+              isVisioRdv ? "grid-cols-5" : isRdvContext ? "grid-cols-4" : "grid-cols-5"
+            )}>
+              <TabsTrigger value="lead" className="text-xs gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Lead</span>
+              </TabsTrigger>
+              <TabsTrigger value="company" className="text-xs gap-1.5">
+                <Building2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Entreprise</span>
+              </TabsTrigger>
+              <TabsTrigger value="history" className="text-xs gap-1.5">
+                <History className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Historique</span>
+              </TabsTrigger>
+              {!isRdvContext && (
+                <TabsTrigger value="agenda" className="text-xs gap-1.5">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Agenda</span>
+                </TabsTrigger>
+              )}
+              {isVisioRdv && (
+                <TabsTrigger value="meeting" className="text-xs gap-1.5">
+                  <Video className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">RDV</span>
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="call" className="text-xs gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{isRdvContext ? "Résultat" : "Résultat"}</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Lead Info Tab */}
-          <TabsContent value="lead" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg">{fullName}</h3>
-                  <StatusBadge status={prospect.statutProspection} />
-                </div>
+          <TabsContent value="lead" className="mt-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-6">
+              <div className="space-y-3">
+                <InfoCard icon={User} label="Nom complet" value={fullName} />
+                <InfoCard icon={Briefcase} label="Poste" value={prospect.poste} />
 
-                <InfoRow icon={User} label="Nom complet" value={fullName} />
-                <InfoRow icon={Briefcase} label="Poste" value={prospect.poste} />
-                <Separator className="my-2" />
+                <Separator className="my-4" />
 
-                <InfoRow icon={Phone} label="Téléphone" value={prospect.telephone} />
-                <InfoRow
+                <InfoCard icon={Phone} label="Téléphone" value={prospect.telephone} copyable />
+                <InfoCard
                   icon={Mail}
                   label="Email"
                   value={prospect.email}
                   href={prospect.email ? `mailto:${prospect.email}` : undefined}
+                  copyable
                 />
-                <InfoRow
+                <InfoCard
                   icon={Linkedin}
                   label="LinkedIn"
                   value={prospect.linkedin ? "Voir le profil" : undefined}
                   href={prospect.linkedin}
                 />
-                <Separator className="my-2" />
 
-                <InfoRow icon={MapPin} label="Source" value={prospect.sourceLead} />
+                <Separator className="my-4" />
+
+                <InfoCard icon={MapPin} label="Source" value={prospect.sourceLead} />
                 {prospect.dateRappel && (
-                  <InfoRow
+                  <InfoCard
                     icon={CalendarIcon}
                     label="Date de rappel"
                     value={format(new Date(prospect.dateRappel), "PPP", { locale: fr })}
@@ -433,29 +542,14 @@ export function CallResultDialog({
 
                 {prospect.notesProspection && (
                   <>
-                    <Separator className="my-2" />
-                    <div className="pt-2">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                    <Separator className="my-4" />
+                    <div className="p-4 bg-muted/30 rounded-xl border">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-3">
                         <FileText className="h-4 w-4" />
-                        <span className="text-xs">Notes de prospection</span>
+                        <span className="text-sm font-medium">Notes de prospection</span>
                       </div>
-                      <div className="bg-muted/50 rounded-md p-3 text-sm whitespace-pre-wrap">
+                      <div className="text-sm whitespace-pre-wrap leading-relaxed">
                         {prospect.notesProspection}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {prospect.notes && (
-                  <>
-                    <Separator className="my-2" />
-                    <div className="pt-2">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                        <FileText className="h-4 w-4" />
-                        <span className="text-xs">Notes générales</span>
-                      </div>
-                      <div className="bg-muted/50 rounded-md p-3 text-sm whitespace-pre-wrap">
-                        {prospect.notes}
                       </div>
                     </div>
                   </>
@@ -465,38 +559,48 @@ export function CallResultDialog({
           </TabsContent>
 
           {/* Company Info Tab */}
-          <TabsContent value="company" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
+          <TabsContent value="company" className="mt-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-6">
               {clientLoading ? (
-                <div className="flex items-center justify-center h-32 text-muted-foreground">
-                  Chargement...
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : client ? (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-lg">{client.nom}</h3>
-                    <StatusBadge status={client.statut} />
+                <div className="space-y-3">
+                  {/* Header entreprise */}
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-xl border">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Building2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">{client.nom}</h3>
+                      {client.secteurActivite && (
+                        <p className="text-sm text-muted-foreground">{client.secteurActivite}</p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className={getStatusConfig(client.statut).badge}>
+                      {client.statut || "Prospect"}
+                    </Badge>
                   </div>
 
-                  <InfoRow icon={Building2} label="Nom" value={client.nom} />
-                  <InfoRow icon={FileText} label="SIRET" value={client.siret} />
-                  <InfoRow icon={Briefcase} label="Secteur d'activité" value={client.secteurActivite} />
-                  <InfoRow
+                  <InfoCard icon={FileText} label="SIRET" value={client.siret} copyable />
+                  <InfoCard
                     icon={Globe}
                     label="Site web"
                     value={client.siteWeb}
                     href={client.siteWeb?.startsWith("http") ? client.siteWeb : `https://${client.siteWeb}`}
                   />
-                  <Separator className="my-2" />
 
                   {/* Adresse */}
                   {(client.adresse || client.ville) && (
-                    <>
-                      <div className="flex items-start gap-3 py-2">
-                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-muted-foreground">Adresse</p>
-                          <p className="text-sm">
+                    <div className="p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center shrink-0 shadow-sm">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground font-medium">Adresse</p>
+                          <p className="text-sm font-medium">
                             {client.adresse && <span>{client.adresse}<br /></span>}
                             {client.codePostal && <span>{client.codePostal} </span>}
                             {client.ville && <span>{client.ville}</span>}
@@ -504,150 +608,165 @@ export function CallResultDialog({
                           </p>
                         </div>
                       </div>
-                      <Separator className="my-2" />
-                    </>
-                  )}
-
-                  {client.caTotal !== undefined && client.caTotal > 0 && (
-                    <InfoRow
-                      icon={FileText}
-                      label="CA Total"
-                      value={new Intl.NumberFormat("fr-FR", {
-                        style: "currency",
-                        currency: "EUR",
-                      }).format(client.caTotal)}
-                    />
-                  )}
-
-                  <InfoRow icon={Clock} label="Santé client" value={client.santeClient} />
-
-                  {client.dateCreation && (
-                    <InfoRow
-                      icon={CalendarIcon}
-                      label="Client depuis"
-                      value={format(new Date(client.dateCreation), "PPP", { locale: fr })}
-                    />
-                  )}
-
-                  {client.notes && (
-                    <>
-                      <Separator className="my-2" />
-                      <div className="pt-2">
-                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                          <FileText className="h-4 w-4" />
-                          <span className="text-xs">Notes entreprise</span>
-                        </div>
-                        <div className="bg-muted/50 rounded-md p-3 text-sm whitespace-pre-wrap">
-                          {client.notes}
-                        </div>
-                      </div>
-                    </>
+                    </div>
                   )}
 
                   {/* Stats */}
-                  <Separator className="my-2" />
-                  <div className="grid grid-cols-3 gap-4 pt-2">
-                    <div className="text-center p-3 bg-muted/50 rounded-md">
-                      <p className="text-2xl font-bold">{client.contacts?.length || 0}</p>
-                      <p className="text-xs text-muted-foreground">Contacts</p>
-                    </div>
-                    <div className="text-center p-3 bg-muted/50 rounded-md">
-                      <p className="text-2xl font-bold">{client.projets?.length || 0}</p>
-                      <p className="text-xs text-muted-foreground">Projets</p>
-                    </div>
-                    <div className="text-center p-3 bg-muted/50 rounded-md">
-                      <p className="text-2xl font-bold">{client.opportunites?.length || 0}</p>
-                      <p className="text-xs text-muted-foreground">Opportunités</p>
-                    </div>
+                  <Separator className="my-4" />
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatCard
+                      icon={Users}
+                      label="Contacts"
+                      value={client.contacts?.length || 0}
+                      color="text-blue-500"
+                    />
+                    <StatCard
+                      icon={Briefcase}
+                      label="Projets"
+                      value={client.projets?.length || 0}
+                      color="text-emerald-500"
+                    />
+                    <StatCard
+                      icon={Target}
+                      label="Opportunités"
+                      value={client.opportunites?.length || 0}
+                      color="text-violet-500"
+                    />
                   </div>
+
+                  {client.caTotal !== undefined && client.caTotal > 0 && (
+                    <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <TrendingUp className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 font-medium">CA Total</p>
+                          <p className="text-xl font-bold text-emerald-700">
+                            {new Intl.NumberFormat("fr-FR", {
+                              style: "currency",
+                              currency: "EUR",
+                            }).format(client.caTotal)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                  <Building2 className="h-8 w-8 mb-2 opacity-50" />
-                  <p>Aucune entreprise liée</p>
+                  <Building2 className="h-10 w-10 mb-3 opacity-30" />
+                  <p className="font-medium">Aucune entreprise liée</p>
+                  <p className="text-xs mt-1">Ce lead n&apos;est pas rattaché à un client</p>
                 </div>
               )}
             </ScrollArea>
           </TabsContent>
 
           {/* Interaction History Tab */}
-          <TabsContent value="history" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
+          <TabsContent value="history" className="mt-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-6">
               {interactionsLoading ? (
-                <div className="flex items-center justify-center h-32 text-muted-foreground">
-                  Chargement...
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : interactions && interactions.length > 0 ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {interactions.length} interaction{interactions.length > 1 ? "s" : ""} enregistrée{interactions.length > 1 ? "s" : ""}
-                  </p>
-                  {interactions.map((interaction) => {
-                    const isEmail = interaction.type === "Email";
-                    const iconClass = isEmail ? "text-blue-500" : "text-muted-foreground";
-                    const borderClass = isEmail ? "border-blue-200 bg-blue-50/30" : "";
-                    const badgeClass = isEmail ? "bg-blue-100 text-blue-700 border-blue-200" : "";
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm font-medium">
+                      {interactions.length} interaction{interactions.length > 1 ? "s" : ""}
+                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      <History className="h-3 w-3 mr-1" />
+                      Historique
+                    </Badge>
+                  </div>
 
-                    return (
-                      <div
-                        key={interaction.id}
-                        className={cn("border rounded-lg p-4 space-y-2", borderClass)}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            {isEmail ? (
-                              <Mail className={cn("h-4 w-4", iconClass)} />
-                            ) : (
-                              <MessageSquare className={cn("h-4 w-4", iconClass)} />
-                            )}
-                            <span className="font-medium">{interaction.objet}</span>
-                          </div>
-                          <Badge variant="outline" className={cn("shrink-0", badgeClass)}>
-                            {interaction.type}
-                          </Badge>
-                        </div>
+                  {/* Timeline */}
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
 
-                        {interaction.date && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
-                          </p>
-                        )}
+                    {interactions.map((interaction, index) => {
+                      const isEmail = interaction.type === "Email";
+                      const isCall = interaction.type === "Appel";
+                      const isMeeting = interaction.type === "Réunion";
 
-                        {interaction.resume && (
+                      const iconBg = isEmail
+                        ? "bg-blue-100 text-blue-600"
+                        : isCall
+                        ? "bg-orange-100 text-orange-600"
+                        : isMeeting
+                        ? "bg-violet-100 text-violet-600"
+                        : "bg-gray-100 text-gray-600";
+
+                      return (
+                        <div key={interaction.id} className="relative pl-10 pb-6 last:pb-0">
+                          {/* Timeline dot */}
                           <div className={cn(
-                            "text-sm rounded p-3 whitespace-pre-wrap",
-                            isEmail
-                              ? "bg-white border border-blue-100 text-foreground"
-                              : "bg-muted/50 text-muted-foreground"
+                            "absolute left-0 top-0 h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-background",
+                            iconBg
                           )}>
-                            {interaction.resume}
+                            {isEmail ? (
+                              <Mail className="h-4 w-4" />
+                            ) : isCall ? (
+                              <Phone className="h-4 w-4" />
+                            ) : isMeeting ? (
+                              <Video className="h-4 w-4" />
+                            ) : (
+                              <MessageSquare className="h-4 w-4" />
+                            )}
                           </div>
-                        )}
 
-                        {interaction.prochaineTache && (
-                          <p className="text-sm text-primary">
-                            → Prochaine action: {interaction.prochaineTache}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                          <div className={cn(
+                            "p-4 rounded-xl border transition-colors",
+                            isEmail ? "bg-blue-50/50 border-blue-200" : "bg-muted/30"
+                          )}>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <span className="font-medium text-sm">{interaction.objet}</span>
+                              <Badge variant="outline" className="text-[10px] shrink-0">
+                                {interaction.type}
+                              </Badge>
+                            </div>
+
+                            {interaction.date && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
+                              </p>
+                            )}
+
+                            {interaction.resume && (
+                              <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-background/50 rounded-lg p-3 border">
+                                {interaction.resume}
+                              </div>
+                            )}
+
+                            {interaction.prochaineTache && (
+                              <p className="text-sm text-primary mt-2 flex items-center gap-1">
+                                <ArrowRight className="h-3 w-3" />
+                                {interaction.prochaineTache}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                  <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-                  <p>Aucune interaction enregistrée</p>
-                  <p className="text-xs mt-1">Les appels seront enregistrés ici</p>
+                  <MessageSquare className="h-10 w-10 mb-3 opacity-30" />
+                  <p className="font-medium">Aucune interaction</p>
+                  <p className="text-xs mt-1">Les appels et emails seront enregistrés ici</p>
                 </div>
               )}
             </ScrollArea>
           </TabsContent>
 
-          {/* Agenda Tab - hidden when in RDV context (prospect already has a meeting planned) */}
+          {/* Agenda Tab */}
           {!isRdvContext && (
-            <TabsContent value="agenda" className="mt-4">
-              <div className="h-[400px]">
+            <TabsContent value="agenda" className="mt-0 flex-1 overflow-hidden p-6">
+              <div className="h-full">
                 <AgendaTab
                   prospect={{
                     id: prospect.id,
@@ -664,28 +783,30 @@ export function CallResultDialog({
             </TabsContent>
           )}
 
-          {/* Live Meeting Tab - only for visio RDV */}
+          {/* Live Meeting Tab */}
           {isVisioRdv && (
-            <TabsContent value="meeting" className="mt-4">
-              <div className="h-[400px] flex flex-col">
+            <TabsContent value="meeting" className="mt-0 flex-1 overflow-hidden p-6">
+              <div className="h-full flex flex-col">
                 {/* Meeting Info Header */}
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+                <div className="bg-gradient-to-r from-violet-50 to-transparent border border-violet-200 rounded-xl p-4 mb-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <Video className="h-5 w-5 text-primary" />
-                        RDV Visio en cours
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {prospect.dateRdvPrevu
-                          ? format(new Date(prospect.dateRdvPrevu), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })
-                          : "Date non définie"}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center">
+                        <Video className="h-6 w-6 text-violet-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-violet-900">RDV Visio en cours</h3>
+                        <p className="text-sm text-violet-600">
+                          {prospect.dateRdvPrevu
+                            ? format(new Date(prospect.dateRdvPrevu), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })
+                            : "Date non définie"}
+                        </p>
+                      </div>
                     </div>
                     {prospect.lienVisio && (
                       <Button
                         onClick={() => window.open(prospect.lienVisio, "_blank")}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-green-600 hover:bg-green-700 shadow-lg"
                       >
                         <Video className="h-4 w-4 mr-2" />
                         Rejoindre
@@ -694,12 +815,12 @@ export function CallResultDialog({
                   </div>
                   {prospect.lienVisio && (
                     <div className="mt-3 flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Lien Meet :</span>
+                      <span className="text-violet-600">Lien :</span>
                       <a
                         href={prospect.lienVisio}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline flex items-center gap-1"
+                        className="text-violet-700 hover:underline flex items-center gap-1 font-medium"
                       >
                         {prospect.lienVisio}
                         <ExternalLink className="h-3 w-3" />
@@ -710,7 +831,7 @@ export function CallResultDialog({
 
                 {/* Live Notes Section */}
                 <div className="flex-1 flex flex-col">
-                  <Label className="flex items-center gap-2 mb-2">
+                  <Label className="flex items-center gap-2 mb-2 font-medium">
                     <FileText className="h-4 w-4" />
                     Prise de notes en direct
                   </Label>
@@ -718,7 +839,7 @@ export function CallResultDialog({
                     placeholder="Prenez des notes pendant le RDV..."
                     value={liveNotes}
                     onChange={(e) => setLiveNotes(e.target.value)}
-                    className="flex-1 min-h-[180px] resize-none"
+                    className="flex-1 min-h-[150px] resize-none"
                   />
                   <div className="flex justify-between items-center mt-3">
                     <p className="text-xs text-muted-foreground">
@@ -730,67 +851,66 @@ export function CallResultDialog({
                       size="sm"
                     >
                       {isSavingNotes && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      Sauvegarder les notes
+                      Sauvegarder
                     </Button>
                   </div>
-                </div>
-
-                {/* Quick action to go to results */}
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    RDV terminé ? Rendez-vous dans l&apos;onglet &quot;Résultat RDV&quot; pour enregistrer le résultat.
-                  </p>
                 </div>
               </div>
             </TabsContent>
           )}
 
           {/* Call Result Tab */}
-          <TabsContent value="call" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
+          <TabsContent value="call" className="mt-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-6">
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 {/* Result selection */}
                 <div className="space-y-3">
-                  <Label>{isRdvContext ? "Résultat du RDV *" : "Résultat de l'appel *"}</Label>
+                  <Label className="text-sm font-medium">
+                    {isRdvContext ? "Résultat du RDV" : "Résultat de l'appel"}
+                  </Label>
                   <RadioGroup
                     value={selectedResult ?? ""}
                     onValueChange={(value) => form.setValue("resultat", value as CallResultFormData["resultat"])}
-                    className="space-y-2"
+                    className="grid grid-cols-2 gap-2"
                   >
-                    {resultOptions.map((result) => (
-                      <label
-                        key={result.value}
-                        htmlFor={result.value}
-                        className={cn(
-                          "flex items-start space-x-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                          selectedResult === result.value
-                            ? "border-primary bg-primary/5"
-                            : "hover:bg-muted/50"
-                        )}
-                      >
-                        <RadioGroupItem value={result.value} id={result.value} className="mt-0.5" />
-                        <div className="flex-1">
-                          <span className="font-medium">
-                            {result.label}
-                          </span>
-                          <p className="text-sm text-muted-foreground">
-                            {result.description}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
+                    {resultOptions.map((result) => {
+                      const Icon = result.icon;
+                      return (
+                        <label
+                          key={result.value}
+                          htmlFor={result.value}
+                          className={cn(
+                            "relative flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all",
+                            selectedResult === result.value
+                              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                              : "hover:bg-muted/50 hover:border-muted-foreground/20"
+                          )}
+                        >
+                          <RadioGroupItem value={result.value} id={result.value} className="mt-0.5 sr-only" />
+                          <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                            selectedResult === result.value ? "bg-primary/10" : "bg-muted"
+                          )}>
+                            <Icon className={cn("h-4 w-4", result.color)} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm block">{result.label}</span>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{result.description}</p>
+                          </div>
+                          {selectedResult === result.value && (
+                            <CheckCircle2 className="h-5 w-5 text-primary absolute top-3 right-3" />
+                          )}
+                        </label>
+                      );
+                    })}
                   </RadioGroup>
                   {form.formState.errors.resultat && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.resultat.message}
-                    </p>
+                    <p className="text-sm text-destructive">{form.formState.errors.resultat.message}</p>
                   )}
                 </div>
 
                 {/* Options spéciales pour "Pas répondu" */}
                 {selectedResult === "Appelé - pas répondu" && (
-                  <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
-                    {/* Voicemail checkbox */}
+                  <div className="space-y-4 p-4 bg-muted/30 rounded-xl border">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
@@ -798,20 +918,14 @@ export function CallResultDialog({
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Message vocal laissé</Label>
-                          <p className="text-xs text-muted-foreground">
-                            J&apos;ai laissé un message sur la boîte vocale
-                          </p>
+                          <p className="text-xs text-muted-foreground">J&apos;ai laissé un message sur la boîte vocale</p>
                         </div>
                       </div>
-                      <Switch
-                        checked={leftVoicemail}
-                        onCheckedChange={setLeftVoicemail}
-                      />
+                      <Switch checked={leftVoicemail} onCheckedChange={setLeftVoicemail} />
                     </div>
 
                     <Separator />
 
-                    {/* Email toggle */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -819,9 +933,7 @@ export function CallResultDialog({
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Envoyer un email de suivi</Label>
-                          <p className="text-xs text-muted-foreground">
-                            Envoyer un email au prospect depuis votre Gmail
-                          </p>
+                          <p className="text-xs text-muted-foreground">Envoyer un email au prospect</p>
                         </div>
                       </div>
                       <Switch
@@ -833,12 +945,11 @@ export function CallResultDialog({
 
                     {!prospect?.email && (
                       <p className="text-xs text-amber-600 flex items-center gap-1 ml-11">
-                        <Mail className="h-3 w-3" />
+                        <AlertCircle className="h-3 w-3" />
                         Aucun email renseigné pour ce contact
                       </p>
                     )}
 
-                    {/* Email Composer */}
                     {wantToSendEmail && prospect?.email && (
                       <EmailComposer
                         prospectEmail={prospect.email}
@@ -847,19 +958,9 @@ export function CallResultDialog({
                         entreprise={prospect.clientNom}
                         leftVoicemail={leftVoicemail}
                         onEmailSent={(emailData) => {
-                          // Marquer l'email comme envoyé (pour l'affichage du résumé)
                           setEmailSent(true);
-
-                          // Créer l'interaction email dans l'historique
                           if (prospect?.client?.[0]) {
-                            const emailContent = `📧 OBJET: ${emailData.subject}
-
-📬 DESTINATAIRE: ${emailData.to}
-
-📝 CONTENU:
-${emailData.body}`;
-
-                            // Utiliser mutate (fire and forget) pour ne pas bloquer l'UI
+                            const emailContent = `OBJET: ${emailData.subject}\n\nDESTINATAIRE: ${emailData.to}\n\nCONTENU:\n${emailData.body}`;
                             createInteraction.mutate({
                               objet: `Email: ${emailData.subject}`,
                               type: "Email",
@@ -877,16 +978,13 @@ ${emailData.body}`;
                   </div>
                 )}
 
-                {/* Date and time picker for "Rappeler" or "Reporter" */}
+                {/* Date picker */}
                 {showDatePicker && (
                   <div className="space-y-2">
-                    <Label>
-                      {selectedResult === "Reporter"
-                        ? "Nouvelle date et heure du RDV *"
-                        : "Date et heure de rappel *"}
+                    <Label className="text-sm font-medium">
+                      {selectedResult === "Reporter" ? "Nouvelle date du RDV" : "Date de rappel"}
                     </Label>
                     <div className="flex gap-2">
-                      {/* Date picker */}
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -908,7 +1006,6 @@ ${emailData.body}`;
                             selected={form.watch("dateRappel") ? new Date(form.watch("dateRappel")!) : undefined}
                             onSelect={(date) => {
                               if (date) {
-                                // Preserve existing time or default to 9:00 AM
                                 const currentValue = form.watch("dateRappel");
                                 if (currentValue) {
                                   const existingDate = new Date(currentValue);
@@ -927,7 +1024,6 @@ ${emailData.body}`;
                         </PopoverContent>
                       </Popover>
 
-                      {/* Time picker */}
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <input
@@ -950,18 +1046,13 @@ ${emailData.body}`;
                         />
                       </div>
                     </div>
-                    {form.formState.errors.dateRappel && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.dateRappel.message}
-                      </p>
-                    )}
                   </div>
                 )}
 
-                {/* Notes - hidden for RDV planifié since details are in the calendar event */}
+                {/* Notes */}
                 {showNotes && (
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Notes de l&apos;appel</Label>
+                    <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
                     <Textarea
                       id="notes"
                       placeholder="Résumé de la conversation..."
@@ -971,82 +1062,34 @@ ${emailData.body}`;
                   </div>
                 )}
 
-                {/* Create interaction checkbox - hidden for RDV planifié (details in calendar) */}
+                {/* Interaction checkbox */}
                 {showInteractionCheckbox && (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="creerInteraction"
-                        checked={form.watch("creerInteraction")}
-                        onCheckedChange={(checked) =>
-                          form.setValue("creerInteraction", checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="creerInteraction" className="text-sm cursor-pointer">
-                        Créer une interaction dans le CRM
-                      </Label>
-                    </div>
-
-                    {/* Résumé des actions pour "Pas répondu" */}
-                    {selectedResult === "Appelé - pas répondu" && (
-                      <div className="ml-6 space-y-2">
-                        {/* Résumé des actions effectuées */}
-                        {(leftVoicemail || emailSent) && (
-                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm font-medium text-blue-800 mb-2">Actions effectuées :</p>
-                            <ul className="text-sm text-blue-700 space-y-1">
-                              {leftVoicemail && (
-                                <li className="flex items-center gap-2">
-                                  <Phone className="h-3 w-3" />
-                                  Message vocal laissé
-                                </li>
-                              )}
-                              {emailSent && (
-                                <li className="flex items-center gap-2">
-                                  <Mail className="h-3 w-3" />
-                                  Email de suivi envoyé
-                                </li>
-                              )}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Prévisualisation du message d'interaction */}
-                        {form.watch("creerInteraction") && (
-                          <div className="p-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
-                            <span className="font-medium">Message qui sera enregistré :</span>{" "}
-                            &quot;Tentative d&apos;appel le {format(new Date(), "dd/MM/yyyy 'à' HH:mm", { locale: fr })} - pas de réponse
-                            {leftVoicemail && ". Message vocal laissé"}
-                            {emailSent && ". Email de suivi envoyé"}&quot;
-                          </div>
-                        )}
-
-                        {/* Message si aucune action et pas d'interaction */}
-                        {!leftVoicemail && !emailSent && !form.watch("creerInteraction") && (
-                          <p className="text-xs text-amber-600">
-                            Aucune action enregistrée. Cochez la case ci-dessus pour tracer cet appel.
-                          </p>
-                        )}
-                      </div>
-                    )}
+                  <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                    <Checkbox
+                      id="creerInteraction"
+                      checked={form.watch("creerInteraction")}
+                      onCheckedChange={(checked) => form.setValue("creerInteraction", checked as boolean)}
+                    />
+                    <Label htmlFor="creerInteraction" className="text-sm cursor-pointer">
+                      Créer une interaction dans le CRM
+                    </Label>
                   </div>
                 )}
 
-                {/* CTA pour créer une opportunité quand Qualifié */}
+                {/* CTA Qualifié */}
                 {selectedResult === "Qualifié" && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-2">
-                    <div className="flex items-center gap-2 text-green-800">
+                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-800">
                       <Target className="h-5 w-5" />
-                      <span className="font-semibold">Lead qualifié !</span>
+                      <span className="font-bold">Lead qualifié !</span>
                     </div>
-                    <p className="text-sm text-green-700">
-                      Ce prospect est prêt à passer à l&apos;étape suivante. Créez une opportunité pour suivre le deal dans votre pipeline commercial.
+                    <p className="text-sm text-emerald-700">
+                      Créez une opportunité pour suivre le deal dans votre pipeline.
                     </p>
                     <Button
                       type="button"
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
                       onClick={() => {
-                        // Sauvegarder d'abord, puis rediriger
                         form.handleSubmit(async (data) => {
                           await handleSubmit(data);
                           router.push(`/opportunites?create=true&client=${prospect?.client?.[0]}&contact=${prospect?.id}&nom=${encodeURIComponent(prospect?.clientNom || "")}`);
@@ -1054,18 +1097,19 @@ ${emailData.body}`;
                       }}
                     >
                       <Target className="mr-2 h-4 w-4" />
-                      Enregistrer et créer une opportunité
+                      Créer une opportunité
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
                 )}
 
-                <DialogFooter className="pt-4">
+                <DialogFooter className="pt-4 border-t">
                   <Button type="button" variant="outline" onClick={handleClose}>
                     Annuler
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Enregistrement..." : "Enregistrer"}
+                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Enregistrer
                   </Button>
                 </DialogFooter>
               </form>

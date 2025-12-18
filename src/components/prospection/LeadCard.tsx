@@ -12,11 +12,14 @@ import {
   Copy,
   ArrowRight,
   FileText,
+  Video,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +35,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import type { Prospect } from "@/hooks/use-prospects";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 
 interface LeadCardProps {
   prospect: Prospect;
@@ -41,27 +44,61 @@ interface LeadCardProps {
   onLost: (prospect: Prospect) => void;
 }
 
-// Get status badge color
-function getStatusColor(status: string | undefined): string {
+// Configuration des couleurs par statut
+function getStatusConfig(status: string | undefined) {
   switch (status) {
     case "À appeler":
-      return "bg-blue-100 text-blue-800";
+      return {
+        border: "border-l-blue-500",
+        badge: "bg-blue-100 text-blue-800 border-blue-200",
+        avatar: "bg-blue-100 text-blue-700",
+      };
     case "Appelé - pas répondu":
-      return "bg-gray-100 text-gray-800";
+      return {
+        border: "border-l-slate-400",
+        badge: "bg-slate-100 text-slate-700 border-slate-200",
+        avatar: "bg-slate-100 text-slate-600",
+      };
     case "Rappeler":
-      return "bg-orange-100 text-orange-800";
+      return {
+        border: "border-l-orange-500",
+        badge: "bg-orange-100 text-orange-800 border-orange-200",
+        avatar: "bg-orange-100 text-orange-700",
+      };
+    case "RDV planifié":
+      return {
+        border: "border-l-violet-500",
+        badge: "bg-violet-100 text-violet-800 border-violet-200",
+        avatar: "bg-violet-100 text-violet-700",
+      };
     case "Qualifié":
-      return "bg-green-100 text-green-800";
+      return {
+        border: "border-l-emerald-500",
+        badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        avatar: "bg-emerald-100 text-emerald-700",
+      };
     case "Non qualifié":
-      return "bg-yellow-100 text-yellow-800";
+      return {
+        border: "border-l-amber-500",
+        badge: "bg-amber-100 text-amber-800 border-amber-200",
+        avatar: "bg-amber-100 text-amber-700",
+      };
     case "Perdu":
-      return "bg-red-100 text-red-800";
+      return {
+        border: "border-l-red-500",
+        badge: "bg-red-100 text-red-800 border-red-200",
+        avatar: "bg-red-100 text-red-700",
+      };
     default:
-      return "bg-gray-100 text-gray-800";
+      return {
+        border: "border-l-gray-400",
+        badge: "bg-gray-100 text-gray-700 border-gray-200",
+        avatar: "bg-gray-100 text-gray-600",
+      };
   }
 }
 
-// Get source badge color
+// Couleur du badge source
 function getSourceColor(source: string | undefined): string {
   switch (source) {
     case "LinkedIn":
@@ -79,22 +116,26 @@ function getSourceColor(source: string | undefined): string {
   }
 }
 
-// Check if date is today
+// Vérifier si la date est aujourd'hui
 function isToday(dateString: string | undefined): boolean {
   if (!dateString) return false;
   const today = new Date().toISOString().split("T")[0];
   return dateString === today;
 }
 
-// Check if date is in the past
+// Vérifier si la date est dans le passé
 function isOverdue(dateString: string | undefined): boolean {
   if (!dateString) return false;
   const today = new Date().toISOString().split("T")[0];
   return dateString < today;
 }
 
-// Get dynamic action button based on prospect status
-function getActionButton(status: string | undefined): { label: string; icon: LucideIcon; variant?: "default" | "outline" | "secondary" } {
+// Bouton d'action dynamique selon le statut
+function getActionButton(status: string | undefined): {
+  label: string;
+  icon: LucideIcon;
+  variant?: "default" | "outline" | "secondary";
+} {
   switch (status) {
     case "À appeler":
       return { label: "Appeler", icon: Phone, variant: "default" };
@@ -125,8 +166,19 @@ export function LeadCard({
     ? `${prospect.prenom} ${prospect.nom}`
     : prospect.nom;
 
+  const initials = prospect.prenom
+    ? `${prospect.prenom[0]}${prospect.nom[0]}`
+    : prospect.nom.slice(0, 2);
+
+  const statusConfig = getStatusConfig(prospect.statutProspection);
   const actionButton = getActionButton(prospect.statutProspection);
   const ActionIcon = actionButton.icon;
+
+  // Indicateur d'urgence (retard rappel ou RDV aujourd'hui)
+  const isUrgent =
+    isOverdue(prospect.dateRappel) ||
+    (prospect.statutProspection === "RDV planifié" &&
+      isToday(prospect.dateRdvPrevu));
 
   const handleCopyPhone = () => {
     if (prospect.telephone) {
@@ -143,59 +195,129 @@ export function LeadCard({
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card
+      className={cn(
+        "group relative overflow-hidden transition-all duration-200",
+        "hover:shadow-md hover:-translate-y-0.5",
+        "border-l-4",
+        statusConfig.border,
+        isUrgent && "ring-2 ring-red-200 ring-offset-1"
+      )}
+    >
       <CardContent className="p-4">
-        {/* Header - Company + Status */}
-        <div className="flex items-start justify-between gap-2 mb-3">
+        {/* Header avec Avatar */}
+        <div className="flex items-start gap-3 mb-3">
+          <Avatar className={cn("h-10 w-10 shrink-0", statusConfig.avatar)}>
+            <AvatarFallback
+              className={cn("font-semibold text-sm", statusConfig.avatar)}
+            >
+              {initials.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <h3 className="font-semibold truncate">
-                {prospect.clientNom || "Entreprise inconnue"}
-              </h3>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm leading-tight truncate">
+                  {fullName}
+                </h3>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <p className="text-xs text-muted-foreground truncate">
+                    {prospect.clientNom || "Entreprise inconnue"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Menu contextuel */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity -mr-1"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={handleCopyPhone}
+                    disabled={!prospect.telephone}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copier le téléphone
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleCopyEmail}
+                    disabled={!prospect.email}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Copier l&apos;email
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onNotQualified(prospect)}>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Non qualifié
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onLost(prospect)}
+                    className="text-red-600"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Perdu
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <p className="text-sm text-muted-foreground mt-0.5">{fullName}</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <Badge className={getStatusColor(prospect.statutProspection)}>
-              {prospect.statutProspection || "N/A"}
-            </Badge>
+
+            {/* Badge statut */}
+            <div className="mt-2">
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] font-medium px-2 py-0", statusConfig.badge)}
+              >
+                {prospect.statutProspection || "N/A"}
+              </Badge>
+            </div>
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="space-y-1.5 mb-3">
-          {prospect.email && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleCopyEmail}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
-                  >
-                    <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="truncate">{prospect.email}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Cliquer pour copier</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+        {/* Informations de contact */}
+        <div className="space-y-1 mb-3">
           {prospect.telephone && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={handleCopyPhone}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full group/btn"
                   >
-                    <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{prospect.telephone}</span>
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span className="font-medium">{prospect.telephone}</span>
+                    <Copy className="h-3 w-3 opacity-0 group-hover/btn:opacity-50 transition-opacity ml-auto" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent side="right">
+                  <p>Cliquer pour copier</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {prospect.email && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleCopyEmail}
+                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full group/btn"
+                  >
+                    <Mail className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{prospect.email}</span>
+                    <Copy className="h-3 w-3 opacity-0 group-hover/btn:opacity-50 transition-opacity ml-auto shrink-0" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
                   <p>Cliquer pour copier</p>
                 </TooltipContent>
               </Tooltip>
@@ -203,121 +325,77 @@ export function LeadCard({
           )}
         </div>
 
-        {/* Tags - Source + Rappel */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {prospect.sourceLead && (
-            <Badge variant="outline" className={getSourceColor(prospect.sourceLead)}>
-              {prospect.sourceLead}
-            </Badge>
-          )}
-          {prospect.dateRappel && (
-            <Badge
-              variant="outline"
-              className={
-                isOverdue(prospect.dateRappel)
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : isToday(prospect.dateRappel)
-                  ? "bg-orange-50 text-orange-700 border-orange-200"
-                  : "bg-gray-50 text-gray-700 border-gray-200"
-              }
-            >
-              <Calendar className="h-3 w-3 mr-1" />
-              {isToday(prospect.dateRappel)
-                ? "Aujourd'hui"
-                : isOverdue(prospect.dateRappel)
-                ? `Retard (${formatDate(prospect.dateRappel)})`
-                : formatDate(prospect.dateRappel)}
-            </Badge>
-          )}
-        </div>
+        {/* Tags - Source, Rappel, RDV */}
+        {(prospect.sourceLead || prospect.dateRappel || prospect.dateRdvPrevu) && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {prospect.sourceLead && (
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] px-1.5 py-0", getSourceColor(prospect.sourceLead))}
+              >
+                {prospect.sourceLead}
+              </Badge>
+            )}
+            {prospect.dateRappel && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] px-1.5 py-0",
+                  isOverdue(prospect.dateRappel)
+                    ? "bg-red-50 text-red-700 border-red-300 animate-pulse"
+                    : isToday(prospect.dateRappel)
+                    ? "bg-orange-50 text-orange-700 border-orange-300"
+                    : "bg-gray-50 text-gray-700 border-gray-200"
+                )}
+              >
+                <Calendar className="h-2.5 w-2.5 mr-1" />
+                {isToday(prospect.dateRappel)
+                  ? "Aujourd'hui"
+                  : isOverdue(prospect.dateRappel)
+                  ? "Retard"
+                  : formatDate(prospect.dateRappel)}
+              </Badge>
+            )}
+            {prospect.dateRdvPrevu && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] px-1.5 py-0",
+                  isToday(prospect.dateRdvPrevu)
+                    ? "bg-violet-50 text-violet-700 border-violet-300"
+                    : "bg-gray-50 text-gray-700 border-gray-200"
+                )}
+              >
+                {prospect.typeRdv === "Visio" ? (
+                  <Video className="h-2.5 w-2.5 mr-1" />
+                ) : (
+                  <MapPin className="h-2.5 w-2.5 mr-1" />
+                )}
+                {isToday(prospect.dateRdvPrevu)
+                  ? "Aujourd'hui"
+                  : formatDate(prospect.dateRdvPrevu)}
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* Notes */}
         {prospect.notesProspection && (
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          <p className="text-xs text-muted-foreground line-clamp-2 mb-3 italic">
             {prospect.notesProspection}
           </p>
         )}
 
-        {/* Actions - Desktop */}
-        <div className="hidden sm:flex items-center gap-2 pt-2 border-t">
-          <Button
-            variant={actionButton.variant}
-            size="sm"
-            className="flex-1"
-            onClick={() => onCall(prospect)}
-          >
-            <ActionIcon className="h-3.5 w-3.5 mr-1" />
-            {actionButton.label}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleCopyPhone}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copier le téléphone
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyEmail}>
-                <Mail className="h-4 w-4 mr-2" />
-                Copier l&apos;email
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onNotQualified(prospect)}>
-                <Clock className="h-4 w-4 mr-2" />
-                Non qualifié
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onLost(prospect)}
-                className="text-red-600"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Perdu
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Actions - Mobile */}
-        <div className="sm:hidden pt-2 border-t">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full">
-                Actions
-                <MoreVertical className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => onCall(prospect)}>
-                <ActionIcon className="h-4 w-4 mr-2" />
-                {actionButton.label}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleCopyPhone}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copier téléphone
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyEmail}>
-                <Mail className="h-4 w-4 mr-2" />
-                Copier email
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onNotQualified(prospect)}>
-                <Clock className="h-4 w-4 mr-2" />
-                Non qualifié
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onLost(prospect)}
-                className="text-red-600"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Perdu
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* Bouton d'action principal */}
+        <Button
+          variant={actionButton.variant}
+          size="sm"
+          className="w-full h-8 text-xs font-medium"
+          onClick={() => onCall(prospect)}
+        >
+          <ActionIcon className="h-3.5 w-3.5 mr-1.5" />
+          {actionButton.label}
+        </Button>
       </CardContent>
     </Card>
   );
