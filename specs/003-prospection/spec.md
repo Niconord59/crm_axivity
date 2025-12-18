@@ -2,8 +2,8 @@
 
 **Feature Branch**: `003-prospection`
 **Created**: 2025-12-15
-**Updated**: 2025-12-15
-**Status**: Implemented (Phase 7 - Google Calendar added)
+**Updated**: 2025-12-19
+**Status**: Implemented (Phase 11 - UI Improvements completed)
 **Priority**: P1 - Haute
 
 ---
@@ -864,6 +864,88 @@ import Image from "next/image";
 
 ---
 
+## Phase 11 : UI Improvements (IMPLEMENTÉE)
+
+### US-010: Améliorer l'UX de la page Prospection (P2)
+
+**En tant que** commercial
+**Je veux** une interface fluide sans scroll inutile
+**Afin de** naviguer efficacement entre les leads
+
+#### Acceptance Criteria
+
+1. **Given** l'utilisateur ouvre le CallResultDialog, **When** le modal s'affiche, **Then** il n'y a pas de scroll sur la page entière (modal en flexbox)
+2. **Given** l'utilisateur consulte la liste des leads, **When** les LeadCards s'affichent, **Then** tous les boutons d'action sont alignés verticalement
+3. **Given** l'utilisateur sélectionne "Tous les statuts", **When** la liste se met à jour, **Then** tous les prospects sont affichés (y compris Qualifié, Non qualifié, Perdu)
+4. **Given** l'utilisateur veut fermer le dialog, **When** il cherche la croix, **Then** elle est clairement visible et pas superposée à d'autres éléments
+
+### Améliorations techniques
+
+#### CallResultDialog Flexbox Layout
+
+Le modal utilise maintenant un layout flexbox qui évite le scroll de la page :
+
+```tsx
+<DialogContent className="sm:max-w-[750px] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
+  <div className="shrink-0 p-6 pb-4 pr-14 border-b">
+    {/* Header avec padding pour la croix */}
+  </div>
+  <Tabs className="flex-1 flex flex-col overflow-hidden">
+    <TabsList className="shrink-0" />
+    <TabsContent className="flex-1 overflow-y-auto" />
+  </Tabs>
+</DialogContent>
+```
+
+#### LeadCard Button Alignment
+
+Les boutons sont maintenant alignés grâce à flexbox :
+
+```tsx
+<Card className="h-full flex flex-col">
+  <CardContent className="p-4 flex flex-col flex-1">
+    {/* Contenu */}
+    <div className="flex-1" /> {/* Spacer */}
+    <Button className="mt-auto">Action</Button>
+  </CardContent>
+</Card>
+```
+
+#### Filter Fix
+
+Le bug de filtre a été corrigé dans `useProspectsWithClients` :
+
+**Avant (buggy):**
+```typescript
+enabled: !!prospects && prospects.length > 0,
+placeholderData: keepPreviousData,
+```
+
+**Après (fixé):**
+```typescript
+enabled: !prospectsLoading && prospects !== undefined,
+// keepPreviousData retiré
+```
+
+La page n'applique plus de filtre sur "Tous les statuts" :
+```typescript
+const activeProspects = useMemo(() => {
+  if (!prospects) return [];
+  return prospects; // Tous les prospects, sans filtre
+}, [prospects]);
+```
+
+### Fichiers modifiés
+
+| Fichier | Modification |
+|---------|--------------|
+| `src/components/prospection/CallResultDialog.tsx` | Layout flexbox, header padding |
+| `src/components/prospection/LeadCard.tsx` | Flexbox alignment pour boutons |
+| `src/hooks/use-prospects.ts` | Fix condition enabled, retrait keepPreviousData |
+| `src/app/(main)/prospection/page.tsx` | Suppression filtre "Tous les statuts" |
+
+---
+
 *Spec créée le 15 décembre 2025*
-*Mise à jour : 16 décembre 2025 (Phase 10 UX Améliorée)*
-*Version : 1.4*
+*Mise à jour : 19 décembre 2025 (Phase 11 UI Improvements)*
+*Version : 1.5*

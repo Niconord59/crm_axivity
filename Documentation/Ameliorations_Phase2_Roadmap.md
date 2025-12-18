@@ -1,8 +1,8 @@
 # Roadmap Améliorations CRM Axivity - Phase 2
 
 **Date de création** : 14 décembre 2025
-**Dernière mise à jour** : 15 décembre 2025
-**Statut** : En cours (60% - Phases 1-3 + Onboarding terminées)
+**Dernière mise à jour** : 19 décembre 2025
+**Statut** : En cours (75% - Phases 1-3 + Onboarding + UI Improvements terminées)
 **Specs techniques** : `Interface/specs/002-crm-ameliorations/`
 
 ---
@@ -40,9 +40,11 @@ Ce document présente la roadmap des améliorations identifiées suite à l'audi
 | A7 | Recherche Globale | Bas - navigation | 2-3h | P3 | 📋 À faire |
 | A8 | Gestion Équipe | Bas - ressources | 3-4h | P3 | 📋 À faire |
 | A9 | Tour Guidé Onboarding | Haut - adoption utilisateur | 2-3h | P1 | ✅ Terminé |
+| A10 | Pipeline Commercial Redesign | Haut - UX professionnelle | 3h | P1 | ✅ Terminé |
+| A11 | UI Improvements (Prospection) | Moyen - qualité UX | 2h | P2 | ✅ Terminé |
 
-**Effort total estimé** : 27-36 heures
-**Effort réalisé** : ~13 heures (Phases 1-3 + A9)
+**Effort total estimé** : 32-41 heures
+**Effort réalisé** : ~18 heures (Phases 1-3 + A9 + A10 + A11)
 
 ---
 
@@ -287,6 +289,66 @@ const { results, isLoading } = useSearch(query);
 
 ---
 
+### A10 - Pipeline Commercial Redesign ✅ TERMINÉ
+
+**Problème initial** : La page Opportunités utilisait un layout fixe qui ne prenait pas toute la largeur de l'écran et manquait de visibilité sur les KPIs.
+
+**Solution implémentée** :
+
+| Composant | Description |
+|-----------|-------------|
+| **KPI Cards** | 4 cartes : Pipeline actif, Valeur pondérée, Gagnées (valeur), Perdues |
+| **OpportunityCard** | Nouveau composant avec couleurs par statut, barre de progression, badges date |
+| **Column Headers** | En-têtes améliorés avec icônes et dégradés de couleur |
+| **CSS Grid Layout** | Grille responsive pleine largeur (`grid-cols-1 md:2 lg:4 xl:5`) |
+| **Empty States** | États vides avec icônes pour colonnes sans opportunités |
+
+**Fichiers créés/modifiés** :
+- `src/components/opportunites/OpportunityCard.tsx` - Nouveau composant carte
+- `src/app/(main)/opportunites/page.tsx` - Refonte complète de la page
+
+**Fonctionnalités** :
+- Barre de progression pour la probabilité
+- Badges de date avec indicateurs de retard (rouge si dépassé, ambre si < 7 jours)
+- Menu dropdown pour changement rapide de statut
+- Valeur pondérée affichée distinctement
+- Layout responsive qui s'adapte à toutes les tailles d'écran
+
+**Bénéfice** : ✅ Vue d'ensemble claire du pipeline, prise de décision facilitée.
+
+**Date de complétion** : 19 décembre 2025
+
+---
+
+### A11 - UI Improvements (Prospection) ✅ TERMINÉ
+
+**Problème initial** : Plusieurs problèmes UX sur la page Prospection :
+- CallResultDialog nécessitait un scroll complet de la page
+- Boutons d'action non alignés entre les LeadCards
+- Filtres "Tous les statuts" ne montrait pas tous les prospects
+- Croix de fermeture du dialog mal positionnée
+
+**Solution implémentée** :
+
+| Amélioration | Description |
+|--------------|-------------|
+| **CallResultDialog Flexbox** | Modal en `h-[90vh] flex flex-col` - plus de scroll page |
+| **LeadCard Button Alignment** | Cards en `h-full flex flex-col` avec bouton `mt-auto` |
+| **Filter Fix** | Suppression du filtre qui cachait les statuts complétés |
+| **Close Button Position** | Header avec `pr-14` et badge inline avec le nom |
+
+**Fichiers modifiés** :
+- `src/components/prospection/CallResultDialog.tsx` - Layout flexbox
+- `src/components/prospection/LeadCard.tsx` - Alignement boutons
+- `src/hooks/use-prospects.ts` - Fix condition `enabled` et suppression `keepPreviousData`
+- `src/app/(main)/prospection/page.tsx` - Suppression filtre statuts
+
+**Bénéfice** : ✅ UX plus fluide, interface cohérente, moins de friction.
+
+**Date de complétion** : 19 décembre 2025
+
+---
+
 ## Planning Recommandé
 
 ### Semaine 1 : P1 (CRITIQUE) - ✅ Partiellement terminé
@@ -349,5 +411,5 @@ const { results, isLoading } = useSearch(query);
 ---
 
 *Document créé le 14 décembre 2025*
-*Dernière mise à jour : 15 décembre 2025*
-*Version : 1.2* - Ajout Tour Guidé Onboarding (A9) terminé
+*Dernière mise à jour : 19 décembre 2025*
+*Version : 1.4* - Pipeline Commercial Redesign (A10) + UI Improvements Prospection (A11) terminés

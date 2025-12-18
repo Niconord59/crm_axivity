@@ -1,8 +1,8 @@
 # Tâches : Module Prospection
 
 **Feature** : 003-prospection
-**Total** : 57 tâches
-**Statut** : 100% (57/57) - Toutes les phases complètes ✅
+**Total** : 66 tâches
+**Statut** : 100% (66/66) - Toutes les phases complètes ✅
 
 ---
 
@@ -403,6 +403,33 @@
 
 ---
 
+## Phase 11 : UI Improvements [COMPLETE]
+
+### T11.1 - CallResultDialog Flexbox Layout
+- [x] Changer modal de `max-h-[90vh]` à `h-[90vh] flex flex-col overflow-hidden`
+- [x] Ajouter `shrink-0` au header et tabs
+- [x] Ajouter `flex-1 overflow-hidden` aux content areas
+- [x] Ajouter `overflow-y-auto` aux TabsContent
+
+### T11.2 - Positionnement croix de fermeture
+- [x] Ajouter `pr-14` padding au header
+- [x] Déplacer le badge statut inline avec le nom (pas en float right)
+- [x] Vérifier espacement avec la croix X
+
+### T11.3 - Alignement boutons LeadCard
+- [x] Ajouter `h-full flex flex-col` à la Card
+- [x] Ajouter `flex flex-col flex-1` au CardContent
+- [x] Ajouter spacer `<div className="flex-1" />` avant le bouton
+- [x] Ajouter `mt-auto` au bouton principal
+
+### T11.4 - Fix filtre "Tous les statuts"
+- [x] Modifier condition `enabled` dans useProspectsWithClients
+- [x] Retirer `keepPreviousData` qui causait des données stales
+- [x] Supprimer le filtre sur les statuts complétés dans la page
+- [x] Tester que tous les prospects s'affichent
+
+---
+
 ## Résumé par phase
 
 | Phase | Tâches | Effort |
@@ -418,9 +445,10 @@
 | Phase 8 : Gmail Integration | 8 | 4h |
 | Phase 9 : Champs facturation | 5 | 1h |
 | Phase 10 : UX Améliorée | 5 | 1h |
-| **Total** | **62** | **~33h** |
+| Phase 11 : UI Improvements | 4 | 2h |
+| **Total** | **66** | **~35h** |
 
 ---
 
 *Tâches créées le 15 décembre 2025*
-*Mise à jour : 16 décembre 2025 (Phase 10 UX Améliorée)*
+*Mise à jour : 19 décembre 2025 (Phase 11 UI Improvements)*

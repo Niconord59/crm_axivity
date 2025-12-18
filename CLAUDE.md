@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-18
+Auto-generated from all feature plans. Last updated: 2025-12-19
 
 ## Active Technologies
 
@@ -18,6 +18,7 @@ src/
 │   ├── forms/              # Formulaires CRUD
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
+│   ├── opportunites/       # Pipeline commercial (OpportunityCard)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
 ├── hooks/                  # React Query hooks (13 hooks - migrés vers Supabase)
 ├── lib/
@@ -68,7 +69,7 @@ npm start       # Production server
   - A8. Gestion Équipe et Charge
 
 ### 003-prospection (Module Prospection - COMPLETE)
-- **Status**: 100% - 62/62 tasks
+- **Status**: 100% - 66/66 tasks
 - **Specs**: `specs/003-prospection/`
 - **Content**:
   - Page `/prospection` dédiée à la gestion des leads
@@ -303,6 +304,19 @@ npm start       # Production server
   - Protection des routes avec redirection automatique
   - Header avec dropdown utilisateur et déconnexion
   - SMTP Resend configuré (sandbox pour dev, production checklist documentée)
+- **UI Improvements Prospection (Phase 11)** (19 déc. 2025)
+  - CallResultDialog en flexbox : plus de scroll page, modal en `h-[90vh] flex flex-col`
+  - Alignement boutons LeadCard : flexbox avec `mt-auto` pour alignement vertical
+  - Fix filtre "Tous les statuts" : affiche maintenant tous les prospects
+  - Positionnement croix fermeture : header avec `pr-14`, badge inline avec nom
+  - Fix bug React Query : condition `enabled` corrigée, `keepPreviousData` retiré
+- **Pipeline Commercial Redesign** (19 déc. 2025)
+  - Nouveau composant `OpportunityCard` : couleurs par statut, barre de progression, badges date
+  - KPI Cards : Pipeline actif, Valeur pondérée, Gagnées (valeur), Perdues (count)
+  - En-têtes colonnes améliorés : icônes et dégradés
+  - Layout CSS Grid responsive pleine largeur (`grid-cols-1 md:2 lg:4 xl:5`)
+  - États vides avec icônes pour colonnes sans opportunités
+  - Menu dropdown pour changement rapide de statut
 
 ## Production Checklist
 

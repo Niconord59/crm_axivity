@@ -33,13 +33,14 @@
 - [x] Corriger les mappings de colonnes
 - [x] Vérifier le build TypeScript
 
-## Phase 5 : Auth UI ⏳
-- [ ] Créer page `/login`
-- [ ] Créer page `/register`
-- [ ] Créer page `/forgot-password`
-- [ ] Créer composant `UserMenu`
-- [ ] Créer hook `use-auth.ts`
-- [ ] Créer middleware de protection des routes
+## Phase 5 : Auth UI ✅
+- [x] Créer page `/login`
+- [x] Créer page `/register`
+- [x] Créer page `/forgot-password`
+- [x] Créer page `/reset-password`
+- [x] Créer composant `UserMenu` (Header dropdown)
+- [x] Créer hook `use-auth.ts`
+- [x] Créer proxy de protection des routes (Next.js 16 - remplace middleware)
 
 ## Phase 6 : Rôles UI ⏳
 - [ ] Créer page `/admin/users`
@@ -52,6 +53,28 @@
 - [ ] Adapter workflow feedback post-projet
 - [ ] Adapter workflow alertes tâches
 - [ ] Adapter workflow relances factures
+
+## Phase 5 détail (18 déc. 2025)
+
+### Auth UI
+- Route groups Next.js : `(auth)` pages standalone, `(main)` pages avec sidebar
+- Pages : `/login`, `/register`, `/forgot-password`, `/reset-password`
+- Proxy Next.js 16 : `src/proxy.ts` (remplace middleware.ts)
+- Helper : `src/lib/supabase/proxy.ts`
+- Header avec dropdown utilisateur et déconnexion
+- SMTP Resend configuré (sandbox mode pour dev)
+
+### Fichiers créés
+- `src/app/(auth)/login/page.tsx`
+- `src/app/(auth)/register/page.tsx`
+- `src/app/(auth)/forgot-password/page.tsx`
+- `src/app/(auth)/reset-password/page.tsx`
+- `src/app/(auth)/layout.tsx`
+- `src/proxy.ts`
+- `src/lib/supabase/proxy.ts`
+- `src/hooks/use-auth.ts`
+
+---
 
 ## Corrections effectuées (18 déc. 2025)
 
