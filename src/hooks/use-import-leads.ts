@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Papa from "papaparse";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { ProspectSource } from "@/types";
 
 // Field mapping for CSV import
@@ -193,16 +193,13 @@ export function useImportLeads() {
 
       let duplicates: string[] = [];
       try {
-        const existingContacts = await airtable.getRecords<{ Email?: string }>(
-          AIRTABLE_TABLES.CONTACTS,
-          {
-            fields: ["Email"],
-          }
-        );
+        const { data: existingContacts } = await supabase
+          .from("contacts")
+          .select("email");
 
         const existingEmails = new Set(
-          existingContacts
-            .map((c) => c.fields.Email?.toLowerCase())
+          (existingContacts || [])
+            .map((c) => c.email?.toLowerCase())
             .filter(Boolean)
         );
 
@@ -222,7 +219,7 @@ export function useImportLeads() {
     [state.rawData]
   );
 
-  // Import leads to Airtable
+  // Import leads to Supabase
   const importLeads = useCallback(async (): Promise<ImportSummary> => {
     if (!state.mapping) {
       throw new Error("Mapping non défini");
@@ -287,27 +284,32 @@ export function useImportLeads() {
 
         try {
           // Check if contact exists
-          const existingContacts = await airtable.getRecords<{
-            Email?: string;
-            "Statut Prospection"?: string;
-          }>(AIRTABLE_TABLES.CONTACTS, {
-            filterByFormula: `LOWER({Email}) = '${lead.email.toLowerCase()}'`,
-            maxRecords: 1,
-          });
+          const { data: existingContacts } = await supabase
+            .from("contacts")
+            .select("id, statut_prospection")
+            .ilike("email", lead.email)
+            .limit(1);
 
-          if (existingContacts.length > 0) {
+          if (existingContacts && existingContacts.length > 0) {
             // Update existing contact
             const contactId = existingContacts[0].id;
-            await airtable.updateRecord(AIRTABLE_TABLES.CONTACTS, contactId, {
-              "Nom Complet": lead.nom,
-              "Téléphone": lead.telephone,
-              "Rôle": lead.role,
-              "LinkedIn": lead.linkedin,
-              "Notes Prospection": lead.notesProspection,
-              "Source Lead": lead.sourceLead,
-              "Statut Prospection":
-                existingContacts[0].fields["Statut Prospection"] || "À appeler",
-            });
+            const updateData: Record<string, unknown> = {
+              nom: lead.nom,
+              telephone: lead.telephone,
+              poste: lead.role,
+              notes_prospection: lead.notesProspection,
+              source_lead: lead.sourceLead,
+            };
+
+            // Preserve existing status if set
+            if (!existingContacts[0].statut_prospection) {
+              updateData.statut_prospection = "À appeler";
+            }
+
+            await supabase
+              .from("contacts")
+              .update(updateData)
+              .eq("id", contactId);
 
             results.push({
               success: true,
@@ -318,58 +320,66 @@ export function useImportLeads() {
           } else {
             // Find or create client
             let clientId: string;
-            const existingClients = await airtable.getRecords<{
-              "Nom du Client"?: string;
-            }>(AIRTABLE_TABLES.CLIENTS, {
-              filterByFormula: `{Nom du Client} = '${lead.entreprise}'`,
-              maxRecords: 1,
-            });
+            const { data: existingClients } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("nom", lead.entreprise)
+              .limit(1);
 
-            if (existingClients.length > 0) {
+            if (existingClients && existingClients.length > 0) {
               clientId = existingClients[0].id;
               // Update existing client with new info if provided
-              const clientUpdateFields: Record<string, unknown> = {};
-              if (lead.siret) clientUpdateFields["SIRET"] = lead.siret;
-              if (lead.adresse) clientUpdateFields["Adresse"] = lead.adresse;
-              if (lead.codePostal) clientUpdateFields["Code Postal"] = lead.codePostal;
-              if (lead.ville) clientUpdateFields["Ville"] = lead.ville;
-              if (lead.pays) clientUpdateFields["Pays"] = lead.pays;
-              if (lead.secteurActivite) clientUpdateFields["Secteur d'activité"] = lead.secteurActivite;
-              if (lead.siteWeb) clientUpdateFields["Site Web"] = lead.siteWeb;
+              const clientUpdateData: Record<string, unknown> = {};
+              if (lead.siret) clientUpdateData.siret = lead.siret;
+              if (lead.adresse) clientUpdateData.adresse = lead.adresse;
+              if (lead.codePostal) clientUpdateData.code_postal = lead.codePostal;
+              if (lead.ville) clientUpdateData.ville = lead.ville;
+              if (lead.pays) clientUpdateData.pays = lead.pays;
+              if (lead.secteurActivite) clientUpdateData.secteur = lead.secteurActivite;
+              if (lead.siteWeb) clientUpdateData.site_web = lead.siteWeb;
 
-              if (Object.keys(clientUpdateFields).length > 0) {
-                await airtable.updateRecord(AIRTABLE_TABLES.CLIENTS, clientId, clientUpdateFields);
+              if (Object.keys(clientUpdateData).length > 0) {
+                await supabase
+                  .from("clients")
+                  .update(clientUpdateData)
+                  .eq("id", clientId);
               }
             } else {
-              const newClient = await airtable.createRecord(
-                AIRTABLE_TABLES.CLIENTS,
-                {
-                  "Nom du Client": lead.entreprise,
-                  "Statut": "Prospect",
-                  "SIRET": lead.siret,
-                  "Adresse": lead.adresse,
-                  "Code Postal": lead.codePostal,
-                  "Ville": lead.ville,
-                  "Pays": lead.pays || "France",
-                  "Secteur d'activité": lead.secteurActivite,
-                  "Site Web": lead.siteWeb,
-                }
-              );
+              const { data: newClient, error: clientError } = await supabase
+                .from("clients")
+                .insert({
+                  nom: lead.entreprise,
+                  statut: "Prospect",
+                  siret: lead.siret,
+                  adresse: lead.adresse,
+                  code_postal: lead.codePostal,
+                  ville: lead.ville,
+                  pays: lead.pays || "France",
+                  secteur: lead.secteurActivite,
+                  site_web: lead.siteWeb,
+                })
+                .select()
+                .single();
+
+              if (clientError) throw clientError;
               clientId = newClient.id;
             }
 
             // Create contact
-            await airtable.createRecord(AIRTABLE_TABLES.CONTACTS, {
-              "Nom Complet": lead.nom,
-              "Email": lead.email,
-              "Téléphone": lead.telephone,
-              "Rôle": lead.role,
-              "LinkedIn": lead.linkedin,
-              "Client": [clientId],
-              "Statut Prospection": "À appeler",
-              "Source Lead": lead.sourceLead,
-              "Notes Prospection": lead.notesProspection,
-            });
+            const { error: contactError } = await supabase
+              .from("contacts")
+              .insert({
+                nom: lead.nom,
+                email: lead.email,
+                telephone: lead.telephone,
+                poste: lead.role,
+                client_id: clientId,
+                statut_prospection: "À appeler",
+                source_lead: lead.sourceLead,
+                notes_prospection: lead.notesProspection,
+              });
+
+            if (contactError) throw contactError;
 
             results.push({
               success: true,
@@ -393,8 +403,8 @@ export function useImportLeads() {
       const progress = Math.round(((i + batch.length) / total) * 100);
       setState((prev) => ({ ...prev, progress }));
 
-      // Rate limiting delay
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Small delay between batches
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     const summary: ImportSummary = {

@@ -1,8 +1,39 @@
 # Plan de Migration : Airtable → Supabase
 
 **Date** : 17 décembre 2025
+**Mise à jour** : 18 décembre 2025
 **Projet** : CRM Axivity
 **Objectifs** : Performance, Temps réel, Authentification, Rôles utilisateurs
+**Statut** : ✅ Phase 4 complète (Hooks migrés)
+
+---
+
+## État actuel de la migration
+
+| Phase | Statut | Notes |
+|-------|--------|-------|
+| 1. Infrastructure | ✅ Complète | Supabase déployé via Coolify |
+| 2. Schéma & Auth | ✅ Complète | 4 fichiers SQL de migration |
+| 3. Migration données | ⏳ En attente | Données test uniquement |
+| 4. Refactoring hooks | ✅ Complète | 10 hooks migrés |
+| 5. Auth UI | ⏳ À faire | Pages login/register |
+| 6. Rôles UI | ⏳ À faire | Page admin utilisateurs |
+| 7. N8N workflows | ⏳ À faire | Adapter les automations |
+
+### Hooks migrés (Phase 4)
+
+| Hook | Statut | Notes |
+|------|--------|-------|
+| `use-clients.ts` | ✅ | Mapping `secteur` (pas `secteur_activite`) |
+| `use-projets.ts` | ✅ | - |
+| `use-taches.ts` | ✅ | - |
+| `use-opportunites.ts` | ✅ | - |
+| `use-factures.ts` | ✅ | - |
+| `use-prospects.ts` | ✅ | Mapping `nom`/`prenom` (pas `nom_complet`) |
+| `use-equipe.ts` | ✅ | Table `equipe` créée |
+| `use-interactions.ts` | ✅ | Mapping `resume`/`user_id` |
+| `use-convert-opportunity.ts` | ✅ | - |
+| `use-import-leads.ts` | ✅ | Mapping colonnes corrigé |
 
 ---
 

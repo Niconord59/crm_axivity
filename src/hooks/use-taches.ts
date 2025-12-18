@@ -1,43 +1,30 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { Tache, TaskStatus, TaskPriority } from "@/types";
 
-interface TacheFields {
-  "Nom de la Tâche"?: string;
-  "Description"?: string;
-  "Statut"?: string;
-  "Priorité"?: string;
-  "Date d'Échéance"?: string;
-  "Temps Estimé (h)"?: number;
-  "Temps Passé (h)"?: number;
-  "Date de Création"?: string;
-  "Date de Complétion"?: string;
-  "Ordre"?: number;
-  "Est en Retard"?: boolean;
-  "Projet"?: string[];
-  "Membre Équipe"?: string[];
-  "Journal de Temps"?: string[];
-}
+// Mapper Supabase -> Tache type
+function mapToTache(record: Record<string, unknown>): Tache {
+  const dateEcheance = record.date_echeance as string | undefined;
+  const statut = record.statut as TaskStatus;
+  const today = new Date().toISOString().split("T")[0];
 
-function mapRecordToTache(record: { id: string; fields: TacheFields }): Tache {
   return {
-    id: record.id,
-    nom: record.fields["Nom de la Tâche"] || "",
-    description: record.fields["Description"],
-    statut: record.fields["Statut"] as TaskStatus,
-    priorite: record.fields["Priorité"] as TaskPriority,
-    dateEcheance: record.fields["Date d'Échéance"],
-    heuresEstimees: record.fields["Temps Estimé (h)"],
-    heuresReelles: record.fields["Temps Passé (h)"],
-    dateCreation: record.fields["Date de Création"],
-    dateTerminee: record.fields["Date de Complétion"],
-    ordre: record.fields["Ordre"],
-    estEnRetard: record.fields["Est en Retard"],
-    projet: record.fields["Projet"],
-    membreEquipe: record.fields["Membre Équipe"],
-    journalTemps: record.fields["Journal de Temps"],
+    id: record.id as string,
+    nom: (record.titre as string) || "",
+    description: record.description as string | undefined,
+    statut: statut,
+    priorite: record.priorite as TaskPriority,
+    dateEcheance: dateEcheance,
+    heuresEstimees: record.heures_estimees as number | undefined,
+    heuresReelles: record.heures_passees as number | undefined,
+    dateCreation: record.created_at as string | undefined,
+    dateTerminee: record.date_terminee as string | undefined,
+    ordre: record.ordre as number | undefined,
+    estEnRetard: dateEcheance && statut !== "Terminé" ? dateEcheance < today : false,
+    projet: record.projet_id ? [record.projet_id as string] : undefined,
+    membreEquipe: record.assignee_id ? [record.assignee_id as string] : undefined,
   };
 }
 
@@ -49,38 +36,26 @@ export function useTaches(options?: {
   return useQuery({
     queryKey: ["taches", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
-      const filters: string[] = [];
+      let query = supabase
+        .from("taches")
+        .select("*")
+        .order("date_echeance", { ascending: true, nullsFirst: false })
+        .order("priorite", { ascending: false });
 
       if (options?.statut) {
-        filters.push(`{Statut} = '${options.statut}'`);
+        query = query.eq("statut", options.statut);
       }
       if (options?.projetId) {
-        filters.push(`FIND('${options.projetId}', ARRAYJOIN({Projet}))`);
+        query = query.eq("projet_id", options.projetId);
       }
       if (options?.membreEquipeId) {
-        filters.push(
-          `FIND('${options.membreEquipeId}', ARRAYJOIN({Membre Équipe}))`
-        );
+        query = query.eq("assignee_id", options.membreEquipeId);
       }
 
-      if (filters.length > 0) {
-        filterByFormula =
-          filters.length === 1 ? filters[0] : `AND(${filters.join(", ")})`;
-      }
+      const { data, error } = await query;
 
-      const records = await airtable.getRecords<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        {
-          filterByFormula,
-          sort: [
-            { field: "Date d'Échéance", direction: "asc" },
-            { field: "Priorité", direction: "desc" },
-          ],
-        }
-      );
-
-      return records.map(mapRecordToTache);
+      if (error) throw error;
+      return (data || []).map(mapToTache);
     },
   });
 }
@@ -90,15 +65,16 @@ export function useTachesEnRetard() {
     queryKey: ["taches", "en-retard"],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
-      const records = await airtable.getRecords<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        {
-          filterByFormula: `AND({Statut} != 'Terminé', {Date d'Échéance} < '${today}')`,
-          sort: [{ field: "Date d'Échéance", direction: "asc" }],
-        }
-      );
 
-      return records.map(mapRecordToTache);
+      const { data, error } = await supabase
+        .from("taches")
+        .select("*")
+        .neq("statut", "Terminé")
+        .lt("date_echeance", today)
+        .order("date_echeance", { ascending: true });
+
+      if (error) throw error;
+      return (data || []).map(mapToTache);
     },
   });
 }
@@ -109,18 +85,16 @@ export function useMesTaches(membreEquipeId: string | undefined) {
     queryFn: async () => {
       if (!membreEquipeId) return [];
 
-      const records = await airtable.getRecords<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        {
-          filterByFormula: `AND(FIND('${membreEquipeId}', ARRAYJOIN({Membre Équipe})), {Statut} != 'Terminé')`,
-          sort: [
-            { field: "Date d'Échéance", direction: "asc" },
-            { field: "Priorité", direction: "desc" },
-          ],
-        }
-      );
+      const { data, error } = await supabase
+        .from("taches")
+        .select("*")
+        .eq("assignee_id", membreEquipeId)
+        .neq("statut", "Terminé")
+        .order("date_echeance", { ascending: true, nullsFirst: false })
+        .order("priorite", { ascending: false });
 
-      return records.map(mapRecordToTache);
+      if (error) throw error;
+      return (data || []).map(mapToTache);
     },
     enabled: !!membreEquipeId,
   });
@@ -131,11 +105,15 @@ export function useTache(id: string | undefined) {
     queryKey: ["tache", id],
     queryFn: async () => {
       if (!id) throw new Error("Tache ID required");
-      const record = await airtable.getRecord<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        id
-      );
-      return mapRecordToTache(record);
+
+      const { data, error } = await supabase
+        .from("taches")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToTache(data);
     },
     enabled: !!id,
   });
@@ -146,22 +124,25 @@ export function useCreateTache() {
 
   return useMutation({
     mutationFn: async (data: Partial<Tache>) => {
-      const fields: Partial<TacheFields> = {
-        "Nom de la Tâche": data.nom,
-        "Description": data.description,
-        "Statut": data.statut || "À faire",
-        "Priorité": data.priorite || "Moyenne",
-        "Date d'Échéance": data.dateEcheance,
-        "Temps Estimé (h)": data.heuresEstimees,
-        "Projet": data.projet,
-        "Membre Équipe": data.membreEquipe,
+      const insertData = {
+        titre: data.nom,
+        description: data.description,
+        statut: data.statut || "À faire",
+        priorite: data.priorite || "Moyenne",
+        date_echeance: data.dateEcheance,
+        heures_estimees: data.heuresEstimees,
+        projet_id: data.projet?.[0],
+        assignee_id: data.membreEquipe?.[0],
       };
 
-      const record = await airtable.createRecord<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        fields
-      );
-      return mapRecordToTache(record);
+      const { data: record, error } = await supabase
+        .from("taches")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToTache(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taches"] });
@@ -175,23 +156,26 @@ export function useUpdateTache() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Tache> }) => {
-      const fields: Partial<TacheFields> = {};
+      const updateData: Record<string, unknown> = {};
 
-      if (data.nom !== undefined) fields["Nom de la Tâche"] = data.nom;
-      if (data.description !== undefined) fields["Description"] = data.description;
-      if (data.statut !== undefined) fields["Statut"] = data.statut;
-      if (data.priorite !== undefined) fields["Priorité"] = data.priorite;
-      if (data.dateEcheance !== undefined) fields["Date d'Échéance"] = data.dateEcheance;
-      if (data.heuresEstimees !== undefined) fields["Temps Estimé (h)"] = data.heuresEstimees;
-      if (data.heuresReelles !== undefined) fields["Temps Passé (h)"] = data.heuresReelles;
-      if (data.membreEquipe !== undefined) fields["Membre Équipe"] = data.membreEquipe;
+      if (data.nom !== undefined) updateData.titre = data.nom;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.statut !== undefined) updateData.statut = data.statut;
+      if (data.priorite !== undefined) updateData.priorite = data.priorite;
+      if (data.dateEcheance !== undefined) updateData.date_echeance = data.dateEcheance;
+      if (data.heuresEstimees !== undefined) updateData.heures_estimees = data.heuresEstimees;
+      if (data.heuresReelles !== undefined) updateData.heures_passees = data.heuresReelles;
+      if (data.membreEquipe !== undefined) updateData.assignee_id = data.membreEquipe?.[0];
 
-      const record = await airtable.updateRecord<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        id,
-        fields
-      );
-      return mapRecordToTache(record);
+      const { data: record, error } = await supabase
+        .from("taches")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToTache(record);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["taches"] });
@@ -206,20 +190,23 @@ export function useUpdateTacheStatut() {
 
   return useMutation({
     mutationFn: async ({ id, statut }: { id: string; statut: TaskStatus }) => {
-      const fields: Partial<TacheFields> = {
-        Statut: statut,
+      const updateData: Record<string, unknown> = {
+        statut: statut,
       };
 
       if (statut === "Terminé") {
-        fields["Date de Complétion"] = new Date().toISOString().split("T")[0];
+        updateData.date_terminee = new Date().toISOString().split("T")[0];
       }
 
-      const record = await airtable.updateRecord<TacheFields>(
-        AIRTABLE_TABLES.TACHES,
-        id,
-        fields
-      );
-      return mapRecordToTache(record);
+      const { data: record, error } = await supabase
+        .from("taches")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToTache(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taches"] });
@@ -233,7 +220,12 @@ export function useDeleteTache() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await airtable.deleteRecord(AIRTABLE_TABLES.TACHES, id);
+      const { error } = await supabase
+        .from("taches")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taches"] });

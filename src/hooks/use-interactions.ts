@@ -1,63 +1,47 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { Interaction, InteractionType } from "@/types";
 
-interface InteractionFields {
-  "Objet de l'Interaction"?: string;
-  "Type"?: string;
-  "Date"?: string;
-  "Notes"?: string;
-  "Contact"?: string[];
-  "Client"?: { id: string; name: string }[]; // Lookup field (read-only)
-  "Participant Interne"?: { id: string; email: string; name: string };
-}
-
-function mapRecordToInteraction(
-  record: { id: string; fields: InteractionFields }
-): Interaction {
+// Mapper Supabase -> Interaction type
+function mapToInteraction(record: Record<string, unknown>): Interaction {
   return {
-    id: record.id,
-    objet: record.fields["Objet de l'Interaction"] || "",
-    type: record.fields["Type"] as InteractionType,
-    date: record.fields["Date"],
-    resume: record.fields["Notes"],
-    contact: record.fields["Contact"],
-    client: record.fields["Client"]?.map(c => c.id),
-    membreEquipe: record.fields["Participant Interne"]
-      ? [record.fields["Participant Interne"].id]
-      : undefined,
+    id: record.id as string,
+    objet: (record.objet as string) || "",
+    type: record.type as InteractionType,
+    date: record.date as string | undefined,
+    resume: record.resume as string | undefined,
+    contact: record.contact_id ? [record.contact_id as string] : undefined,
+    client: record.client_id ? [record.client_id as string] : undefined,
+    membreEquipe: record.user_id ? [record.user_id as string] : undefined,
+    createdTime: record.created_at as string | undefined,
   };
 }
 
 export function useInteractions(options?: {
-  contactName?: string;    // Filter by contact name (ARRAYJOIN returns names from link fields)
-  clientName?: string;     // Filter by client name (lookup field shows names)
+  contactId?: string;
+  clientId?: string;
 }) {
   return useQuery({
     queryKey: ["interactions", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
+      let query = supabase
+        .from("interactions")
+        .select("*")
+        .order("date", { ascending: false, nullsFirst: false });
 
-      // Filter by Contact name (link field ARRAYJOIN returns primary field = names)
-      if (options?.contactName) {
-        filterByFormula = `FIND('${options.contactName}', ARRAYJOIN({Contact}))`;
+      if (options?.contactId) {
+        query = query.eq("contact_id", options.contactId);
       }
-      // Filter by Client name (lookup field contains names, not IDs)
-      else if (options?.clientName) {
-        filterByFormula = `FIND('${options.clientName}', ARRAYJOIN({Client}))`;
+      if (options?.clientId) {
+        query = query.eq("client_id", options.clientId);
       }
 
-      const records = await airtable.getRecords<InteractionFields>(
-        AIRTABLE_TABLES.INTERACTIONS,
-        {
-          filterByFormula,
-          sort: [{ field: "Date", direction: "desc" }],
-        }
-      );
+      const { data, error } = await query;
 
-      return records.map(mapRecordToInteraction);
+      if (error) throw error;
+      return (data || []).map(mapToInteraction);
     },
   });
 }
@@ -67,11 +51,15 @@ export function useInteraction(id: string | undefined) {
     queryKey: ["interaction", id],
     queryFn: async () => {
       if (!id) throw new Error("Interaction ID required");
-      const record = await airtable.getRecord<InteractionFields>(
-        AIRTABLE_TABLES.INTERACTIONS,
-        id
-      );
-      return mapRecordToInteraction(record);
+
+      const { data, error } = await supabase
+        .from("interactions")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToInteraction(data);
     },
     enabled: !!id,
   });
@@ -82,21 +70,24 @@ export function useCreateInteraction() {
 
   return useMutation({
     mutationFn: async (data: Partial<Interaction>) => {
-      // Note: "Client" is a lookup field (read-only), auto-populated from Contact
-      const fields: Partial<InteractionFields> = {
-        "Objet de l'Interaction": data.objet,
-        "Type": data.type,
-        "Date": data.date,
-        "Notes": data.resume,
-        "Contact": data.contact,
-        // Don't include "Client" - it's a lookup field auto-populated via Contact
+      const insertData = {
+        objet: data.objet,
+        type: data.type,
+        date: data.date,
+        resume: data.resume,
+        contact_id: data.contact?.[0],
+        client_id: data.client?.[0],
+        user_id: data.membreEquipe?.[0],
       };
 
-      const record = await airtable.createRecord<InteractionFields>(
-        AIRTABLE_TABLES.INTERACTIONS,
-        fields
-      );
-      return mapRecordToInteraction(record);
+      const { data: record, error } = await supabase
+        .from("interactions")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToInteraction(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["interactions"] });
@@ -105,34 +96,33 @@ export function useCreateInteraction() {
 }
 
 export function useLastInteractionDate(options?: {
-  contactName?: string;
-  clientName?: string;
+  contactId?: string;
+  clientId?: string;
 }) {
   return useQuery({
     queryKey: ["interactions", "last-date", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
+      if (!options?.contactId && !options?.clientId) return null;
 
-      if (options?.contactName) {
-        filterByFormula = `FIND('${options.contactName}', ARRAYJOIN({Contact}))`;
-      } else if (options?.clientName) {
-        filterByFormula = `FIND('${options.clientName}', ARRAYJOIN({Client}))`;
+      let query = supabase
+        .from("interactions")
+        .select("date")
+        .order("date", { ascending: false })
+        .limit(1);
+
+      if (options?.contactId) {
+        query = query.eq("contact_id", options.contactId);
+      }
+      if (options?.clientId) {
+        query = query.eq("client_id", options.clientId);
       }
 
-      if (!filterByFormula) return null;
+      const { data, error } = await query;
 
-      const records = await airtable.getRecords<InteractionFields>(
-        AIRTABLE_TABLES.INTERACTIONS,
-        {
-          filterByFormula,
-          sort: [{ field: "Date", direction: "desc" }],
-          maxRecords: 1,
-        }
-      );
-
-      if (records.length === 0) return null;
-      return records[0].fields["Date"] || null;
+      if (error) throw error;
+      if (!data || data.length === 0) return null;
+      return data[0].date || null;
     },
-    enabled: !!(options?.contactName || options?.clientName),
+    enabled: !!(options?.contactId || options?.clientId),
   });
 }

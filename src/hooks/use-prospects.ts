@@ -1,34 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
-import type { Contact, Client, ProspectStatus, ProspectSource, RdvType } from "@/types";
-
-// Field names for T2-Contacts (Airtable)
-interface ContactFields {
-  "Nom Complet"?: string;
-  "Email"?: string;
-  "Téléphone"?: string;
-  "Rôle"?: string;
-  "Notes"?: string;
-  "LinkedIn"?: string;
-  // Prospection fields
-  "Statut Prospection"?: string;
-  "Date Rappel"?: string;
-  "Date RDV Prévu"?: string;
-  "Type RDV"?: string;
-  "Lien Visio"?: string;
-  "Source Lead"?: string;
-  "Notes Prospection"?: string;
-  // Linked records
-  "Client"?: string[];
-  "Interactions"?: string[];
-}
-
-// Field names for T1-Clients (for lookups)
-interface ClientFields {
-  "Nom du Client"?: string;
-}
+import { supabase } from "@/lib/supabase";
+import type { Contact, ProspectStatus, ProspectSource, RdvType } from "@/types";
 
 // Extended prospect type with client name
 export interface Prospect extends Contact {
@@ -43,31 +17,25 @@ export interface ProspectFilters {
   search?: string;
 }
 
-function mapRecordToContact(record: { id: string; fields: ContactFields }): Contact {
-  const nomComplet = record.fields["Nom Complet"] || "";
-  // Split "Nom Complet" into prenom and nom (first word = prenom, rest = nom)
-  const parts = nomComplet.trim().split(/\s+/);
-  const prenom = parts.length > 1 ? parts[0] : undefined;
-  const nom = parts.length > 1 ? parts.slice(1).join(" ") : nomComplet;
-
+// Mapper Supabase -> Contact type
+function mapToContact(record: Record<string, unknown>): Contact {
   return {
-    id: record.id,
-    nom: nom,
-    prenom: prenom,
-    email: record.fields["Email"],
-    telephone: record.fields["Téléphone"],
-    poste: record.fields["Rôle"],
-    notes: record.fields["Notes"],
-    linkedin: record.fields["LinkedIn"],
-    statutProspection: record.fields["Statut Prospection"] as ProspectStatus,
-    dateRappel: record.fields["Date Rappel"],
-    dateRdvPrevu: record.fields["Date RDV Prévu"],
-    typeRdv: record.fields["Type RDV"] as RdvType,
-    lienVisio: record.fields["Lien Visio"],
-    sourceLead: record.fields["Source Lead"] as ProspectSource,
-    notesProspection: record.fields["Notes Prospection"],
-    client: record.fields["Client"],
-    interactions: record.fields["Interactions"],
+    id: record.id as string,
+    nom: (record.nom as string) || "",
+    prenom: record.prenom as string | undefined,
+    email: record.email as string | undefined,
+    telephone: record.telephone as string | undefined,
+    poste: record.poste as string | undefined,
+    estPrincipal: record.est_principal as boolean | undefined,
+    statutProspection: record.statut_prospection as ProspectStatus,
+    dateRappel: record.date_rappel as string | undefined,
+    dateRdvPrevu: record.date_rdv_prevu as string | undefined,
+    typeRdv: record.type_rdv as RdvType,
+    lienVisio: record.lien_visio as string | undefined,
+    sourceLead: record.source_lead as ProspectSource,
+    notesProspection: record.notes_prospection as string | undefined,
+    client: record.client_id ? [record.client_id as string] : undefined,
+    createdTime: record.created_at as string | undefined,
   };
 }
 
@@ -90,31 +58,29 @@ function getEndOfWeek(): string {
  * Hook to fetch prospects (contacts with prospection status)
  */
 export function useProspects(filters?: ProspectFilters) {
-  const { data: clients } = useClients();
-
   return useQuery({
     queryKey: ["prospects", filters],
     queryFn: async () => {
-      const filterParts: string[] = [];
-
-      // Base filter: only contacts with prospection status
-      filterParts.push("{Statut Prospection} != ''");
+      let query = supabase
+        .from("contacts")
+        .select("*")
+        .not("statut_prospection", "is", null)
+        .neq("statut_prospection", "")
+        .order("date_rappel", { ascending: true, nullsFirst: false })
+        .order("statut_prospection", { ascending: true });
 
       // Filter by status
       if (filters?.statut) {
         if (Array.isArray(filters.statut)) {
-          const statusFilters = filters.statut.map(
-            (s) => `{Statut Prospection} = '${s}'`
-          );
-          filterParts.push(`OR(${statusFilters.join(", ")})`);
+          query = query.in("statut_prospection", filters.statut);
         } else {
-          filterParts.push(`{Statut Prospection} = '${filters.statut}'`);
+          query = query.eq("statut_prospection", filters.statut);
         }
       }
 
       // Filter by source
       if (filters?.source) {
-        filterParts.push(`{Source Lead} = '${filters.source}'`);
+        query = query.eq("source_lead", filters.source);
       }
 
       // Filter by date rappel
@@ -123,41 +89,30 @@ export function useProspects(filters?: ProspectFilters) {
 
         switch (filters.dateRappel) {
           case "today":
-            filterParts.push(`{Date Rappel} = '${today}'`);
+            query = query.eq("date_rappel", today);
             break;
           case "this_week":
-            filterParts.push(`AND({Date Rappel} >= '${today}', {Date Rappel} <= '${getEndOfWeek()}')`);
+            query = query.gte("date_rappel", today).lte("date_rappel", getEndOfWeek());
             break;
           case "overdue":
-            filterParts.push(`AND({Date Rappel} != '', {Date Rappel} < '${today}', {Statut Prospection} = 'Rappeler')`);
+            query = query
+              .not("date_rappel", "is", null)
+              .lt("date_rappel", today)
+              .eq("statut_prospection", "Rappeler");
             break;
         }
       }
 
-      // Search filter
+      // Search filter (search in nom, prenom, and email)
       if (filters?.search) {
-        const searchTerm = filters.search.toLowerCase();
-        filterParts.push(
-          `OR(FIND('${searchTerm}', LOWER({Nom Complet})), FIND('${searchTerm}', LOWER({Email})))`
-        );
+        const searchTerm = `%${filters.search}%`;
+        query = query.or(`nom.ilike.${searchTerm},prenom.ilike.${searchTerm},email.ilike.${searchTerm}`);
       }
 
-      const filterByFormula = filterParts.length > 1
-        ? `AND(${filterParts.join(", ")})`
-        : filterParts[0];
+      const { data, error } = await query;
 
-      const records = await airtable.getRecords<ContactFields>(
-        AIRTABLE_TABLES.CONTACTS,
-        {
-          filterByFormula,
-          sort: [
-            { field: "Date Rappel", direction: "asc" },
-            { field: "Statut Prospection", direction: "asc" },
-          ],
-        }
-      );
-
-      return records.map(mapRecordToContact);
+      if (error) throw error;
+      return (data || []).map(mapToContact);
     },
   });
 }
@@ -170,11 +125,15 @@ export function useProspect(id: string | undefined) {
     queryKey: ["prospect", id],
     queryFn: async () => {
       if (!id) throw new Error("Prospect ID required");
-      const record = await airtable.getRecord<ContactFields>(
-        AIRTABLE_TABLES.CONTACTS,
-        id
-      );
-      return mapRecordToContact(record);
+
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToContact(data);
     },
     enabled: !!id,
   });
@@ -184,7 +143,7 @@ export function useProspect(id: string | undefined) {
  * Hook to get prospects with client names (for display)
  */
 export function useProspectsWithClients(filters?: ProspectFilters) {
-  const { data: prospects, ...rest } = useProspects(filters);
+  const { data: prospects } = useProspects(filters);
 
   return useQuery({
     queryKey: ["prospects-with-clients", filters, prospects?.map(p => p.id)],
@@ -202,21 +161,18 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
         return prospects.map(p => ({ ...p, clientNom: undefined }));
       }
 
-      // Fetch client names
-      const clientMap = new Map<string, string>();
+      // Fetch client names in one query
+      const { data: clients, error } = await supabase
+        .from("clients")
+        .select("id, nom")
+        .in("id", clientIds);
 
-      // Fetch clients in batches to avoid rate limits
-      for (const clientId of clientIds) {
-        try {
-          const record = await airtable.getRecord<ClientFields>(
-            AIRTABLE_TABLES.CLIENTS,
-            clientId
-          );
-          clientMap.set(clientId, record.fields["Nom du Client"] || "");
-        } catch {
-          // Client might have been deleted
-        }
-      }
+      if (error) throw error;
+
+      const clientMap = new Map<string, string>();
+      (clients || []).forEach(c => {
+        clientMap.set(c.id, c.nom || "");
+      });
 
       // Merge client names with prospects
       return prospects.map(prospect => ({
@@ -227,8 +183,6 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
       }));
     },
     enabled: !!prospects && prospects.length > 0,
-    // Garder les données précédentes pendant le refetch pour éviter
-    // que les composants (comme ProspectForm) soient unmount
     placeholderData: keepPreviousData,
   });
 }
@@ -257,39 +211,41 @@ export function useUpdateProspectStatus() {
       lienVisio?: string;
       notes?: string;
     }) => {
-      const fields: Partial<ContactFields> = {
-        "Statut Prospection": statut,
+      const updateData: Record<string, unknown> = {
+        statut_prospection: statut,
       };
 
       if (dateRappel !== undefined) {
-        fields["Date Rappel"] = dateRappel || undefined;
+        updateData.date_rappel = dateRappel || null;
       }
 
       if (dateRdvPrevu !== undefined) {
-        fields["Date RDV Prévu"] = dateRdvPrevu || undefined;
+        updateData.date_rdv_prevu = dateRdvPrevu || null;
       }
 
       if (typeRdv !== undefined) {
-        fields["Type RDV"] = typeRdv || undefined;
+        updateData.type_rdv = typeRdv || null;
       }
 
       if (lienVisio !== undefined) {
-        fields["Lien Visio"] = lienVisio || undefined;
+        updateData.lien_visio = lienVisio || null;
       }
 
       if (notes !== undefined) {
-        fields["Notes Prospection"] = notes;
+        updateData.notes_prospection = notes;
       }
 
-      const record = await airtable.updateRecord<ContactFields>(
-        AIRTABLE_TABLES.CONTACTS,
-        id,
-        fields
-      );
-      return mapRecordToContact(record);
+      const { data, error } = await supabase
+        .from("contacts")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToContact(data);
     },
     onSuccess: async (_, variables) => {
-      // Refetch all prospect-related queries to ensure UI updates immediately
       await queryClient.refetchQueries({ queryKey: ["prospects"] });
       await queryClient.refetchQueries({ queryKey: ["prospects-with-clients"] });
       queryClient.invalidateQueries({ queryKey: ["prospect", variables.id] });
@@ -312,6 +268,11 @@ export function useCreateProspect() {
       secteurActivite,
       siteWeb,
       telephoneEntreprise,
+      siret,
+      adresse,
+      codePostal,
+      ville,
+      pays,
       // Contact
       nom,
       prenom,
@@ -326,14 +287,19 @@ export function useCreateProspect() {
     }: {
       // Entreprise
       entreprise: string;
-      clientId?: string; // If selected from existing clients
+      clientId?: string;
       secteurActivite?: string;
       siteWeb?: string;
       telephoneEntreprise?: string;
+      siret?: string;
+      adresse?: string;
+      codePostal?: string;
+      ville?: string;
+      pays?: string;
       // Contact
       nom: string;
       prenom?: string;
-      email?: string; // Now optional (email OR telephone required)
+      email?: string;
       telephone?: string;
       role?: string;
       sourceLead: ProspectSource;
@@ -348,59 +314,66 @@ export function useCreateProspect() {
       if (existingClientId) {
         clientId = existingClientId;
       } else {
-        // Check if client exists by name (in case user typed an existing name)
-        const existingClients = await airtable.getRecords<ClientFields>(
-          AIRTABLE_TABLES.CLIENTS,
-          {
-            filterByFormula: `{Nom du Client} = '${entreprise.replace(/'/g, "\\'")}'`,
-            maxRecords: 1,
-          }
-        );
+        // Check if client exists by name
+        const { data: existingClients } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("nom", entreprise)
+          .limit(1);
 
-        if (existingClients.length > 0) {
+        if (existingClients && existingClients.length > 0) {
           clientId = existingClients[0].id;
         } else {
-          // Create new client with additional info
-          const clientFields: Record<string, unknown> = {
-            "Nom du Client": entreprise,
-            "Statut": "Prospect",
+          // Create new client
+          const clientData: Record<string, unknown> = {
+            nom: entreprise,
+            statut: "Prospect",
           };
 
-          // Add optional fields if provided
-          if (secteurActivite) clientFields["Secteur d'Activité"] = secteurActivite;
-          if (siteWeb) clientFields["Site Web"] = siteWeb;
-          if (telephoneEntreprise) clientFields["Téléphone"] = telephoneEntreprise;
+          if (secteurActivite) clientData.secteur = secteurActivite;
+          if (siteWeb) clientData.site_web = siteWeb;
+          if (telephoneEntreprise) clientData.telephone = telephoneEntreprise;
+          if (siret) clientData.siret = siret;
+          if (adresse) clientData.adresse = adresse;
+          if (codePostal) clientData.code_postal = codePostal;
+          if (ville) clientData.ville = ville;
+          if (pays) clientData.pays = pays;
 
-          const newClient = await airtable.createRecord(
-            AIRTABLE_TABLES.CLIENTS,
-            clientFields
-          );
+          const { data: newClient, error: clientError } = await supabase
+            .from("clients")
+            .insert(clientData)
+            .select()
+            .single();
+
+          if (clientError) throw clientError;
           clientId = newClient.id;
         }
       }
 
       // 2. Create contact with prospection fields
-      const nomComplet = prenom ? `${prenom} ${nom}` : nom;
-      const contactFields: Partial<ContactFields> = {
-        "Nom Complet": nomComplet,
-        "Client": [clientId],
-        "Statut Prospection": statutProspection || "À appeler",
-        "Source Lead": sourceLead,
+      const contactData: Record<string, unknown> = {
+        nom: nom,
+        client_id: clientId,
+        statut_prospection: statutProspection || "À appeler",
+        source_lead: sourceLead,
       };
 
-      // Add optional contact fields
-      if (email) contactFields["Email"] = email;
-      if (telephone) contactFields["Téléphone"] = telephone;
-      if (role) contactFields["Rôle"] = role;
-      if (notesProspection) contactFields["Notes Prospection"] = notesProspection;
-      if (dateRappel) contactFields["Date Rappel"] = dateRappel;
+      if (prenom) contactData.prenom = prenom;
+      if (email) contactData.email = email;
+      if (telephone) contactData.telephone = telephone;
+      if (role) contactData.poste = role;
+      if (notesProspection) contactData.notes_prospection = notesProspection;
+      if (dateRappel) contactData.date_rappel = dateRappel;
 
-      const record = await airtable.createRecord<ContactFields>(
-        AIRTABLE_TABLES.CONTACTS,
-        contactFields
-      );
+      const { data: record, error } = await supabase
+        .from("contacts")
+        .insert(contactData)
+        .select()
+        .single();
 
-      return { ...mapRecordToContact(record), clientId };
+      if (error) throw error;
+
+      return { ...mapToContact(record), clientId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
@@ -463,75 +436,54 @@ export function useProspectionKPIs() {
  * Returns prospects with status "RDV planifié" where dateRdvPrevu < today
  */
 export function usePastRdvProspects() {
-  const { data: clients } = useClients();
-
   return useQuery({
     queryKey: ["prospects-past-rdv"],
     queryFn: async () => {
       const today = getToday();
 
-      // Filter: RDV planifié status AND dateRdvPrevu < today
-      const filterByFormula = `AND({Statut Prospection} = 'RDV planifié', {Date RDV Prévu} != '', {Date RDV Prévu} < '${today}')`;
+      // Fetch prospects with past RDV
+      const { data: prospects, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("statut_prospection", "RDV planifié")
+        .not("date_rdv_prevu", "is", null)
+        .lt("date_rdv_prevu", today)
+        .order("date_rdv_prevu", { ascending: true });
 
-      const records = await airtable.getRecords<ContactFields>(
-        AIRTABLE_TABLES.CONTACTS,
-        {
-          filterByFormula,
-          sort: [{ field: "Date RDV Prévu", direction: "asc" }],
-        }
-      );
+      if (error) throw error;
 
-      const prospects = records.map(mapRecordToContact);
+      const mappedProspects = (prospects || []).map(mapToContact);
 
-      // Fetch client names for each prospect
-      if (prospects.length > 0) {
+      if (mappedProspects.length > 0) {
+        // Get unique client IDs
         const clientIds = [...new Set(
-          prospects
+          mappedProspects
             .flatMap(p => p.client || [])
             .filter(Boolean)
         )];
 
-        const clientMap = new Map<string, string>();
+        if (clientIds.length > 0) {
+          const { data: clients } = await supabase
+            .from("clients")
+            .select("id, nom")
+            .in("id", clientIds);
 
-        for (const clientId of clientIds) {
-          try {
-            const record = await airtable.getRecord<ClientFields>(
-              AIRTABLE_TABLES.CLIENTS,
-              clientId
-            );
-            clientMap.set(clientId, record.fields["Nom du Client"] || "");
-          } catch {
-            // Client might have been deleted
-          }
+          const clientMap = new Map<string, string>();
+          (clients || []).forEach(c => {
+            clientMap.set(c.id, c.nom || "");
+          });
+
+          return mappedProspects.map(prospect => ({
+            ...prospect,
+            clientNom: prospect.client?.[0]
+              ? clientMap.get(prospect.client[0])
+              : undefined,
+          }));
         }
-
-        return prospects.map(prospect => ({
-          ...prospect,
-          clientNom: prospect.client?.[0]
-            ? clientMap.get(prospect.client[0])
-            : undefined,
-        }));
       }
 
-      return prospects as Prospect[];
+      return mappedProspects as Prospect[];
     },
-    // Refresh every 5 minutes to catch newly past RDVs
     refetchInterval: 5 * 60 * 1000,
-  });
-}
-
-// Re-export useClients for internal use
-function useClients() {
-  return useQuery({
-    queryKey: ["clients-for-prospects"],
-    queryFn: async () => {
-      const records = await airtable.getRecords<ClientFields>(
-        AIRTABLE_TABLES.CLIENTS,
-        {
-          fields: ["Nom du Client"],
-        }
-      );
-      return records;
-    },
   });
 }

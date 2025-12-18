@@ -1,43 +1,30 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { Opportunite, OpportunityStatus } from "@/types";
 
-interface OpportuniteFields {
-  "Nom de l'Opportunité"?: string;
-  "Statut"?: string;
-  "Valeur Estimée"?: number;
-  "Probabilité"?: number;
-  "Date de Clôture Estimée"?: string;
-  "Source"?: string;
-  "Notes"?: string;
-  "Date de Création"?: string;
-  "Valeur Pondérée"?: number;
-  "Client"?: string[];
-  "Contact"?: string[];
-  "Lignes de Devis"?: string[];
-  "Projet Créé"?: string[];
-}
+// Mapper Supabase -> Opportunite type
+function mapToOpportunite(record: Record<string, unknown>): Opportunite {
+  const valeurEstimee = record.valeur_estimee as number | undefined;
+  const probabilite = record.probabilite as number | undefined;
 
-function mapRecordToOpportunite(
-  record: { id: string; fields: OpportuniteFields }
-): Opportunite {
   return {
-    id: record.id,
-    nom: record.fields["Nom de l'Opportunité"] || "",
-    statut: record.fields["Statut"] as OpportunityStatus,
-    valeurEstimee: record.fields["Valeur Estimée"],
-    probabilite: record.fields["Probabilité"],
-    dateClotureEstimee: record.fields["Date de Clôture Estimée"],
-    source: record.fields["Source"],
-    notes: record.fields["Notes"],
-    dateCreation: record.fields["Date de Création"],
-    valeurPonderee: record.fields["Valeur Pondérée"],
-    client: record.fields["Client"],
-    contact: record.fields["Contact"],
-    lignesDevis: record.fields["Lignes de Devis"],
-    projetCree: record.fields["Projet Créé"],
+    id: record.id as string,
+    nom: (record.nom as string) || "",
+    statut: record.statut as OpportunityStatus,
+    valeurEstimee: valeurEstimee,
+    probabilite: probabilite,
+    dateClotureEstimee: record.date_cloture_prevue as string | undefined,
+    source: record.source as string | undefined,
+    notes: record.notes as string | undefined,
+    dateCreation: record.created_at as string | undefined,
+    valeurPonderee: valeurEstimee && probabilite
+      ? valeurEstimee * (probabilite / 100)
+      : undefined,
+    client: record.client_id ? [record.client_id as string] : undefined,
+    contact: record.contact_id ? [record.contact_id as string] : undefined,
+    projetCree: record.projet_id ? [record.projet_id as string] : undefined,
   };
 }
 
@@ -48,30 +35,22 @@ export function useOpportunites(options?: {
   return useQuery({
     queryKey: ["opportunites", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
-      const filters: string[] = [];
+      let query = supabase
+        .from("opportunites")
+        .select("*")
+        .order("date_cloture_prevue", { ascending: true, nullsFirst: false });
 
       if (options?.statut) {
-        filters.push(`{Statut} = '${options.statut}'`);
+        query = query.eq("statut", options.statut);
       }
       if (options?.clientId) {
-        filters.push(`FIND('${options.clientId}', ARRAYJOIN({Client}))`);
+        query = query.eq("client_id", options.clientId);
       }
 
-      if (filters.length > 0) {
-        filterByFormula =
-          filters.length === 1 ? filters[0] : `AND(${filters.join(", ")})`;
-      }
+      const { data, error } = await query;
 
-      const records = await airtable.getRecords<OpportuniteFields>(
-        AIRTABLE_TABLES.OPPORTUNITES,
-        {
-          filterByFormula,
-          sort: [{ field: "Date de Clôture Estimée", direction: "asc" }],
-        }
-      );
-
-      return records.map(mapRecordToOpportunite);
+      if (error) throw error;
+      return (data || []).map(mapToOpportunite);
     },
   });
 }
@@ -80,16 +59,15 @@ export function useOpportunitesParStatut() {
   return useQuery({
     queryKey: ["opportunites", "par-statut"],
     queryFn: async () => {
-      const records = await airtable.getRecords<OpportuniteFields>(
-        AIRTABLE_TABLES.OPPORTUNITES,
-        {
-          filterByFormula:
-            "AND({Statut} != 'Gagné', {Statut} != 'Perdu')",
-          sort: [{ field: "Date de Clôture Estimée", direction: "asc" }],
-        }
-      );
+      const { data, error } = await supabase
+        .from("opportunites")
+        .select("*")
+        .not("statut", "in", '("Gagné","Perdu")')
+        .order("date_cloture_prevue", { ascending: true, nullsFirst: false });
 
-      const opportunites = records.map(mapRecordToOpportunite);
+      if (error) throw error;
+
+      const opportunites = (data || []).map(mapToOpportunite);
 
       // Group by status for Kanban
       const grouped: Record<OpportunityStatus, Opportunite[]> = {
@@ -116,11 +94,15 @@ export function useOpportunite(id: string | undefined) {
     queryKey: ["opportunite", id],
     queryFn: async () => {
       if (!id) throw new Error("Opportunite ID required");
-      const record = await airtable.getRecord<OpportuniteFields>(
-        AIRTABLE_TABLES.OPPORTUNITES,
-        id
-      );
-      return mapRecordToOpportunite(record);
+
+      const { data, error } = await supabase
+        .from("opportunites")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToOpportunite(data);
     },
     enabled: !!id,
   });
@@ -131,23 +113,26 @@ export function useCreateOpportunite() {
 
   return useMutation({
     mutationFn: async (data: Partial<Opportunite>) => {
-      const fields: Partial<OpportuniteFields> = {
-        "Nom de l'Opportunité": data.nom,
-        "Statut": data.statut,
-        "Valeur Estimée": data.valeurEstimee,
-        "Probabilité": data.probabilite,
-        "Date de Clôture Estimée": data.dateClotureEstimee,
-        "Source": data.source,
-        "Notes": data.notes,
-        "Client": data.client,
-        "Contact": data.contact,
+      const insertData = {
+        nom: data.nom,
+        statut: data.statut || "Qualifié",
+        valeur_estimee: data.valeurEstimee,
+        probabilite: data.probabilite,
+        date_cloture_prevue: data.dateClotureEstimee,
+        source: data.source,
+        notes: data.notes,
+        client_id: data.client?.[0],
+        contact_id: data.contact?.[0],
       };
 
-      const record = await airtable.createRecord<OpportuniteFields>(
-        AIRTABLE_TABLES.OPPORTUNITES,
-        fields
-      );
-      return mapRecordToOpportunite(record);
+      const { data: record, error } = await supabase
+        .from("opportunites")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToOpportunite(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["opportunites"] });
@@ -166,25 +151,25 @@ export function useUpdateOpportunite() {
       id: string;
       data: Partial<Opportunite>;
     }) => {
-      const fields: Partial<OpportuniteFields> = {};
+      const updateData: Record<string, unknown> = {};
 
-      if (data.nom !== undefined) fields["Nom de l'Opportunité"] = data.nom;
-      if (data.statut !== undefined) fields["Statut"] = data.statut;
-      if (data.valeurEstimee !== undefined)
-        fields["Valeur Estimée"] = data.valeurEstimee;
-      if (data.probabilite !== undefined)
-        fields["Probabilité"] = data.probabilite;
-      if (data.dateClotureEstimee !== undefined)
-        fields["Date de Clôture Estimée"] = data.dateClotureEstimee;
-      if (data.source !== undefined) fields["Source"] = data.source;
-      if (data.notes !== undefined) fields["Notes"] = data.notes;
+      if (data.nom !== undefined) updateData.nom = data.nom;
+      if (data.statut !== undefined) updateData.statut = data.statut;
+      if (data.valeurEstimee !== undefined) updateData.valeur_estimee = data.valeurEstimee;
+      if (data.probabilite !== undefined) updateData.probabilite = data.probabilite;
+      if (data.dateClotureEstimee !== undefined) updateData.date_cloture_prevue = data.dateClotureEstimee;
+      if (data.source !== undefined) updateData.source = data.source;
+      if (data.notes !== undefined) updateData.notes = data.notes;
 
-      const record = await airtable.updateRecord<OpportuniteFields>(
-        AIRTABLE_TABLES.OPPORTUNITES,
-        id,
-        fields
-      );
-      return mapRecordToOpportunite(record);
+      const { data: record, error } = await supabase
+        .from("opportunites")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToOpportunite(record);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["opportunites"] });
@@ -204,12 +189,15 @@ export function useUpdateOpportuniteStatut() {
       id: string;
       statut: OpportunityStatus;
     }) => {
-      const record = await airtable.updateRecord<OpportuniteFields>(
-        AIRTABLE_TABLES.OPPORTUNITES,
-        id,
-        { Statut: statut }
-      );
-      return mapRecordToOpportunite(record);
+      const { data: record, error } = await supabase
+        .from("opportunites")
+        .update({ statut })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToOpportunite(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["opportunites"] });

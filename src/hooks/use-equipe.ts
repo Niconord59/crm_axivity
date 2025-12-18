@@ -1,35 +1,20 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { MembreEquipe, TeamRole } from "@/types";
 
-interface EquipeFields {
-  "Nom du Membre"?: string;
-  "Email"?: string;
-  "Rôle"?: string;
-  "Capacité Hebdo (h)"?: number;
-  "Charge Prévue (Semaine)"?: number;
-  "% Capacité Atteinte"?: number;
-  "Tâches"?: string[];
-  "Connaissances"?: string[];
-  "Accomplissements"?: string[];
-  "Demandes d'Évolution"?: string[];
-}
-
-function mapRecordToMembreEquipe(
-  record: { id: string; fields: EquipeFields }
-): MembreEquipe {
+// Mapper Supabase -> MembreEquipe type
+function mapToMembreEquipe(record: Record<string, unknown>): MembreEquipe {
   return {
-    id: record.id,
-    nom: record.fields["Nom du Membre"] || "",
-    email: record.fields["Email"],
-    role: record.fields["Rôle"] as TeamRole,
-    capaciteHebdo: record.fields["Capacité Hebdo (h)"],
-    heuresSemaine: record.fields["Charge Prévue (Semaine)"],
-    chargeActuelle: record.fields["% Capacité Atteinte"],
-    tachesAssignees: record.fields["Tâches"],
-    accomplissements: record.fields["Accomplissements"],
+    id: record.id as string,
+    nom: (record.nom as string) || "",
+    email: record.email as string | undefined,
+    role: record.role as TeamRole,
+    capaciteHebdo: record.capacite_hebdo as number | undefined,
+    heuresSemaine: record.charge_prevue_semaine as number | undefined,
+    chargeActuelle: record.capacite_atteinte as number | undefined,
+    createdTime: record.created_at as string | undefined,
   };
 }
 
@@ -37,21 +22,19 @@ export function useEquipe(options?: { role?: TeamRole }) {
   return useQuery({
     queryKey: ["equipe", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
+      let query = supabase
+        .from("equipe")
+        .select("*")
+        .order("nom", { ascending: true });
 
       if (options?.role) {
-        filterByFormula = `{Rôle} = '${options.role}'`;
+        query = query.eq("role", options.role);
       }
 
-      const records = await airtable.getRecords<EquipeFields>(
-        AIRTABLE_TABLES.EQUIPE,
-        {
-          filterByFormula,
-          sort: [{ field: "Nom du Membre", direction: "asc" }],
-        }
-      );
+      const { data, error } = await query;
 
-      return records.map(mapRecordToMembreEquipe);
+      if (error) throw error;
+      return (data || []).map(mapToMembreEquipe);
     },
   });
 }
@@ -61,11 +44,15 @@ export function useMembreEquipe(id: string | undefined) {
     queryKey: ["membre-equipe", id],
     queryFn: async () => {
       if (!id) throw new Error("Membre équipe ID required");
-      const record = await airtable.getRecord<EquipeFields>(
-        AIRTABLE_TABLES.EQUIPE,
-        id
-      );
-      return mapRecordToMembreEquipe(record);
+
+      const { data, error } = await supabase
+        .from("equipe")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToMembreEquipe(data);
     },
     enabled: !!id,
   });
@@ -75,14 +62,13 @@ export function useChargeEquipe() {
   return useQuery({
     queryKey: ["equipe", "charge"],
     queryFn: async () => {
-      const records = await airtable.getRecords<EquipeFields>(
-        AIRTABLE_TABLES.EQUIPE,
-        {
-          sort: [{ field: "% Capacité Atteinte", direction: "desc" }],
-        }
-      );
+      const { data, error } = await supabase
+        .from("equipe")
+        .select("*")
+        .order("capacite_atteinte", { ascending: false, nullsFirst: false });
 
-      return records.map(mapRecordToMembreEquipe);
+      if (error) throw error;
+      return (data || []).map(mapToMembreEquipe);
     },
   });
 }
@@ -92,18 +78,21 @@ export function useCreateMembreEquipe() {
 
   return useMutation({
     mutationFn: async (data: Partial<MembreEquipe>) => {
-      const fields: Partial<EquipeFields> = {
-        "Nom du Membre": data.nom,
-        "Email": data.email,
-        "Rôle": data.role,
-        "Capacité Hebdo (h)": data.capaciteHebdo,
+      const insertData = {
+        nom: data.nom,
+        email: data.email,
+        role: data.role,
+        capacite_hebdo: data.capaciteHebdo,
       };
 
-      const record = await airtable.createRecord<EquipeFields>(
-        AIRTABLE_TABLES.EQUIPE,
-        fields
-      );
-      return mapRecordToMembreEquipe(record);
+      const { data: record, error } = await supabase
+        .from("equipe")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToMembreEquipe(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["equipe"] });
@@ -122,19 +111,22 @@ export function useUpdateMembreEquipe() {
       id: string;
       data: Partial<MembreEquipe>;
     }) => {
-      const fields: Partial<EquipeFields> = {};
+      const updateData: Record<string, unknown> = {};
 
-      if (data.nom !== undefined) fields["Nom du Membre"] = data.nom;
-      if (data.email !== undefined) fields["Email"] = data.email;
-      if (data.role !== undefined) fields["Rôle"] = data.role;
-      if (data.capaciteHebdo !== undefined) fields["Capacité Hebdo (h)"] = data.capaciteHebdo;
+      if (data.nom !== undefined) updateData.nom = data.nom;
+      if (data.email !== undefined) updateData.email = data.email;
+      if (data.role !== undefined) updateData.role = data.role;
+      if (data.capaciteHebdo !== undefined) updateData.capacite_hebdo = data.capaciteHebdo;
 
-      const record = await airtable.updateRecord<EquipeFields>(
-        AIRTABLE_TABLES.EQUIPE,
-        id,
-        fields
-      );
-      return mapRecordToMembreEquipe(record);
+      const { data: record, error } = await supabase
+        .from("equipe")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToMembreEquipe(record);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["equipe"] });

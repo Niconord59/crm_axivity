@@ -1,57 +1,28 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { Client } from "@/types";
 
-interface ClientFields {
-  "Nom du Client"?: string;
-  "Secteur d'activité"?: string;
-  "Statut"?: string;
-  "Site Web"?: string;
-  "Téléphone"?: string;
-  "Notes"?: string;
-  "Date de Création"?: string;
-  // Billing / Address fields
-  "SIRET"?: string;
-  "Adresse"?: string;
-  "Code Postal"?: string;
-  "Ville"?: string;
-  "Pays"?: string;
-  // Calculated fields
-  "Santé du Client"?: string;
-  "CA Total Encaissé"?: number;
-  // Linked records
-  "Contacts"?: string[];
-  "Projets"?: string[];
-  "Opportunités"?: string[];
-  "Factures"?: string[];
-}
-
-function mapRecordToClient(record: { id: string; fields: ClientFields }): Client {
+// Mapper Supabase -> Client type
+function mapToClient(record: Record<string, unknown>): Client {
   return {
-    id: record.id,
-    nom: record.fields["Nom du Client"] || "",
-    secteurActivite: record.fields["Secteur d'activité"],
-    statut: record.fields["Statut"] as Client["statut"],
-    siteWeb: record.fields["Site Web"],
-    telephone: record.fields["Téléphone"],
-    notes: record.fields["Notes"],
-    dateCreation: record.fields["Date de Création"],
+    id: record.id as string,
+    nom: (record.nom as string) || "",
+    secteurActivite: record.secteur as string | undefined,
+    statut: record.statut as Client["statut"],
+    siteWeb: record.site_web as string | undefined,
+    telephone: record.telephone as string | undefined,
+    notes: record.notes as string | undefined,
+    dateCreation: record.created_at as string | undefined,
     // Billing / Address fields
-    siret: record.fields["SIRET"],
-    adresse: record.fields["Adresse"],
-    codePostal: record.fields["Code Postal"],
-    ville: record.fields["Ville"],
-    pays: record.fields["Pays"],
+    siret: record.siret as string | undefined,
+    adresse: record.adresse as string | undefined,
+    codePostal: record.code_postal as string | undefined,
+    ville: record.ville as string | undefined,
+    pays: record.pays as string | undefined,
     // Calculated fields
-    santeClient: record.fields["Santé du Client"],
-    caTotal: record.fields["CA Total Encaissé"],
-    // Linked records
-    contacts: record.fields["Contacts"],
-    projets: record.fields["Projets"],
-    opportunites: record.fields["Opportunités"],
-    factures: record.fields["Factures"],
+    santeClient: record.sante_client as string | undefined,
   };
 }
 
@@ -59,30 +30,22 @@ export function useClients(options?: { statut?: string; secteur?: string }) {
   return useQuery({
     queryKey: ["clients", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
-      const filters: string[] = [];
+      let query = supabase
+        .from("clients")
+        .select("*")
+        .order("nom", { ascending: true });
 
       if (options?.statut) {
-        filters.push(`{Statut} = '${options.statut}'`);
+        query = query.eq("statut", options.statut);
       }
       if (options?.secteur) {
-        filters.push(`{Secteur d'activité} = '${options.secteur}'`);
+        query = query.eq("secteur", options.secteur);
       }
 
-      if (filters.length > 0) {
-        filterByFormula =
-          filters.length === 1 ? filters[0] : `AND(${filters.join(", ")})`;
-      }
+      const { data, error } = await query;
 
-      const records = await airtable.getRecords<ClientFields>(
-        AIRTABLE_TABLES.CLIENTS,
-        {
-          filterByFormula,
-          sort: [{ field: "Nom du Client", direction: "asc" }],
-        }
-      );
-
-      return records.map(mapRecordToClient);
+      if (error) throw error;
+      return (data || []).map(mapToClient);
     },
   });
 }
@@ -92,11 +55,15 @@ export function useClient(id: string | undefined) {
     queryKey: ["client", id],
     queryFn: async () => {
       if (!id) throw new Error("Client ID required");
-      const record = await airtable.getRecord<ClientFields>(
-        AIRTABLE_TABLES.CLIENTS,
-        id
-      );
-      return mapRecordToClient(record);
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToClient(data);
     },
     enabled: !!id,
   });
@@ -107,20 +74,28 @@ export function useCreateClient() {
 
   return useMutation({
     mutationFn: async (data: Partial<Client>) => {
-      const fields: Partial<ClientFields> = {
-        "Nom du Client": data.nom,
-        "Secteur d'activité": data.secteurActivite,
-        "Statut": data.statut,
-        "Site Web": data.siteWeb,
-        "Téléphone": data.telephone,
-        "Notes": data.notes,
+      const insertData = {
+        nom: data.nom,
+        secteur: data.secteurActivite,
+        statut: data.statut || "Prospect",
+        site_web: data.siteWeb,
+        telephone: data.telephone,
+        notes: data.notes,
+        siret: data.siret,
+        adresse: data.adresse,
+        code_postal: data.codePostal,
+        ville: data.ville,
+        pays: data.pays || "France",
       };
 
-      const record = await airtable.createRecord<ClientFields>(
-        AIRTABLE_TABLES.CLIENTS,
-        fields
-      );
-      return mapRecordToClient(record);
+      const { data: record, error } = await supabase
+        .from("clients")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToClient(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -133,21 +108,29 @@ export function useUpdateClient() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Client> }) => {
-      const fields: Partial<ClientFields> = {};
+      const updateData: Record<string, unknown> = {};
 
-      if (data.nom !== undefined) fields["Nom du Client"] = data.nom;
-      if (data.secteurActivite !== undefined) fields["Secteur d'activité"] = data.secteurActivite;
-      if (data.statut !== undefined) fields["Statut"] = data.statut;
-      if (data.siteWeb !== undefined) fields["Site Web"] = data.siteWeb;
-      if (data.telephone !== undefined) fields["Téléphone"] = data.telephone;
-      if (data.notes !== undefined) fields["Notes"] = data.notes;
+      if (data.nom !== undefined) updateData.nom = data.nom;
+      if (data.secteurActivite !== undefined) updateData.secteur = data.secteurActivite;
+      if (data.statut !== undefined) updateData.statut = data.statut;
+      if (data.siteWeb !== undefined) updateData.site_web = data.siteWeb;
+      if (data.telephone !== undefined) updateData.telephone = data.telephone;
+      if (data.notes !== undefined) updateData.notes = data.notes;
+      if (data.siret !== undefined) updateData.siret = data.siret;
+      if (data.adresse !== undefined) updateData.adresse = data.adresse;
+      if (data.codePostal !== undefined) updateData.code_postal = data.codePostal;
+      if (data.ville !== undefined) updateData.ville = data.ville;
+      if (data.pays !== undefined) updateData.pays = data.pays;
 
-      const record = await airtable.updateRecord<ClientFields>(
-        AIRTABLE_TABLES.CLIENTS,
-        id,
-        fields
-      );
-      return mapRecordToClient(record);
+      const { data: record, error } = await supabase
+        .from("clients")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToClient(record);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -161,7 +144,12 @@ export function useDeleteClient() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await airtable.deleteRecord(AIRTABLE_TABLES.CLIENTS, id);
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });

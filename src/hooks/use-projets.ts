@@ -1,65 +1,27 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { Projet, ProjectStatus } from "@/types";
 
-interface ProjetFields {
-  "ID Projet"?: number;
-  "Brief Projet"?: string;
-  "Nom du Projet"?: string;
-  "Statut"?: string;
-  "Date de Début"?: string;
-  "Date de Fin Prévue"?: string;
-  "Date Fin Réelle"?: string;
-  "Budget Final"?: number;
-  "Notes"?: string;
-  "Priorité"?: string;
-  "% Tâches Terminées"?: number;
-  "Budget Temps Consommé"?: number;
-  "Marge Brute"?: number;
-  "Total Heures Estimées"?: number;
-  "Total Heures Passées"?: number;
-  "Montant Total Facturé"?: number;
-  "Coût Interne Estimé"?: number;
-  "Nb Tâches"?: number;
-  "Nb Tâches Terminées"?: number;
-  "Client"?: string[];
-  "Opportunités"?: string[];
-  "Tâches"?: string[];
-  "Factures"?: string[];
-  "Équipe"?: string[];
-  "Feedback"?: string[];
-}
-
-function mapRecordToProjet(record: { id: string; fields: ProjetFields }): Projet {
+// Mapper Supabase -> Projet type
+function mapToProjet(record: Record<string, unknown>): Projet {
   return {
-    id: record.id,
-    idProjet: record.fields["ID Projet"],
-    briefProjet: record.fields["Brief Projet"],
-    nomProjet: record.fields["Nom du Projet"],
-    statut: record.fields["Statut"] as ProjectStatus,
-    dateDebut: record.fields["Date de Début"],
-    dateFinPrevue: record.fields["Date de Fin Prévue"],
-    dateFinReelle: record.fields["Date Fin Réelle"],
-    budget: record.fields["Budget Final"],
-    notes: record.fields["Notes"],
-    priorite: record.fields["Priorité"] as Projet["priorite"],
-    pourcentageTachesTerminees: record.fields["% Tâches Terminées"],
-    budgetTempsConsomme: record.fields["Budget Temps Consommé"],
-    margeBrute: record.fields["Marge Brute"],
-    totalHeuresEstimees: record.fields["Total Heures Estimées"],
-    totalHeuresPassees: record.fields["Total Heures Passées"],
-    montantTotalFacture: record.fields["Montant Total Facturé"],
-    coutInterneEstime: record.fields["Coût Interne Estimé"],
-    nbTaches: record.fields["Nb Tâches"],
-    nbTachesTerminees: record.fields["Nb Tâches Terminées"],
-    client: record.fields["Client"],
-    opportunite: record.fields["Opportunités"],
-    taches: record.fields["Tâches"],
-    factures: record.fields["Factures"],
-    equipe: record.fields["Équipe"],
-    feedbacks: record.fields["Feedback"],
+    id: record.id as string,
+    idProjet: record.id_projet as number | undefined,
+    briefProjet: record.brief as string | undefined,
+    nomProjet: record.nom as string | undefined,
+    statut: record.statut as ProjectStatus,
+    dateDebut: record.date_debut as string | undefined,
+    dateFinPrevue: record.date_fin_prevue as string | undefined,
+    dateFinReelle: record.date_fin_reelle as string | undefined,
+    budget: record.budget_initial as number | undefined,
+    notes: record.notes as string | undefined,
+    priorite: record.priorite as Projet["priorite"],
+    // Calculated fields will come from database views/functions later
+    totalHeuresEstimees: record.heures_estimees as number | undefined,
+    totalHeuresPassees: record.heures_passees as number | undefined,
+    client: record.client_id ? [record.client_id as string] : undefined,
   };
 }
 
@@ -67,30 +29,22 @@ export function useProjets(options?: { statut?: ProjectStatus; clientId?: string
   return useQuery({
     queryKey: ["projets", options],
     queryFn: async () => {
-      let filterByFormula: string | undefined;
-      const filters: string[] = [];
+      let query = supabase
+        .from("projets")
+        .select("*")
+        .order("date_debut", { ascending: false, nullsFirst: false });
 
       if (options?.statut) {
-        filters.push(`{Statut} = '${options.statut}'`);
+        query = query.eq("statut", options.statut);
       }
       if (options?.clientId) {
-        filters.push(`FIND('${options.clientId}', ARRAYJOIN({Client}))`);
+        query = query.eq("client_id", options.clientId);
       }
 
-      if (filters.length > 0) {
-        filterByFormula =
-          filters.length === 1 ? filters[0] : `AND(${filters.join(", ")})`;
-      }
+      const { data, error } = await query;
 
-      const records = await airtable.getRecords<ProjetFields>(
-        AIRTABLE_TABLES.PROJETS,
-        {
-          filterByFormula,
-          sort: [{ field: "Date de Début", direction: "desc" }],
-        }
-      );
-
-      return records.map(mapRecordToProjet);
+      if (error) throw error;
+      return (data || []).map(mapToProjet);
     },
   });
 }
@@ -99,15 +53,14 @@ export function useProjetsActifs() {
   return useQuery({
     queryKey: ["projets", "actifs"],
     queryFn: async () => {
-      const records = await airtable.getRecords<ProjetFields>(
-        AIRTABLE_TABLES.PROJETS,
-        {
-          filterByFormula: "OR({Statut} = 'En cours', {Statut} = 'Cadrage')",
-          sort: [{ field: "Date de Fin Prévue", direction: "asc" }],
-        }
-      );
+      const { data, error } = await supabase
+        .from("projets")
+        .select("*")
+        .in("statut", ["En cours", "Cadrage"])
+        .order("date_fin_prevue", { ascending: true, nullsFirst: false });
 
-      return records.map(mapRecordToProjet);
+      if (error) throw error;
+      return (data || []).map(mapToProjet);
     },
   });
 }
@@ -117,11 +70,15 @@ export function useProjet(id: string | undefined) {
     queryKey: ["projet", id],
     queryFn: async () => {
       if (!id) throw new Error("Projet ID required");
-      const record = await airtable.getRecord<ProjetFields>(
-        AIRTABLE_TABLES.PROJETS,
-        id
-      );
-      return mapRecordToProjet(record);
+
+      const { data, error } = await supabase
+        .from("projets")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return mapToProjet(data);
     },
     enabled: !!id,
   });
@@ -132,22 +89,25 @@ export function useCreateProjet() {
 
   return useMutation({
     mutationFn: async (data: Partial<Projet>) => {
-      const fields: Partial<ProjetFields> = {
-        "Brief Projet": data.briefProjet,
-        "Statut": data.statut,
-        "Date de Début": data.dateDebut,
-        "Date de Fin Prévue": data.dateFinPrevue,
-        "Budget Final": data.budget,
-        "Notes": data.notes,
-        "Priorité": data.priorite,
-        "Client": data.client,
+      const insertData = {
+        brief: data.briefProjet,
+        nom: data.nomProjet || data.briefProjet,
+        statut: data.statut || "Cadrage",
+        date_debut: data.dateDebut,
+        date_fin_prevue: data.dateFinPrevue,
+        budget_initial: data.budget,
+        notes: data.notes,
+        client_id: data.client?.[0],
       };
 
-      const record = await airtable.createRecord<ProjetFields>(
-        AIRTABLE_TABLES.PROJETS,
-        fields
-      );
-      return mapRecordToProjet(record);
+      const { data: record, error } = await supabase
+        .from("projets")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToProjet(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projets"] });
@@ -160,23 +120,27 @@ export function useUpdateProjet() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Projet> }) => {
-      const fields: Partial<ProjetFields> = {};
+      const updateData: Record<string, unknown> = {};
 
-      if (data.briefProjet !== undefined) fields["Brief Projet"] = data.briefProjet;
-      if (data.statut !== undefined) fields["Statut"] = data.statut;
-      if (data.dateDebut !== undefined) fields["Date de Début"] = data.dateDebut;
-      if (data.dateFinPrevue !== undefined) fields["Date de Fin Prévue"] = data.dateFinPrevue;
-      if (data.dateFinReelle !== undefined) fields["Date Fin Réelle"] = data.dateFinReelle;
-      if (data.budget !== undefined) fields["Budget Final"] = data.budget;
-      if (data.notes !== undefined) fields["Notes"] = data.notes;
-      if (data.priorite !== undefined) fields["Priorité"] = data.priorite;
+      if (data.briefProjet !== undefined) updateData.brief = data.briefProjet;
+      if (data.nomProjet !== undefined) updateData.nom = data.nomProjet;
+      if (data.statut !== undefined) updateData.statut = data.statut;
+      if (data.dateDebut !== undefined) updateData.date_debut = data.dateDebut;
+      if (data.dateFinPrevue !== undefined) updateData.date_fin_prevue = data.dateFinPrevue;
+      if (data.dateFinReelle !== undefined) updateData.date_fin_reelle = data.dateFinReelle;
+      if (data.budget !== undefined) updateData.budget_initial = data.budget;
+      if (data.notes !== undefined) updateData.notes = data.notes;
+      if (data.priorite !== undefined) updateData.priorite = data.priorite;
 
-      const record = await airtable.updateRecord<ProjetFields>(
-        AIRTABLE_TABLES.PROJETS,
-        id,
-        fields
-      );
-      return mapRecordToProjet(record);
+      const { data: record, error } = await supabase
+        .from("projets")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToProjet(record);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projets"] });
