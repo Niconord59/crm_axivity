@@ -4,7 +4,6 @@ import "./globals.css";
 import { SessionProvider } from "@/providers/session-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
-import { AppLayout } from "@/components/layout";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,7 +30,7 @@ export default function RootLayout({
         <SessionProvider>
           <QueryProvider>
             <AuthProvider>
-              <AppLayout>{children}</AppLayout>
+              {children}
             </AuthProvider>
           </QueryProvider>
         </SessionProvider>
