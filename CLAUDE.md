@@ -130,7 +130,7 @@ npm start       # Production server
   - `providers/onboarding-provider.tsx` : Context provider pour le tour
 
 ### 005-supabase-migration (Migration Backend - IN PROGRESS)
-- **Status**: 70% - Phase 4 complète
+- **Status**: 85% - Phase 5 complète
 - **Specs**: `specs/005-supabase-migration/`
 - **Content**:
   - Migration du backend Airtable vers Supabase self-hosted
@@ -138,15 +138,22 @@ npm start       # Production server
   - 10 hooks React Query migrés
   - 5 fichiers de migration SQL
   - Row Level Security (5 rôles utilisateur)
+  - Auth UI complète (login, register, forgot-password, reset-password)
 - **Phases complétées**:
   - ✅ Phase 1 : Infrastructure (Supabase déployé)
   - ✅ Phase 2 : Schéma & Auth (21 tables créées)
   - ✅ Phase 4 : Refactoring hooks (10 hooks migrés)
+  - ✅ Phase 5 : Auth UI (pages login/register/reset-password)
 - **Phases restantes**:
   - ⏳ Phase 3 : Migration données (données test uniquement)
-  - ⏳ Phase 5 : Auth UI (pages login/register)
   - ⏳ Phase 6 : Rôles UI (admin users)
   - ⏳ Phase 7 : N8N workflows
+- **Auth UI** (18 déc. 2025):
+  - Pages : `/login`, `/register`, `/forgot-password`, `/reset-password`
+  - Route groups : `(auth)` standalone, `(main)` avec sidebar
+  - Proxy Next.js 16 : `src/proxy.ts` (remplace middleware.ts)
+  - Helper : `src/lib/supabase/proxy.ts`
+  - SMTP : Resend configuré (sandbox mode pour dev)
 - **Hooks migrés** (Supabase) :
   - `use-clients.ts`, `use-projets.ts`, `use-taches.ts`
   - `use-opportunites.ts`, `use-factures.ts`, `use-prospects.ts`
@@ -288,6 +295,69 @@ npm start       # Production server
   - Colonnes manquantes ajoutées (date_rdv_prevu, objet, date_terminee)
   - Build TypeScript validé
   - Script `05_dev_quick_fix.sql` pour désactiver RLS en dev
+- **Auth UI Supabase** (18 déc. 2025)
+  - Pages auth : `/login`, `/register`, `/forgot-password`, `/reset-password`
+  - Route groups Next.js : `(auth)` pages standalone, `(main)` pages avec sidebar
+  - Migration middleware → proxy (Next.js 16 best practice)
+  - Fichiers : `src/proxy.ts`, `src/lib/supabase/proxy.ts`
+  - Protection des routes avec redirection automatique
+  - Header avec dropdown utilisateur et déconnexion
+  - SMTP Resend configuré (sandbox pour dev, production checklist documentée)
+
+## Production Checklist
+
+### Domaine principal
+- **Domaine** : `axivity.cloud`
+- **Supabase** : `supabase.axivity.cloud`
+
+### SMTP / Emails (Resend)
+
+**Configuration actuelle (DEV)** :
+```env
+ENABLE_EMAIL_AUTOCONFIRM=true  # Pas de confirmation email
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=re_xxxxxxxxxx  # API Key Resend
+SMTP_ADMIN_EMAIL=onboarding@resend.dev  # Sandbox
+SMTP_SENDER_NAME=CRM Axivity
+```
+
+**Configuration PRODUCTION** (à faire avant déploiement) :
+1. **Vérifier le domaine dans Resend** :
+   - Aller sur https://resend.com/domains
+   - Ajouter `axivity.cloud`
+   - Configurer les DNS (MX, SPF, DKIM, DMARC)
+
+2. **Modifier les variables Coolify** :
+   ```env
+   ENABLE_EMAIL_AUTOCONFIRM=false
+   SMTP_ADMIN_EMAIL=noreply@axivity.cloud
+   ADDITIONAL_REDIRECT_URLS=https://crm.axivity.cloud/**
+   GOTRUE_SITE_URL=https://crm.axivity.cloud
+   ```
+
+3. **Redéployer le service Auth dans Coolify**
+
+### URLs de redirection
+
+**DEV** :
+```env
+ADDITIONAL_REDIRECT_URLS=http://localhost:3000/**,http://localhost:3000/auth/callback
+```
+
+**PRODUCTION** :
+```env
+ADDITIONAL_REDIRECT_URLS=https://crm.axivity.cloud/**,https://crm.axivity.cloud/auth/callback
+GOTRUE_SITE_URL=https://crm.axivity.cloud
+```
+
+### Variables d'environnement Frontend (.env.production)
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://supabase.axivity.cloud
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...  # Clé anon de production
+```
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
