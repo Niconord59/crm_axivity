@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Target,
+  FileText,
+  TrendingUp,
+  Trophy,
+  XCircle,
+  Briefcase,
+} from "lucide-react";
 import {
   DragDropContext,
   Droppable,
@@ -18,17 +27,47 @@ import {
 } from "@/components/shared";
 import { opportuniteExportColumns } from "@/lib/export";
 import { PipelineChart } from "@/components/charts";
+import { OpportunityCard } from "@/components/opportunites/OpportunityCard";
 import {
   useOpportunitesParStatut,
   useUpdateOpportuniteStatut,
 } from "@/hooks/use-opportunites";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { type OpportunityStatus } from "@/types";
 
-const KANBAN_COLUMNS: { status: OpportunityStatus; title: string; color: string }[] = [
-  { status: "Qualifié", title: "Qualifiés", color: "bg-blue-100" },
-  { status: "Proposition", title: "Proposition", color: "bg-purple-100" },
-  { status: "Négociation", title: "Négociation", color: "bg-orange-100" },
+const KANBAN_COLUMNS: {
+  status: OpportunityStatus;
+  title: string;
+  icon: React.ElementType;
+  gradient: string;
+  iconBg: string;
+  iconColor: string;
+}[] = [
+  {
+    status: "Qualifié",
+    title: "Qualifiés",
+    icon: Target,
+    gradient: "from-blue-500/10 to-blue-500/5",
+    iconBg: "bg-blue-100",
+    iconColor: "text-blue-600",
+  },
+  {
+    status: "Proposition",
+    title: "Proposition",
+    icon: FileText,
+    gradient: "from-violet-500/10 to-violet-500/5",
+    iconBg: "bg-violet-100",
+    iconColor: "text-violet-600",
+  },
+  {
+    status: "Négociation",
+    title: "Négociation",
+    icon: TrendingUp,
+    gradient: "from-orange-500/10 to-orange-500/5",
+    iconBg: "bg-orange-100",
+    iconColor: "text-orange-600",
+  },
 ];
 
 export default function OpportunitesPage() {
@@ -52,14 +91,31 @@ export default function OpportunitesPage() {
     });
   };
 
+  const handleStatusChange = (id: string, status: OpportunityStatus) => {
+    updateStatut.mutate({ id, statut: status });
+  };
+
   if (isLoading) {
     return <PageLoading />;
   }
 
+  // Calculate totals
   const totalPipeline = KANBAN_COLUMNS.reduce((sum, col) => {
     const opps = opportunitesGroupees?.[col.status] || [];
     return sum + opps.reduce((s, o) => s + (o.valeurPonderee || 0), 0);
   }, 0);
+
+  const totalCount = KANBAN_COLUMNS.reduce((sum, col) => {
+    return sum + (opportunitesGroupees?.[col.status]?.length || 0);
+  }, 0);
+
+  const wonCount = opportunitesGroupees?.["Gagné"]?.length || 0;
+  const wonValue = opportunitesGroupees?.["Gagné"]?.reduce(
+    (sum, o) => sum + (o.valeurEstimee || 0),
+    0
+  ) || 0;
+
+  const lostCount = opportunitesGroupees?.["Perdu"]?.length || 0;
 
   // Flatten grouped opportunities for export
   const allOpportunites = KANBAN_COLUMNS.flatMap(
@@ -70,7 +126,7 @@ export default function OpportunitesPage() {
     <div className="space-y-6 h-full flex flex-col">
       <PageHeader
         title="Pipeline Commercial"
-        description={`Valeur pondérée totale: ${formatCurrency(totalPipeline)}`}
+        description="Gérez vos opportunités et suivez votre pipeline"
       >
         <ExportButton
           data={allOpportunites}
@@ -79,6 +135,65 @@ export default function OpportunitesPage() {
           sheetName="Pipeline"
         />
       </PageHeader>
+
+      {/* KPIs Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-primary">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Briefcase className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Pipeline actif</p>
+                <p className="text-xl font-bold">{totalCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Valeur pondérée</p>
+                <p className="text-xl font-bold">{formatCurrency(totalPipeline)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-emerald-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <Trophy className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Gagnées</p>
+                <p className="text-xl font-bold">{wonCount} <span className="text-sm font-normal text-muted-foreground">({formatCurrency(wonValue)})</span></p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Perdues</p>
+                <p className="text-xl font-bold">{lostCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Toggle Chart Button */}
       <div className="flex justify-end">
@@ -111,33 +226,43 @@ export default function OpportunitesPage() {
 
       {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <ScrollArea className="flex-1 -mx-4 px-4 lg:-mx-6 lg:px-6">
-          <div className="flex gap-4 pb-4 min-w-max">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {KANBAN_COLUMNS.map((column) => {
               const opportunities = opportunitesGroupees?.[column.status] || [];
               const columnTotal = opportunities.reduce(
                 (sum, o) => sum + (o.valeurPonderee || 0),
                 0
               );
+              const Icon = column.icon;
 
               return (
                 <div
                   key={column.status}
-                  className="w-[300px] flex-shrink-0 flex flex-col"
+                  className="flex flex-col min-w-0"
                 >
                   {/* Column Header */}
                   <div
-                    className={`rounded-t-lg px-4 py-3 ${column.color}`}
+                    className={cn(
+                      "rounded-t-xl px-4 py-4 bg-gradient-to-br border border-b-0",
+                      column.gradient
+                    )}
                   >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{column.title}</h3>
-                      <span className="text-sm text-muted-foreground">
-                        {opportunities.length}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center", column.iconBg)}>
+                        <Icon className={cn("h-5 w-5", column.iconColor)} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold">{column.title}</h3>
+                          <span className="text-sm font-medium bg-background/80 px-2 py-0.5 rounded-full">
+                            {opportunities.length}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {formatCurrency(columnTotal)}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {formatCurrency(columnTotal)}
-                    </p>
                   </div>
 
                   {/* Droppable Area */}
@@ -146,11 +271,12 @@ export default function OpportunitesPage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`flex-1 rounded-b-lg border border-t-0 bg-card p-2 min-h-[500px] ${
-                          snapshot.isDraggingOver ? "bg-muted/50" : ""
-                        }`}
+                        className={cn(
+                          "flex-1 rounded-b-xl border border-t-0 bg-muted/30 p-3 min-h-[450px] transition-colors",
+                          snapshot.isDraggingOver && "bg-muted/60 border-dashed"
+                        )}
                       >
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {opportunities.map((opp, index) => (
                             <Draggable
                               key={opp.id}
@@ -158,58 +284,34 @@ export default function OpportunitesPage() {
                               index={index}
                             >
                               {(provided, snapshot) => (
-                                <Card
+                                <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`cursor-grab active:cursor-grabbing ${
-                                    snapshot.isDragging ? "shadow-lg" : ""
-                                  }`}
+                                  className="cursor-grab active:cursor-grabbing"
                                 >
-                                  <CardContent className="p-3">
-                                    <h4 className="font-medium text-sm line-clamp-2">
-                                      {opp.nom}
-                                    </h4>
-                                    <div className="mt-2 space-y-1">
-                                      <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                          Valeur
-                                        </span>
-                                        <span className="font-medium">
-                                          {formatCurrency(opp.valeurEstimee)}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                          Probabilité
-                                        </span>
-                                        <span>
-                                          {opp.probabilite
-                                            ? `${Math.round(opp.probabilite * 100)}%`
-                                            : "N/A"}
-                                        </span>
-                                      </div>
-                                      {opp.dateClotureEstimee && (
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">
-                                            Clôture
-                                          </span>
-                                          <span className="text-xs">
-                                            {formatDate(opp.dateClotureEstimee)}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
+                                  <OpportunityCard
+                                    opportunity={opp}
+                                    onStatusChange={handleStatusChange}
+                                    isDragging={snapshot.isDragging}
+                                  />
+                                </div>
                               )}
                             </Draggable>
                           ))}
                           {provided.placeholder}
                           {opportunities.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-8">
-                              Aucune opportunité
-                            </p>
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                              <div className={cn("h-12 w-12 rounded-full flex items-center justify-center mb-3", column.iconBg, "opacity-50")}>
+                                <Icon className={cn("h-6 w-6", column.iconColor, "opacity-50")} />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Aucune opportunité
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Glissez une carte ici
+                              </p>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -219,27 +321,46 @@ export default function OpportunitesPage() {
               );
             })}
 
-            {/* Won/Lost columns (non-draggable targets) */}
-            <div className="w-[200px] flex-shrink-0">
-              <div className="rounded-lg bg-green-100 px-4 py-3">
-                <h3 className="font-semibold text-green-800">Gagnées</h3>
-                <p className="text-sm text-green-600 mt-1">
-                  {opportunitesGroupees?.["Gagné"]?.length || 0} opportunités
-                </p>
+            {/* Won column */}
+            <div className="flex flex-col min-w-0">
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border p-4 h-full">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <Trophy className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-emerald-800">Gagnées</h3>
+                    <p className="text-xs text-emerald-600">
+                      {wonCount} opportunité{wonCount > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-emerald-700">
+                  {formatCurrency(wonValue)}
+                </div>
               </div>
             </div>
 
-            <div className="w-[200px] flex-shrink-0">
-              <div className="rounded-lg bg-red-100 px-4 py-3">
-                <h3 className="font-semibold text-red-800">Perdues</h3>
-                <p className="text-sm text-red-600 mt-1">
-                  {opportunitesGroupees?.["Perdu"]?.length || 0} opportunités
-                </p>
+            {/* Lost column */}
+            <div className="flex flex-col min-w-0 hidden xl:flex">
+              <div className="rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border p-4 h-full">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
+                    <XCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-800">Perdues</h3>
+                    <p className="text-xs text-red-600">
+                      {lostCount} opportunité{lostCount > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Opportunités clôturées sans succès
+                </div>
               </div>
             </div>
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
       </DragDropContext>
     </div>
   );
