@@ -22,8 +22,9 @@ import {
   KPICard,
 } from "@/components/shared";
 import { AppBreadcrumb } from "@/components/layout";
-import { useFactures, useMarquerFacturePayee } from "@/hooks/use-factures";
+import { useFactures, useMarquerFacturePayee, useEnvoyerRelance } from "@/hooks/use-factures";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
+import { useToast } from "@/lib/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 
 interface RelanceLevel {
@@ -73,6 +74,24 @@ function getRelanceLevel(dateEcheance: string): number {
 export default function RelancesPage() {
   const { data: factures, isLoading } = useFactures({ statut: "Envoyé" });
   const marquerPayee = useMarquerFacturePayee();
+  const envoyerRelance = useEnvoyerRelance();
+  const { toast } = useToast();
+
+  const handleRelancer = async (factureId: string) => {
+    try {
+      const result = await envoyerRelance.mutateAsync(factureId);
+      toast({
+        title: "Relance envoyée",
+        description: result.message,
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de l'envoi de la relance",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return <PageLoading />;
@@ -270,9 +289,23 @@ export default function RelancesPage() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm">
-                              <Mail className="h-4 w-4 mr-1" />
-                              Relancer
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRelancer(facture.id)}
+                              disabled={envoyerRelance.isPending}
+                            >
+                              {envoyerRelance.isPending ? (
+                                <>
+                                  <Clock className="h-4 w-4 mr-1 animate-spin" />
+                                  Envoi...
+                                </>
+                              ) : (
+                                <>
+                                  <Mail className="h-4 w-4 mr-1" />
+                                  Relancer
+                                </>
+                              )}
                             </Button>
                             <Button
                               variant="default"

@@ -72,15 +72,22 @@ export const PROSPECT_SOURCES = [
 ] as const;
 export type ProspectSource = (typeof PROSPECT_SOURCES)[number];
 
+// Rôles Supabase (valeurs stockées en DB)
 export const TEAM_ROLES = [
-  "Direction",
-  "Chef de Projet",
-  "Développeur",
-  "Designer",
-  "Commercial",
-  "Support",
+  "admin",
+  "developpeur_nocode",
+  "developpeur_automatisme",
+  "client",
 ] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
+
+// Labels français pour l'affichage
+export const TEAM_ROLE_LABELS: Record<TeamRole, string> = {
+  admin: "Admin",
+  developpeur_nocode: "Développeur NoCode",
+  developpeur_automatisme: "Développeur Automatisme",
+  client: "Client",
+};
 
 // =============================================================================
 // BASE ENTITY INTERFACE

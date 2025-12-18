@@ -20,6 +20,7 @@ function mapToFacture(record: Record<string, unknown>): Facture {
     datePaiement: record.date_paiement as string | undefined,
     notes: record.notes as string | undefined,
     niveauRelance: record.niveau_relance as number | undefined,
+    niveauRelanceEnvoye: record.niveau_relance_envoye as number | undefined,
     projet: record.projet_id ? [record.projet_id as string] : undefined,
     client: record.client_id ? [record.client_id as string] : undefined,
   };
@@ -188,6 +189,41 @@ export function useMarquerFacturePayee() {
 
       if (error) throw error;
       return mapToFacture(record);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["factures"] });
+    },
+  });
+}
+
+interface RelanceResponse {
+  success: boolean;
+  message: string;
+  niveau_relance: number;
+  facture_id: string;
+  error?: string;
+}
+
+export function useEnvoyerRelance() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (factureId: string): Promise<RelanceResponse> => {
+      const response = await fetch("/api/factures/relance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ factureId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors de l'envoi de la relance");
+      }
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["factures"] });

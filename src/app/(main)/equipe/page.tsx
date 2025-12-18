@@ -20,7 +20,7 @@ import {
   EmptyState,
 } from "@/components/shared";
 import { useEquipe, useChargeEquipe } from "@/hooks/use-equipe";
-import { TEAM_ROLES, type TeamRole } from "@/types";
+import { TEAM_ROLES, TEAM_ROLE_LABELS, type TeamRole } from "@/types";
 
 export default function EquipePage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -67,7 +67,7 @@ export default function EquipePage() {
               <SelectItem value="all">Tous les rôles</SelectItem>
               {TEAM_ROLES.map((role) => (
                 <SelectItem key={role} value={role}>
-                  {role}
+                  {TEAM_ROLE_LABELS[role]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -116,7 +116,7 @@ export default function EquipePage() {
                       </div>
                       {membre.role && (
                         <p className="text-sm text-muted-foreground">
-                          {membre.role}
+                          {TEAM_ROLE_LABELS[membre.role as TeamRole] || membre.role}
                         </p>
                       )}
                     </div>

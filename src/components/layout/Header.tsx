@@ -67,7 +67,7 @@ export function Header() {
             <span className="hidden sm:inline">Rechercher...</span>
             <span className="sm:hidden">Rechercher</span>
             <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-              <span className="text-xs">⌘</span>K
+              Ctrl+K
             </kbd>
           </Button>
         </div>
