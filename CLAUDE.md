@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-16
+Auto-generated from all feature plans. Last updated: 2025-12-18
 
 ## Active Technologies
 
@@ -19,10 +19,11 @@ src/
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (13 hooks)
+├── hooks/                  # React Query hooks (13 hooks - migrés vers Supabase)
 ├── lib/
-│   ├── airtable.ts         # API client
-│   ├── airtable-tables.ts  # Table IDs (21 tables)
+│   ├── supabase.ts         # Supabase client (NOUVEAU - principal)
+│   ├── airtable.ts         # API client (LEGACY)
+│   ├── airtable-tables.ts  # Table IDs (LEGACY)
 │   ├── utils.ts            # Helpers (cn, formatters)
 │   ├── schemas/            # Zod validation schemas
 │   └── tour-steps.ts       # Configuration des étapes du tour
@@ -128,21 +129,61 @@ npm start       # Production server
   - `lib/tour-steps.ts` : Configuration des 11 étapes du tour
   - `providers/onboarding-provider.tsx` : Context provider pour le tour
 
+### 005-supabase-migration (Migration Backend - IN PROGRESS)
+- **Status**: 70% - Phase 4 complète
+- **Specs**: `specs/005-supabase-migration/`
+- **Content**:
+  - Migration du backend Airtable vers Supabase self-hosted
+  - Déploiement via Coolify (template intégré)
+  - 10 hooks React Query migrés
+  - 5 fichiers de migration SQL
+  - Row Level Security (5 rôles utilisateur)
+- **Phases complétées**:
+  - ✅ Phase 1 : Infrastructure (Supabase déployé)
+  - ✅ Phase 2 : Schéma & Auth (21 tables créées)
+  - ✅ Phase 4 : Refactoring hooks (10 hooks migrés)
+- **Phases restantes**:
+  - ⏳ Phase 3 : Migration données (données test uniquement)
+  - ⏳ Phase 5 : Auth UI (pages login/register)
+  - ⏳ Phase 6 : Rôles UI (admin users)
+  - ⏳ Phase 7 : N8N workflows
+- **Hooks migrés** (Supabase) :
+  - `use-clients.ts`, `use-projets.ts`, `use-taches.ts`
+  - `use-opportunites.ts`, `use-factures.ts`, `use-prospects.ts`
+  - `use-equipe.ts`, `use-interactions.ts`
+  - `use-convert-opportunity.ts`, `use-import-leads.ts`
+- **Mapping colonnes important** :
+  - `nom_complet` → `nom` + `prenom` (contacts)
+  - `secteur_activite` → `secteur` (clients)
+  - `role` → `poste` (contacts)
+  - `notes` → `resume` (interactions)
+
 ## Documentation
 
 - **Passation projet**: `Documentation/passation_projet_agence_ia.md`
 - **Roadmap Phase 2**: `Documentation/Ameliorations_Phase2_Roadmap.md`
 - **Guide construction Airtable**: `Documentation/Guide de Construction _ Base Airtable pour Agence IA.md`
 
-## Supabase Integration (NEW)
+## Supabase Integration (ACTIVE)
 
 - **URL**: `https://supabase.axivity.cloud`
 - **Client**: `lib/supabase.ts`
-- **Migrations**: `supabase/migrations/` (4 fichiers SQL)
+- **Migrations**: `supabase/migrations/` (5 fichiers SQL)
 - **Déploiement**: Coolify (template Supabase intégré)
 - **Variables d'environnement**:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Migrations SQL
+
+| Fichier | Description | Statut |
+|---------|-------------|--------|
+| `00_extensions.sql` | Extensions PostgreSQL | ✅ |
+| `01_schema.sql` | 21 tables + ENUMs | ✅ |
+| `02_rls.sql` | Row Level Security | ✅ |
+| `03_functions.sql` | Triggers et fonctions | ✅ |
+| `04_equipe_table.sql` | Table équipe + colonnes | ⚠️ À exécuter |
+| `05_dev_quick_fix.sql` | Désactiver RLS (dev) | ⚠️ À exécuter |
 
 ### Rôles utilisateur Supabase
 
@@ -154,7 +195,17 @@ npm start       # Production server
 | `membre` | Ses tâches + projets assignés |
 | `client` | Portail client (lecture seule) |
 
-## Airtable Integration (LEGACY - Migration en cours)
+### Mapping Airtable → Supabase
+
+| Airtable | Supabase | Notes |
+|----------|----------|-------|
+| `nom_complet` | `nom` + `prenom` | Champs séparés |
+| `secteur_activite` | `secteur` | Renommé |
+| `role` (contacts) | `poste` | Poste du contact |
+| `notes` (interactions) | `resume` | Résumé |
+| `participant_interne_id` | `user_id` | Lien profiles |
+
+## Airtable Integration (LEGACY - Déprécié)
 
 - **Base ID**: `appEf6JtWFdfLwsU6`
 - **API Key**: `.env.local` (`NEXT_PUBLIC_AIRTABLE_API_KEY`)
@@ -230,6 +281,13 @@ npm start       # Production server
   - Migrations SQL prêtes (21 tables, RLS, triggers)
   - 5 rôles utilisateur (admin, manager, commercial, membre, client)
   - Variables d'environnement ajoutées
+- **Migration Hooks Supabase** (18 déc. 2025)
+  - 10 hooks React Query migrés d'Airtable vers Supabase
+  - Correction des mappings de colonnes (nom_complet → nom/prenom, etc.)
+  - Table `equipe` créée pour T10-Équipe
+  - Colonnes manquantes ajoutées (date_rdv_prevu, objet, date_terminee)
+  - Build TypeScript validé
+  - Script `05_dev_quick_fix.sql` pour désactiver RLS en dev
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

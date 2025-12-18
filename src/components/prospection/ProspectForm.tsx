@@ -201,7 +201,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
 
   // Fetch des interactions pour le client sélectionné (uniquement si contacts existants)
   const { data: clientInteractions, isLoading: isLoadingInteractions } = useInteractions({
-    clientName: hasExistingContacts ? selectedClientName : undefined,
+    clientId: hasExistingContacts ? selectedClientId : undefined,
   });
 
   // Filter clients based on search
