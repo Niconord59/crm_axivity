@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Bell, Check, AlertTriangle, FileText, FolderKanban, Clock, X } from "lucide-react";
+import { Bell, Check, AlertTriangle, FileText, FolderKanban, Clock, X, Phone, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -14,12 +14,13 @@ import { Separator } from "@/components/ui/separator";
 import { useTachesEnRetard } from "@/hooks/use-taches";
 import { useFacturesImpayees } from "@/hooks/use-factures";
 import { useProjetsActifs } from "@/hooks/use-projets";
+import { useRappelsAujourdhui, useRdvAujourdhui } from "@/hooks/use-prospects";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface Notification {
   id: string;
-  type: "task" | "invoice" | "project";
+  type: "task" | "invoice" | "project" | "callback" | "rdv";
   title: string;
   description: string;
   href: string;
@@ -36,6 +37,8 @@ export function NotificationPanel() {
   const { data: tachesEnRetard } = useTachesEnRetard();
   const { data: facturesImpayees } = useFacturesImpayees();
   const { data: projetsActifs } = useProjetsActifs();
+  const { data: rappelsAujourdhui } = useRappelsAujourdhui();
+  const { data: rdvAujourdhui } = useRdvAujourdhui();
 
   // Load dismissed notifications from localStorage
   useEffect(() => {
@@ -112,6 +115,39 @@ export function NotificationPanel() {
       });
     });
 
+  // Add callbacks scheduled for today
+  rappelsAujourdhui?.slice(0, 3).forEach((prospect) => {
+    const contactName = prospect.prenom
+      ? `${prospect.prenom} ${prospect.nom}`
+      : prospect.nom;
+    notifications.push({
+      id: `callback-${prospect.id}`,
+      type: "callback",
+      title: "Rappel à faire",
+      description: `${contactName}${prospect.clientNom ? ` - ${prospect.clientNom}` : ""}`,
+      href: `/prospection?leadId=${prospect.id}`,
+      isUrgent: false,
+      date: prospect.dateRappel,
+    });
+  });
+
+  // Add RDV scheduled for today
+  rdvAujourdhui?.slice(0, 3).forEach((prospect) => {
+    const contactName = prospect.prenom
+      ? `${prospect.prenom} ${prospect.nom}`
+      : prospect.nom;
+    const isVisio = prospect.typeRdv === "Visio";
+    notifications.push({
+      id: `rdv-${prospect.id}`,
+      type: "rdv",
+      title: isVisio ? "Visio aujourd'hui" : "RDV aujourd'hui",
+      description: `${contactName}${prospect.clientNom ? ` - ${prospect.clientNom}` : ""}`,
+      href: `/prospection?leadId=${prospect.id}`,
+      isUrgent: true,
+      date: prospect.dateRdvPrevu,
+    });
+  });
+
   // Filter out dismissed notifications
   const visibleNotifications = notifications.filter(
     (n) => !dismissedIds.has(n.id)
@@ -128,6 +164,10 @@ export function NotificationPanel() {
         return <FileText className="h-4 w-4" />;
       case "project":
         return <FolderKanban className="h-4 w-4" />;
+      case "callback":
+        return <Phone className="h-4 w-4" />;
+      case "rdv":
+        return <Video className="h-4 w-4" />;
     }
   };
 

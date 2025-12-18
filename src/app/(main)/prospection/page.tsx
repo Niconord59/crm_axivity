@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Upload, Phone as PhoneIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, PageLoading, EmptyState } from "@/components/shared";
@@ -16,6 +17,7 @@ import {
 import {
   useProspectsWithClients,
   useUpdateProspectStatus,
+  useProspect,
   type ProspectFilters,
   type Prospect,
 } from "@/hooks/use-prospects";
@@ -28,8 +30,23 @@ export default function ProspectionPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const leadIdFromUrl = searchParams.get("leadId");
+
   const queryClient = useQueryClient();
   const { data: prospects, isLoading } = useProspectsWithClients(filters);
+  const { data: prospectFromUrl } = useProspect(leadIdFromUrl || undefined);
+
+  // Auto-open dialog if leadId is in URL
+  useEffect(() => {
+    if (leadIdFromUrl && prospectFromUrl) {
+      setSelectedProspect(prospectFromUrl as Prospect);
+      setCallDialogOpen(true);
+      // Clear the URL parameter without reloading
+      router.replace("/prospection", { scroll: false });
+    }
+  }, [leadIdFromUrl, prospectFromUrl, router]);
   const updateStatus = useUpdateProspectStatus();
 
   // Filter out qualified/non-qualified/lost prospects by default

@@ -431,6 +431,103 @@ export function useProspectionKPIs() {
 }
 
 /**
+ * Hook to fetch prospects with callbacks scheduled for today
+ * Returns prospects with status "Rappeler" where dateRappel is today
+ */
+export function useRappelsAujourdhui() {
+  return useQuery({
+    queryKey: ["prospects-rappels-aujourdhui"],
+    queryFn: async () => {
+      const today = getToday();
+
+      const { data: prospects, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("statut_prospection", "Rappeler")
+        .eq("date_rappel", today)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const mappedProspects = (prospects || []).map(mapToContact);
+
+      if (mappedProspects.length > 0) {
+        const clientIds = [...new Set(
+          mappedProspects.flatMap(p => p.client || []).filter(Boolean)
+        )];
+
+        if (clientIds.length > 0) {
+          const { data: clients } = await supabase
+            .from("clients")
+            .select("id, nom")
+            .in("id", clientIds);
+
+          const clientMap = new Map<string, string>();
+          (clients || []).forEach(c => clientMap.set(c.id, c.nom || ""));
+
+          return mappedProspects.map(prospect => ({
+            ...prospect,
+            clientNom: prospect.client?.[0] ? clientMap.get(prospect.client[0]) : undefined,
+          }));
+        }
+      }
+
+      return mappedProspects as Prospect[];
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook to fetch RDV scheduled for today
+ * Returns prospects with status "RDV planifié" where dateRdvPrevu is today
+ */
+export function useRdvAujourdhui() {
+  return useQuery({
+    queryKey: ["prospects-rdv-aujourdhui"],
+    queryFn: async () => {
+      const today = getToday();
+
+      const { data: prospects, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("statut_prospection", "RDV planifié")
+        .gte("date_rdv_prevu", today)
+        .lt("date_rdv_prevu", today + "T23:59:59")
+        .order("date_rdv_prevu", { ascending: true });
+
+      if (error) throw error;
+
+      const mappedProspects = (prospects || []).map(mapToContact);
+
+      if (mappedProspects.length > 0) {
+        const clientIds = [...new Set(
+          mappedProspects.flatMap(p => p.client || []).filter(Boolean)
+        )];
+
+        if (clientIds.length > 0) {
+          const { data: clients } = await supabase
+            .from("clients")
+            .select("id, nom")
+            .in("id", clientIds);
+
+          const clientMap = new Map<string, string>();
+          (clients || []).forEach(c => clientMap.set(c.id, c.nom || ""));
+
+          return mappedProspects.map(prospect => ({
+            ...prospect,
+            clientNom: prospect.client?.[0] ? clientMap.get(prospect.client[0]) : undefined,
+          }));
+        }
+      }
+
+      return mappedProspects as Prospect[];
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+}
+
+/**
  * Hook to fetch prospects with past RDV dates (for notifications)
  * Returns prospects with status "RDV planifié" where dateRdvPrevu < today
  */
