@@ -21,11 +21,13 @@ import {
   EmptyState,
 } from "@/components/shared";
 import { useEquipe, useChargeEquipe } from "@/hooks/use-equipe";
+import { useAuth } from "@/hooks/use-auth";
 import { TEAM_ROLES, TEAM_ROLE_LABELS, type TeamRole } from "@/types";
 
 export default function EquipePage() {
   const router = useRouter();
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const { isAdmin } = useAuth();
 
   const { data: equipe, isLoading } = useEquipe();
   const { data: chargeEquipe } = useChargeEquipe();
@@ -45,12 +47,12 @@ export default function EquipePage() {
     <div className="space-y-6">
       <PageHeader
         title="Équipe"
-        description="Gérez votre équipe et suivez leur charge de travail"
-        action={{
+        description={isAdmin() ? "Gérez votre équipe et suivez leur charge de travail" : "La charge de travail de l'équipe"}
+        action={isAdmin() ? {
           label: "Ajouter un Membre",
           icon: Plus,
           onClick: () => router.push("/admin/users"),
-        }}
+        } : undefined}
       >
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
@@ -78,11 +80,11 @@ export default function EquipePage() {
       {!filteredEquipe || filteredEquipe.length === 0 ? (
         <EmptyState
           title="Aucun membre"
-          description="Ajoutez votre premier membre d'équipe."
-          action={{
+          description={isAdmin() ? "Ajoutez votre premier membre d'équipe." : "Aucun membre dans l'équipe pour le moment."}
+          action={isAdmin() ? {
             label: "Ajouter un membre",
             onClick: () => router.push("/admin/users"),
-          }}
+          } : undefined}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

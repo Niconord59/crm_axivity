@@ -77,6 +77,7 @@ export const TEAM_ROLES = [
   "admin",
   "developpeur_nocode",
   "developpeur_automatisme",
+  "commercial",
   "client",
 ] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
@@ -86,6 +87,7 @@ export const TEAM_ROLE_LABELS: Record<TeamRole, string> = {
   admin: "Admin",
   developpeur_nocode: "Développeur NoCode",
   developpeur_automatisme: "Développeur Automatisme",
+  commercial: "Commercial",
   client: "Client",
 };
 
