@@ -77,11 +77,12 @@ const ROLES = [
   { value: "admin", label: "Admin", color: "bg-red-100 text-red-800" },
   { value: "developpeur_nocode", label: "Développeur NoCode", color: "bg-blue-100 text-blue-800" },
   { value: "developpeur_automatisme", label: "Développeur Automatisme", color: "bg-purple-100 text-purple-800" },
+  { value: "commercial", label: "Commercial", color: "bg-green-100 text-green-800" },
   { value: "client", label: "Client", color: "bg-gray-100 text-gray-800" },
 ];
 
 function getRoleBadge(role: string) {
-  const roleConfig = ROLES.find((r) => r.value === role) || ROLES[3];
+  const roleConfig = ROLES.find((r) => r.value === role) || ROLES[ROLES.length - 1];
   return (
     <Badge variant="outline" className={roleConfig.color}>
       {roleConfig.label}

@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     }
 
     // Validate role
-    const validRoles = ["admin", "developpeur_nocode", "developpeur_automatisme", "client"];
+    const validRoles = ["admin", "developpeur_nocode", "developpeur_automatisme", "commercial", "client"];
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         { error: "Rôle invalide" },

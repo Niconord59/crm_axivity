@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Types pour les tables Supabase
-export type UserRole = 'admin' | 'developpeur_nocode' | 'developpeur_automatisme' | 'client'
+export type UserRole = 'admin' | 'developpeur_nocode' | 'developpeur_automatisme' | 'commercial' | 'client'
 
 export type Profile = {
   id: string

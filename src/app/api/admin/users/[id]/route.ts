@@ -55,7 +55,7 @@ export async function PATCH(
 
     // Validate role if provided
     if (role) {
-      const validRoles = ["admin", "developpeur_nocode", "developpeur_automatisme", "client"];
+      const validRoles = ["admin", "developpeur_nocode", "developpeur_automatisme", "commercial", "client"];
       if (!validRoles.includes(role)) {
         return NextResponse.json(
           { error: "Rôle invalide" },

@@ -55,8 +55,9 @@
 | Rôle | Permissions |
 |------|-------------|
 | `admin` | Accès total |
-| `developpeur_nocode` | CRUD sur toutes les entités (ex-manager) |
+| `developpeur_nocode` | CRUD sur toutes les entités |
 | `developpeur_automatisme` | Lecture + modification tâches assignées |
+| `commercial` | Gestion clients/contacts/opportunités propres, lecture projets/factures |
 | `client` | Portail client (lecture seule) |
 
 ### Fichiers créés/modifiés

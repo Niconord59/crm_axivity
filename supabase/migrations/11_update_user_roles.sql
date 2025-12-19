@@ -4,18 +4,18 @@
 -- Date: 2025-12-19
 --
 -- Old roles: admin, manager, commercial, membre, client
--- New roles: admin, developpeur_nocode, developpeur_automatisme, client
+-- New roles: admin, developpeur_nocode, developpeur_automatisme, commercial, client
 --
 -- Mapping:
 --   admin → admin (unchanged)
 --   manager → developpeur_nocode
---   commercial → developpeur_nocode (merged)
+--   commercial → commercial (unchanged, for future use)
 --   membre → developpeur_automatisme
 --   client → client (unchanged)
 -- ============================================
 
 -- Step 1: Create the new enum type
-CREATE TYPE user_role_new AS ENUM ('admin', 'developpeur_nocode', 'developpeur_automatisme', 'client');
+CREATE TYPE user_role_new AS ENUM ('admin', 'developpeur_nocode', 'developpeur_automatisme', 'commercial', 'client');
 
 -- Step 2: Update profiles table to use text temporarily, migrate values, then use new enum
 ALTER TABLE profiles
@@ -23,8 +23,9 @@ ALTER TABLE profiles
   ALTER COLUMN role TYPE text USING role::text;
 
 -- Step 3: Update existing role values
-UPDATE profiles SET role = 'developpeur_nocode' WHERE role IN ('manager', 'commercial');
+UPDATE profiles SET role = 'developpeur_nocode' WHERE role = 'manager';
 UPDATE profiles SET role = 'developpeur_automatisme' WHERE role = 'membre';
+-- Note: 'commercial' and 'admin' and 'client' remain unchanged
 
 -- Step 4: Convert to new enum
 ALTER TABLE profiles
@@ -191,10 +192,62 @@ CREATE POLICY "interactions_insert_dev_auto"
   WITH CHECK (auth.user_role() = 'developpeur_automatisme');
 
 -- ============================================
+-- RLS policies for commercial role
+-- Commercial can manage their own clients, contacts, opportunities
+-- ============================================
+
+-- Clients: commercial can see/manage their own clients
+CREATE POLICY "clients_select_commercial"
+  ON clients FOR SELECT
+  USING (auth.user_role() = 'commercial' AND owner_id = auth.uid());
+
+CREATE POLICY "clients_insert_commercial"
+  ON clients FOR INSERT
+  WITH CHECK (auth.user_role() = 'commercial');
+
+CREATE POLICY "clients_update_commercial"
+  ON clients FOR UPDATE
+  USING (auth.user_role() = 'commercial' AND owner_id = auth.uid());
+
+-- Contacts: commercial can see/manage contacts of their clients
+CREATE POLICY "contacts_select_commercial"
+  ON contacts FOR SELECT
+  USING (auth.user_role() = 'commercial' AND owner_id = auth.uid());
+
+CREATE POLICY "contacts_crud_commercial"
+  ON contacts FOR ALL
+  USING (auth.user_role() = 'commercial' AND owner_id = auth.uid());
+
+-- Opportunites: commercial can manage their own opportunities
+CREATE POLICY "opportunites_select_commercial"
+  ON opportunites FOR SELECT
+  USING (auth.user_role() = 'commercial' AND owner_id = auth.uid());
+
+CREATE POLICY "opportunites_crud_commercial"
+  ON opportunites FOR ALL
+  USING (auth.user_role() = 'commercial' AND owner_id = auth.uid());
+
+-- Projets: commercial can view all projects (read-only)
+CREATE POLICY "projets_select_commercial"
+  ON projets FOR SELECT
+  USING (auth.user_role() = 'commercial');
+
+-- Factures: commercial can view invoices (read-only)
+CREATE POLICY "factures_select_commercial"
+  ON factures FOR SELECT
+  USING (auth.user_role() = 'commercial');
+
+-- Interactions: commercial can create interactions
+CREATE POLICY "interactions_insert_commercial"
+  ON interactions FOR INSERT
+  WITH CHECK (auth.user_role() = 'commercial');
+
+-- ============================================
 -- Done! Summary of new role permissions:
 --
 -- admin: Full access to everything
--- developpeur_nocode: Full CRUD on all business entities (like old manager+commercial)
+-- developpeur_nocode: Full CRUD on all business entities
 -- developpeur_automatisme: Read access + can update own tasks/interactions
+-- commercial: Manage own clients/contacts/opportunities, read projects/factures
 -- client: Portal access only (their own projects/factures)
 -- ============================================
