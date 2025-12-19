@@ -5,18 +5,18 @@
 
 ## Summary
 
-Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une agence IA. L'interface permet de gérer le cycle de vie client complet : prospection (opportunités), vente (pipeline), exécution (projets/tâches), facturation et fidélisation. L'application est construite avec React 18 + Shadcn/UI + Tailwind CSS, communiquant avec une base Airtable existante via API REST. Design 100% responsive mobile-first.
+Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une agence IA. L'interface permet de gérer le cycle de vie client complet : prospection (opportunités), vente (pipeline), exécution (projets/tâches), facturation et fidélisation. L'application est construite avec React 19 + Next.js 16 + Shadcn/UI + Tailwind CSS, communiquant avec Supabase (migration depuis Airtable en cours). Design 100% responsive mobile-first.
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x avec React 18.3.1
-**Primary Dependencies**: Next.js 14 (App Router), Shadcn/UI, Tailwind CSS 3.x, Recharts, @hello-pangea/dnd (drag-and-drop)
-**Storage**: Airtable REST API (Base ID: appEf6JtWFdfLwsU6) - Aucune base de données locale
+**Language/Version**: TypeScript 5.x avec React 19.2.3
+**Primary Dependencies**: Next.js 16.0.10 (App Router + Turbopack), Shadcn/UI, Tailwind CSS 3.x, Recharts, @hello-pangea/dnd v18 (drag-and-drop)
+**Storage**: Supabase self-hosted (https://supabase.axivity.cloud) - Migration depuis Airtable en cours (85%)
 **Testing**: Vitest + React Testing Library + Playwright (E2E)
 **Target Platform**: Web (navigateurs modernes), responsive mobile-first (375px minimum)
-**Project Type**: Web application (frontend uniquement, backend = Airtable API)
+**Project Type**: Web application (frontend Next.js, backend = Supabase)
 **Performance Goals**: Dashboard < 3s, interactions < 2s, 60fps animations
-**Constraints**: Connexion internet requise, pas de mode offline, API Airtable rate limits
+**Constraints**: Connexion internet requise, pas de mode offline
 **Scale/Scope**: ~10 pages principales, ~50 composants, équipe 5-15 utilisateurs
 
 ## Constitution Check

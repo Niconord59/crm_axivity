@@ -1,19 +1,13 @@
 <!--
 ## Sync Impact Report
-- Version change: N/A (initial) → 1.0.0
-- Added principles:
-  - I. Mobile-First Responsive Design
-  - II. Shadcn/UI Component Exclusivity
-  - III. Airtable API as Single Source of Truth
-  - IV. Automation-Ready Architecture
-  - V. Data Integrity & Bidirectional Relations
-  - VI. Simplicity & YAGNI
-- Added sections:
-  - Technical Stack Requirements
-  - Development Workflow
-  - Governance
+- Version change: 1.0.0 → 1.1.0 (2025-12-19)
+- Updated principles:
+  - III. Airtable API as Single Source of Truth → III. Supabase as Single Source of Truth
+- Updated sections:
+  - Technical Stack Requirements: React 18.3.1 → 19.2.3, added Next.js 16.0.10, Airtable → Supabase
+  - Compliance Review: Airtable → Supabase reference
 - Templates requiring updates:
-  - `.specify/templates/plan-template.md` - ✅ updated (Constitution Check section aligned)
+  - `.specify/templates/plan-template.md` - ✅ no changes needed
   - `.specify/templates/spec-template.md` - ✅ no changes needed
   - `.specify/templates/tasks-template.md` - ✅ no changes needed
 - Follow-up TODOs: None
@@ -47,16 +41,18 @@ Required component categories:
 
 **Rationale**: Shadcn/UI provides consistent, accessible, and customizable components that integrate seamlessly with Tailwind CSS, ensuring design coherence and reducing maintenance burden.
 
-### III. Airtable API as Single Source of Truth
+### III. Supabase as Single Source of Truth
 
-All data operations MUST go through the Airtable REST API. The React application is a presentation layer only - no local database or data caching beyond reasonable UI performance optimizations.
+All data operations MUST go through Supabase. The React application is a presentation layer only - no local database or data caching beyond reasonable UI performance optimizations (React Query).
 
-- Base ID: `appEf6JtWFdfLwsU6`
-- All 21 tables are pre-defined with specific Table IDs (see `lib/airtable.ts`)
-- CRUD operations MUST use the official Airtable API endpoints
-- Field IDs and Table IDs MUST be used for reliable API calls
+- Supabase URL: `https://supabase.axivity.cloud`
+- All 21 tables are defined in PostgreSQL with Row Level Security (RLS)
+- CRUD operations MUST use the Supabase client (`lib/supabase.ts`)
+- Authentication is handled via Supabase Auth
 
-**Rationale**: Airtable serves as the "nervous system" of the agency, enabling both the web interface and N8N automations to operate on the same data source without synchronization issues.
+**Rationale**: Supabase serves as the "nervous system" of the agency, enabling both the web interface and N8N automations to operate on the same data source without synchronization issues. Migration from Airtable completed December 2025.
+
+> **Legacy Note**: Original implementation used Airtable REST API (Base ID: `appEf6JtWFdfLwsU6`). Airtable client preserved in `lib/airtable.ts` for reference.
 
 ### IV. Automation-Ready Architecture
 
@@ -95,12 +91,13 @@ Start with the minimum viable implementation. Avoid premature optimization and u
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **React** | 18.3.1 | Frontend framework |
+| **React** | 19.2.3 | Frontend framework |
+| **Next.js** | 16.0.10 | App Router + Turbopack |
 | **Shadcn/UI** | Latest | UI component library |
 | **Tailwind CSS** | 3.x | Utility-first styling |
 | **Recharts** | Latest | Charts and visualizations |
 | **TypeScript** | 5.x | Type safety |
-| **Airtable API** | REST | Backend data layer |
+| **Supabase** | Self-hosted | Backend data layer (migrated from Airtable) |
 
 **Project Structure**:
 ```
@@ -161,8 +158,8 @@ This constitution supersedes all other development practices for the CRM Axivity
 **Compliance Review**: All pull requests MUST verify:
 - [ ] Mobile-first responsive design implemented
 - [ ] Only Shadcn/UI components used
-- [ ] Airtable API used correctly (no local data storage)
+- [ ] Supabase used correctly (no local data storage)
 - [ ] Bidirectional relations maintained
 - [ ] No unnecessary complexity added
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-14
+**Version**: 1.1.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-19
