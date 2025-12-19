@@ -44,11 +44,26 @@
 - [x] Créer hook `use-auth.ts`
 - [x] Créer proxy de protection des routes (Next.js 16 - remplace middleware)
 
-## Phase 6 : Rôles UI ⏳
-- [ ] Créer page `/admin/users`
-- [ ] Créer composant `InviteUserDialog`
-- [ ] Implémenter changement de rôle
-- [ ] Tester les permissions par rôle
+## Phase 6 : Rôles UI ✅
+- [x] Créer page `/admin/users`
+- [x] Créer composant `InviteUserDialog` (intégré dans la page)
+- [x] Implémenter changement de rôle (PATCH API)
+- [x] Aligner les rôles code ↔ base de données (migration 11)
+- [x] Tester les permissions par rôle
+
+### Rôles utilisateur (alignés)
+| Rôle | Permissions |
+|------|-------------|
+| `admin` | Accès total |
+| `developpeur_nocode` | CRUD sur toutes les entités (ex-manager) |
+| `developpeur_automatisme` | Lecture + modification tâches assignées |
+| `client` | Portail client (lecture seule) |
+
+### Fichiers créés/modifiés
+- `src/app/(main)/admin/users/page.tsx` - Page admin complète
+- `src/app/api/admin/users/route.ts` - API GET/POST users
+- `src/app/api/admin/users/[id]/route.ts` - API PATCH/DELETE user
+- `supabase/migrations/11_update_user_roles.sql` - Migration enum + RLS
 
 ## Phase 7 : N8N Workflows ⏳
 - [ ] Adapter workflow conversion opportunité
