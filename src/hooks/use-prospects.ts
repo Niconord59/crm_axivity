@@ -435,18 +435,25 @@ export function useProspectionKPIs() {
  * Hook to fetch prospects with callbacks scheduled for today
  * Returns prospects with status "Rappeler" where dateRappel is today
  */
-export function useRappelsAujourdhui() {
+export function useRappelsAujourdhui(userId?: string) {
   return useQuery({
-    queryKey: ["prospects-rappels-aujourdhui"],
+    queryKey: ["prospects-rappels-aujourdhui", userId],
     queryFn: async () => {
       const today = getToday();
 
-      const { data: prospects, error } = await supabase
+      let query = supabase
         .from("contacts")
         .select("*")
         .eq("statut_prospection", "Rappeler")
         .eq("date_rappel", today)
         .order("created_at", { ascending: false });
+
+      // Filter by owner if provided
+      if (userId) {
+        query = query.eq("owner_id", userId);
+      }
+
+      const { data: prospects, error } = await query;
 
       if (error) throw error;
 
@@ -483,18 +490,25 @@ export function useRappelsAujourdhui() {
  * Hook to fetch RDV scheduled for today
  * Returns prospects with status "RDV planifié" where dateRdvPrevu is today
  */
-export function useRdvAujourdhui() {
+export function useRdvAujourdhui(userId?: string) {
   return useQuery({
-    queryKey: ["prospects-rdv-aujourdhui"],
+    queryKey: ["prospects-rdv-aujourdhui", userId],
     queryFn: async () => {
       const today = getToday();
 
-      const { data: prospects, error } = await supabase
+      let query = supabase
         .from("contacts")
         .select("*")
         .eq("statut_prospection", "RDV planifié")
         .eq("date_rdv_prevu", today)
         .order("created_at", { ascending: false });
+
+      // Filter by owner if provided
+      if (userId) {
+        query = query.eq("owner_id", userId);
+      }
+
+      const { data: prospects, error } = await query;
 
       if (error) throw error;
 

@@ -60,18 +60,25 @@ export function useTaches(options?: {
   });
 }
 
-export function useTachesEnRetard() {
+export function useTachesEnRetard(userId?: string) {
   return useQuery({
-    queryKey: ["taches", "en-retard"],
+    queryKey: ["taches", "en-retard", userId],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("taches")
         .select("*")
         .neq("statut", "Terminé")
         .lt("date_echeance", today)
         .order("date_echeance", { ascending: true });
+
+      // Filter by user if provided
+      if (userId) {
+        query = query.eq("assignee_id", userId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data || []).map(mapToTache);

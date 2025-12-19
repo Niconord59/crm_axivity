@@ -50,15 +50,22 @@ export function useProjets(options?: { statut?: ProjectStatus; clientId?: string
   });
 }
 
-export function useProjetsActifs() {
+export function useProjetsActifs(userId?: string) {
   return useQuery({
-    queryKey: ["projets", "actifs"],
+    queryKey: ["projets", "actifs", userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("projets")
         .select("*")
         .in("statut", ["En cours", "Cadrage"])
         .order("date_fin_prevue", { ascending: true, nullsFirst: false });
+
+      // Filter by owner if provided
+      if (userId) {
+        query = query.eq("owner_id", userId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data || []).map(mapToProjet);

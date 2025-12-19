@@ -15,6 +15,7 @@ import { useTachesEnRetard } from "@/hooks/use-taches";
 import { useFacturesImpayees } from "@/hooks/use-factures";
 import { useProjetsActifs } from "@/hooks/use-projets";
 import { useRappelsAujourdhui, useRdvAujourdhui } from "@/hooks/use-prospects";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -34,11 +35,16 @@ export function NotificationPanel() {
   const [open, setOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
-  const { data: tachesEnRetard } = useTachesEnRetard();
-  const { data: facturesImpayees } = useFacturesImpayees();
-  const { data: projetsActifs } = useProjetsActifs();
-  const { data: rappelsAujourdhui } = useRappelsAujourdhui();
-  const { data: rdvAujourdhui } = useRdvAujourdhui();
+  const { user, isAdmin } = useAuth();
+
+  // Admin sees all notifications, others see only their own
+  const userId = isAdmin() ? undefined : user?.id;
+
+  const { data: tachesEnRetard } = useTachesEnRetard(userId);
+  const { data: facturesImpayees } = useFacturesImpayees(); // Factures are global
+  const { data: projetsActifs } = useProjetsActifs(userId);
+  const { data: rappelsAujourdhui } = useRappelsAujourdhui(userId);
+  const { data: rdvAujourdhui } = useRdvAujourdhui(userId);
 
   // Load dismissed notifications from localStorage
   useEffect(() => {
