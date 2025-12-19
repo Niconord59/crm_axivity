@@ -44,12 +44,13 @@
 - [x] Créer hook `use-auth.ts`
 - [x] Créer proxy de protection des routes (Next.js 16 - remplace middleware)
 
-## Phase 6 : Rôles UI ✅
+## Phase 6 : Rôles UI ✅ (Complète)
 - [x] Créer page `/admin/users`
 - [x] Créer composant `InviteUserDialog` (intégré dans la page)
 - [x] Implémenter changement de rôle (PATCH API)
-- [x] Aligner les rôles code ↔ base de données (migration 11)
+- [x] Aligner les rôles code ↔ base de données (migration 11 + 11_v2)
 - [x] Tester les permissions par rôle
+- [x] Migration SQL exécutée avec succès
 
 ### Rôles utilisateur (alignés)
 | Rôle | Permissions |
