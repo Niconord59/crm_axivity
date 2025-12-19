@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("Connexion en cours...");
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -28,21 +27,25 @@ export default function AuthCallbackPage() {
       const errorParam = queryParams.get("error");
       const errorDescription = queryParams.get("error_description");
 
+      console.log("[Callback] type:", type, "hasToken:", !!accessToken, "hasCode:", !!code);
+
       // Handle error from Supabase
       if (errorParam) {
         setError(errorDescription || errorParam);
-        setTimeout(() => router.push("/login?error=" + errorParam), 2000);
+        setTimeout(() => window.location.href = "/login?error=" + errorParam, 2000);
         return;
       }
 
       try {
         // Case 1: PKCE flow with code
         if (code) {
+          setStatus("Échange du code...");
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         }
         // Case 2: Implicit flow with access_token (from invite/magic link)
         else if (accessToken && refreshToken) {
+          setStatus("Configuration de la session...");
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -54,23 +57,28 @@ export default function AuthCallbackPage() {
           throw new Error("Paramètres d'authentification manquants");
         }
 
+        // Wait a moment for cookies to be set
+        setStatus("Redirection...");
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Check the type to determine where to redirect
+        // Use window.location.href for full page reload to ensure cookies are sent
         if (type === "invite" || type === "recovery") {
-          // For invites and password recovery, go to reset password page
-          router.push("/reset-password");
+          console.log("[Callback] Redirecting to /reset-password");
+          window.location.href = "/reset-password";
         } else {
-          // For other cases (magic link login, etc.), go to home
-          router.push("/");
+          console.log("[Callback] Redirecting to /");
+          window.location.href = "/";
         }
       } catch (err) {
         console.error("Auth callback error:", err);
         setError(err instanceof Error ? err.message : "Erreur d'authentification");
-        setTimeout(() => router.push("/login?error=auth_callback_error"), 2000);
+        setTimeout(() => window.location.href = "/login?error=auth_callback_error", 2000);
       }
     };
 
     handleCallback();
-  }, [router]);
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -83,7 +91,7 @@ export default function AuthCallbackPage() {
         ) : (
           <div className="space-y-4">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Connexion en cours...</p>
+            <p className="text-muted-foreground">{status}</p>
           </div>
         )}
       </div>
