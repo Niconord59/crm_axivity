@@ -15,11 +15,12 @@ const ROUTE_CONFIG = {
     "/auth/callback",
   ],
   // Routes that authenticated users should be redirected away from
+  // Note: /reset-password is NOT here because authenticated users need access
+  // (e.g., after accepting an invite, they're authenticated but need to set password)
   authOnly: [
     "/login",
     "/register",
     "/forgot-password",
-    "/reset-password",
   ],
   // Default redirect for authenticated users leaving auth pages
   defaultAuthenticatedRedirect: "/",
