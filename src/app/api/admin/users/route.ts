@@ -96,6 +96,18 @@ export async function GET() {
   }
 }
 
+// Map user_role to team_role for equipe table
+function mapUserRoleToTeamRole(userRole: string): string | null {
+  const mapping: Record<string, string> = {
+    admin: "Direction",
+    developpeur_nocode: "Développeur",
+    developpeur_automatisme: "Développeur",
+    commercial: "Commercial",
+    client: null as unknown as string, // Clients don't appear in equipe
+  };
+  return mapping[userRole] || null;
+}
+
 // POST - Invite a new user
 export async function POST(request: Request) {
   try {
@@ -168,6 +180,28 @@ export async function POST(request: Request) {
       if (profileError) {
         console.error("Error creating profile:", profileError);
         // Don't fail the request, the profile can be created later
+      }
+
+      // Create equipe record for team members (not clients)
+      const teamRole = mapUserRoleToTeamRole(role);
+      if (teamRole) {
+        const fullName = [prenom, nom].filter(Boolean).join(" ") || email.split("@")[0];
+        const { error: equipeError } = await supabaseAdmin
+          .from("equipe")
+          .upsert({
+            profile_id: inviteData.user.id,
+            nom: fullName,
+            email: email,
+            role: teamRole,
+            capacite_hebdo: 35, // Default 35h/week
+          }, {
+            onConflict: "profile_id",
+          });
+
+        if (equipeError) {
+          console.error("Error creating equipe record:", equipeError);
+          // Don't fail the request, the equipe record can be created later
+        }
       }
     }
 
