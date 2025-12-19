@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 
 export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("Connexion en cours...");
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    // Prevent double execution in React StrictMode
+    if (hasRun.current) {
+      console.log("[Callback] Already running, skipping...");
+      return;
+    }
+    hasRun.current = true;
+
     const handleCallback = async () => {
       const supabase = createClient();
 
@@ -46,11 +54,21 @@ export default function AuthCallbackPage() {
         // Case 2: Implicit flow with access_token (from invite/magic link)
         else if (accessToken && refreshToken) {
           setStatus("Configuration de la session...");
-          const { error } = await supabase.auth.setSession({
+          console.log("[Callback] Setting session with tokens...");
+
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
-          if (error) throw error;
+
+          console.log("[Callback] setSession result:", { data, error });
+
+          if (error) {
+            console.error("[Callback] setSession error:", error);
+            throw error;
+          }
+
+          console.log("[Callback] Session set successfully, user:", data?.user?.email);
         }
         // No valid auth params
         else {
