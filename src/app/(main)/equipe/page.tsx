@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, Mail, Clock, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { useEquipe, useChargeEquipe } from "@/hooks/use-equipe";
 import { TEAM_ROLES, TEAM_ROLE_LABELS, type TeamRole } from "@/types";
 
 export default function EquipePage() {
+  const router = useRouter();
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
   const { data: equipe, isLoading } = useEquipe();
@@ -47,9 +49,7 @@ export default function EquipePage() {
         action={{
           label: "Ajouter un Membre",
           icon: Plus,
-          onClick: () => {
-            // TODO: Open create member dialog
-          },
+          onClick: () => router.push("/admin/users"),
         }}
       >
         <div className="flex items-center gap-2">
@@ -81,9 +81,7 @@ export default function EquipePage() {
           description="Ajoutez votre premier membre d'équipe."
           action={{
             label: "Ajouter un membre",
-            onClick: () => {
-              // TODO: Open create member dialog
-            },
+            onClick: () => router.push("/admin/users"),
           }}
         />
       ) : (
