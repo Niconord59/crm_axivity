@@ -39,9 +39,19 @@ ALTER TABLE profiles
   ALTER COLUMN role TYPE user_role_new USING role::user_role_new,
   ALTER COLUMN role SET DEFAULT 'developpeur_automatisme';
 
--- Step 5: Drop old enum and rename new one
+-- Step 5: Drop functions that depend on user_role type
+DROP FUNCTION IF EXISTS auth.user_role();
+DROP FUNCTION IF EXISTS auth.is_admin_or_manager();
+
+-- Step 6: Drop old enum and rename new one
 DROP TYPE user_role;
 ALTER TYPE user_role_new RENAME TO user_role;
+
+-- Step 7: Recreate the user_role function with new type
+CREATE OR REPLACE FUNCTION auth.user_role()
+RETURNS user_role AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- ============================================
 -- Update RLS helper functions
