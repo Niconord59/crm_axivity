@@ -13,11 +13,13 @@
 - [x] Créer les triggers et fonctions
 - [x] Configurer RLS (policies)
 
-## Phase 3 : Migration données ⏳
-- [ ] Exporter les données Airtable
-- [ ] Transformer les données (mapping colonnes)
-- [ ] Importer dans Supabase
+## Phase 3 : Migration données ✅
+- [x] ~~Exporter les données Airtable~~ (N/A - base Airtable vide)
+- [x] ~~Transformer les données~~ (N/A - base Airtable vide)
+- [x] ~~Importer dans Supabase~~ (N/A - base Airtable vide)
 - [x] Créer données de test (équipe)
+- [x] Vérifier mapping CSV import → Supabase
+- [x] Ajouter colonne linkedin manquante (migration 10)
 
 ## Phase 4 : Refactoring hooks ✅
 - [x] Migrer `use-clients.ts`

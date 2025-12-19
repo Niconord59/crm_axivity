@@ -297,6 +297,7 @@ export function useImportLeads() {
               nom: lead.nom,
               telephone: lead.telephone,
               poste: lead.role,
+              linkedin: lead.linkedin,
               notes_prospection: lead.notesProspection,
               source_lead: lead.sourceLead,
             };
@@ -373,6 +374,7 @@ export function useImportLeads() {
                 email: lead.email,
                 telephone: lead.telephone,
                 poste: lead.role,
+                linkedin: lead.linkedin,
                 client_id: clientId,
                 statut_prospection: "À appeler",
                 source_lead: lead.sourceLead,
