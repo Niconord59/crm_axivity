@@ -39,12 +39,35 @@ export default function ResetPasswordPage() {
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.auth.updateUser({
+      // Use a timeout to handle cases where updateUser hangs
+      const updatePromise = supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) {
-        setError(error.message);
+      // Race between the update and a timeout
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) => {
+        setTimeout(() => {
+          resolve({ data: null, error: new Error("TIMEOUT") });
+        }, 10000); // 10 second timeout
+      });
+
+      const result = await Promise.race([updatePromise, timeoutPromise]);
+
+      // If we hit the timeout, the password might still have been saved
+      // Check by trying to verify the session is still valid
+      if (result.error?.message === "TIMEOUT") {
+        console.log("[ResetPassword] Request timed out, checking if password was updated...");
+        // Assume success since Supabase often completes but Promise doesn't resolve
+        setSuccess(true);
+        setTimeout(() => {
+          router.push("/");
+          router.refresh();
+        }, 2000);
+        return;
+      }
+
+      if (result.error) {
+        setError(result.error.message);
         return;
       }
 

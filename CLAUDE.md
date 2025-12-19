@@ -131,24 +131,25 @@ npm start       # Production server
   - `providers/onboarding-provider.tsx` : Context provider pour le tour
 
 ### 005-supabase-migration (Migration Backend - IN PROGRESS)
-- **Status**: 85% - Phase 5 complète
+- **Status**: 95% - Phase 7 complète
 - **Specs**: `specs/005-supabase-migration/`
 - **Content**:
   - Migration du backend Airtable vers Supabase self-hosted
   - Déploiement via Coolify (template intégré)
   - 10 hooks React Query migrés
-  - 5 fichiers de migration SQL
+  - 14 fichiers de migration SQL
   - Row Level Security (5 rôles utilisateur)
   - Auth UI complète (login, register, forgot-password, reset-password)
+  - 4 workflows N8N adaptés pour Supabase
 - **Phases complétées**:
   - ✅ Phase 1 : Infrastructure (Supabase déployé)
   - ✅ Phase 2 : Schéma & Auth (21 tables créées)
   - ✅ Phase 4 : Refactoring hooks (10 hooks migrés)
   - ✅ Phase 5 : Auth UI (pages login/register/reset-password)
+  - ✅ Phase 6 : Rôles UI (invitation utilisateurs, gestion équipe)
+  - ✅ Phase 7 : N8N workflows (4 workflows adaptés)
 - **Phases restantes**:
   - ⏳ Phase 3 : Migration données (données test uniquement)
-  - ⏳ Phase 6 : Rôles UI (admin users)
-  - ⏳ Phase 7 : N8N workflows
 - **Auth UI** (18 déc. 2025):
   - Pages : `/login`, `/register`, `/forgot-password`, `/reset-password`
   - Route groups : `(auth)` standalone, `(main)` avec sidebar
@@ -190,8 +191,17 @@ npm start       # Production server
 | `01_schema.sql` | 21 tables + ENUMs | ✅ |
 | `02_rls.sql` | Row Level Security | ✅ |
 | `03_functions.sql` | Triggers et fonctions | ✅ |
-| `04_equipe_table.sql` | Table équipe + colonnes | ⚠️ À exécuter |
-| `05_dev_quick_fix.sql` | Désactiver RLS (dev) | ⚠️ À exécuter |
+| `04_equipe_table.sql` | Table équipe + colonnes | ✅ |
+| `05_dev_quick_fix.sql` | Désactiver RLS (dev) | ✅ |
+| `06_test_data.sql` | Données de test | ✅ |
+| `07_fix_profiles_rls.sql` | Fix RLS profiles | ✅ |
+| `08_update_test_dates.sql` | Mise à jour dates test | ✅ |
+| `09_factures_relance_columns.sql` | Colonnes relance factures | ✅ |
+| `10_contacts_linkedin_column.sql` | Colonne LinkedIn contacts | ✅ |
+| `11_update_user_roles.sql` | Mise à jour rôles | ✅ |
+| `12_equipe_profile_unique.sql` | Contrainte unique équipe | ✅ |
+| `13_projets_feedback_column.sql` | Colonne feedback_envoye | ⚠️ À exécuter |
+| `14_invoice_status_en_retard.sql` | Statut "En retard" factures | ⚠️ À exécuter |
 
 ### Rôles utilisateur Supabase
 
@@ -212,6 +222,40 @@ npm start       # Production server
 | `role` (contacts) | `poste` | Poste du contact |
 | `notes` (interactions) | `resume` | Résumé |
 | `participant_interne_id` | `user_id` | Lien profiles |
+
+## N8N Workflows Supabase (Phase 7 - 19 déc. 2025)
+
+4 workflows adaptés d'Airtable vers Supabase, disponibles dans `Workflows_n8n/`:
+
+| Workflow | Fichier | Déclencheur |
+|----------|---------|-------------|
+| **Conversion Opportunité** | `supabase_conversion_opportunite_projet.json` | Toutes les minutes |
+| **Feedback Post-Projet** | `supabase_feedback_post_projet.json` | Quotidien 9h |
+| **Alertes Tâches** | `supabase_alertes_taches_retard.json` | Quotidien 9h (Lun-Ven) |
+| **Relances Factures** | `supabase_relances_factures.json` | Quotidien 10h (Lun-Ven) |
+
+### Configuration N8N
+
+1. Credential Supabase API :
+   - Host: `https://supabase.axivity.cloud`
+   - Service Role Key: depuis Coolify → Variables
+
+2. Syntaxe des filtres PostgREST (IMPORTANT) :
+   ```
+   "filterString": "={{ 'date_echeance=lt.' + $now.toISODate() + '&statut=neq.Terminé' }}"
+   ```
+   Note: Utiliser `={{ }}` pour les expressions dynamiques, pas `{{ }}`
+
+### Colonnes requises
+
+Exécuter les migrations 13 et 14 avant d'activer les workflows :
+```sql
+-- Migration 13: feedback_envoye pour projets
+ALTER TABLE projets ADD COLUMN IF NOT EXISTS feedback_envoye BOOLEAN DEFAULT false;
+
+-- Migration 14: Statut 'En retard' pour factures
+ALTER TYPE invoice_status ADD VALUE IF NOT EXISTS 'En retard';
+```
 
 ## Airtable Integration (LEGACY - Déprécié)
 
@@ -317,6 +361,17 @@ npm start       # Production server
   - Layout CSS Grid responsive pleine largeur (`grid-cols-1 md:2 lg:4 xl:5`)
   - États vides avec icônes pour colonnes sans opportunités
   - Menu dropdown pour changement rapide de statut
+- **Phase 6 - Rôles UI** (19 déc. 2025)
+  - Invitation utilisateurs via email avec Supabase Auth
+  - Callback auth pour redirection vers reset-password
+  - Fix Promise.race pour updateUser qui ne résolvait pas
+  - Création automatique du record équipe à l'invitation
+- **Phase 7 - N8N Workflows Supabase** (19 déc. 2025)
+  - 4 workflows adaptés d'Airtable vers Supabase
+  - Remplacement des nodes Airtable par Supabase
+  - Correction syntaxe expressions : `={{ }}` au lieu de `{{ }}`
+  - Adaptation des noms de colonnes (snake_case)
+  - Migrations 13 et 14 pour colonnes requises
 
 ## Production Checklist
 

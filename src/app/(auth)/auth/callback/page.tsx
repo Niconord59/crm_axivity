@@ -11,91 +11,108 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     // Prevent double execution in React StrictMode
-    if (hasRun.current) {
-      console.log("[Callback] Already running, skipping...");
-      return;
-    }
+    if (hasRun.current) return;
     hasRun.current = true;
 
-    const handleCallback = async () => {
-      const supabase = createClient();
+    console.log("[Callback] Starting...");
+    console.log("[Callback] Full URL:", window.location.href);
+    console.log("[Callback] Hash:", window.location.hash);
 
-      // Get the hash fragment (contains access_token for implicit flow)
-      const hashParams = new URLSearchParams(
-        window.location.hash.substring(1) // Remove the '#'
-      );
+    // Parse hash fragment
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get("type");
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
 
-      // Also check query params (for PKCE flow)
-      const queryParams = new URLSearchParams(window.location.search);
+    console.log("[Callback] Parsed params:", {
+      type,
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+    });
 
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
-      const type = hashParams.get("type") || queryParams.get("type");
-      const code = queryParams.get("code");
-      const errorParam = queryParams.get("error");
-      const errorDescription = queryParams.get("error_description");
+    // If no tokens in hash, redirect to login
+    if (!accessToken || !refreshToken) {
+      console.log("[Callback] No tokens found, redirecting to login");
+      window.location.replace("/login");
+      return;
+    }
 
-      console.log("[Callback] type:", type, "hasToken:", !!accessToken, "hasCode:", !!code);
+    const supabase = createClient();
 
-      // Handle error from Supabase
-      if (errorParam) {
-        setError(errorDescription || errorParam);
-        setTimeout(() => window.location.href = "/login?error=" + errorParam, 2000);
-        return;
-      }
+    // Use onAuthStateChange to detect when session is ready
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[Callback] Auth state change:", event, {
+        hasSession: !!session,
+        email: session?.user?.email,
+      });
 
-      try {
-        // Case 1: PKCE flow with code
-        if (code) {
-          setStatus("Échange du code...");
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        }
-        // Case 2: Implicit flow with access_token (from invite/magic link)
-        else if (accessToken && refreshToken) {
-          setStatus("Configuration de la session...");
-          console.log("[Callback] Setting session with tokens...");
-
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          console.log("[Callback] setSession result:", { data, error });
-
-          if (error) {
-            console.error("[Callback] setSession error:", error);
-            throw error;
-          }
-
-          console.log("[Callback] Session set successfully, user:", data?.user?.email);
-        }
-        // No valid auth params
-        else {
-          throw new Error("Paramètres d'authentification manquants");
-        }
-
-        // Wait a moment for cookies to be set
+      if (event === "SIGNED_IN" && session) {
         setStatus("Redirection...");
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log("[Callback] Session confirmed, redirecting...");
 
-        // Check the type to determine where to redirect
-        // Use window.location.href for full page reload to ensure cookies are sent
+        // Unsubscribe before redirecting
+        subscription.unsubscribe();
+
+        // Redirect based on type
         if (type === "invite" || type === "recovery") {
-          console.log("[Callback] Redirecting to /reset-password");
-          window.location.href = "/reset-password";
+          window.location.replace("/reset-password");
         } else {
-          console.log("[Callback] Redirecting to /");
-          window.location.href = "/";
+          window.location.replace("/");
         }
+      }
+    });
+
+    // Set up the session manually with the tokens from hash
+    const setupSession = async () => {
+      try {
+        setStatus("Configuration de la session...");
+        console.log("[Callback] Setting session with tokens...");
+
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        console.log("[Callback] setSession result:", {
+          hasSession: !!data?.session,
+          email: data?.session?.user?.email,
+          error: sessionError?.message,
+        });
+
+        if (sessionError) {
+          throw sessionError;
+        }
+
+        if (!data?.session) {
+          throw new Error("Session non créée");
+        }
+
+        // Give onAuthStateChange a moment to fire, then redirect directly as fallback
+        setTimeout(() => {
+          console.log("[Callback] Fallback redirect after setSession success");
+          subscription.unsubscribe();
+          if (type === "invite" || type === "recovery") {
+            window.location.replace("/reset-password");
+          } else {
+            window.location.replace("/");
+          }
+        }, 500);
       } catch (err) {
-        console.error("Auth callback error:", err);
+        console.error("[Callback] Error:", err);
+        subscription.unsubscribe();
         setError(err instanceof Error ? err.message : "Erreur d'authentification");
-        setTimeout(() => window.location.href = "/login?error=auth_callback_error", 2000);
+        setTimeout(() => {
+          window.location.replace("/login?error=auth_callback_error");
+        }, 2000);
       }
     };
 
-    handleCallback();
+    setupSession();
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
