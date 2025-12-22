@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   CalendarIcon,
@@ -536,7 +536,7 @@ export function CallResultDialog({
                   <InfoCard
                     icon={CalendarIcon}
                     label="Date de rappel"
-                    value={format(new Date(prospect.dateRappel), "PPP", { locale: fr })}
+                    value={format(parseISO(prospect.dateRappel), "PPP", { locale: fr })}
                   />
                 )}
 
@@ -731,7 +731,7 @@ export function CallResultDialog({
                             {interaction.date && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
+                                {format(parseISO(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
                               </p>
                             )}
 
@@ -798,7 +798,7 @@ export function CallResultDialog({
                         <h3 className="font-bold text-violet-900">RDV Visio en cours</h3>
                         <p className="text-sm text-violet-600">
                           {prospect.dateRdvPrevu
-                            ? format(new Date(prospect.dateRdvPrevu), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })
+                            ? format(parseISO(prospect.dateRdvPrevu), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })
                             : "Date non définie"}
                         </p>
                       </div>

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Plus,
@@ -787,7 +787,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                               </div>
                               {interaction.date && (
                                 <p className="text-xs text-muted-foreground">
-                                  {format(new Date(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
+                                  {format(parseISO(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
                                 </p>
                               )}
                               {interaction.resume && (
