@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   title: "CRM Axivity - Cockpit Opérationnel",
   description:
     "Cockpit opérationnel pour la gestion de l'agence IA - Clients, Projets, Opportunités, Factures",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
