@@ -16,12 +16,12 @@ interface SendEmailResponse {
 }
 
 /**
- * Hook to send emails via Gmail API
+ * Hook to send emails via email service (supports both Gmail and Microsoft)
  */
 export function useSendEmail() {
   return useMutation({
     mutationFn: async (params: SendEmailParams): Promise<SendEmailResponse> => {
-      const response = await fetch("/api/gmail/send", {
+      const response = await fetch("/api/email/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

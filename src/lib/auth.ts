@@ -1,11 +1,15 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import type { JWT } from "next-auth/jwt";
+
+export type OAuthProvider = "google" | "microsoft";
 
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
     error?: string;
+    provider?: OAuthProvider;
   }
 }
 
@@ -15,6 +19,7 @@ interface ExtendedJWT extends JWT {
   refreshToken?: string;
   expiresAt?: number;
   error?: string;
+  provider?: OAuthProvider;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -30,6 +35,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
     }),
+    MicrosoftEntraID({
+      clientId: process.env.AUTH_MICROSOFT_ID!,
+      clientSecret: process.env.AUTH_MICROSOFT_SECRET!,
+      // Use "common" tenant to support both personal and work/school accounts
+      issuer: "https://login.microsoftonline.com/common/v2.0",
+      authorization: {
+        params: {
+          scope: "openid email profile User.Read Calendars.ReadWrite Mail.Send offline_access",
+        },
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, account }): Promise<ExtendedJWT> {
@@ -37,11 +53,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Initial sign in
       if (account) {
+        // Determine provider from account
+        const provider: OAuthProvider = account.provider === "microsoft-entra-id" ? "microsoft" : "google";
+
         return {
           ...extendedToken,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
           expiresAt: account.expires_at,
+          provider,
         };
       }
 
@@ -53,15 +73,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Access token has expired, try to refresh it
       if (extendedToken.refreshToken) {
         try {
-          const response = await fetch("https://oauth2.googleapis.com/token", {
+          const isGoogle = extendedToken.provider === "google";
+
+          // Different token endpoints for each provider
+          const tokenUrl = isGoogle
+            ? "https://oauth2.googleapis.com/token"
+            : "https://login.microsoftonline.com/common/oauth2/v2.0/token";
+
+          const body = isGoogle
+            ? new URLSearchParams({
+                client_id: process.env.AUTH_GOOGLE_ID!,
+                client_secret: process.env.AUTH_GOOGLE_SECRET!,
+                grant_type: "refresh_token",
+                refresh_token: extendedToken.refreshToken,
+              })
+            : new URLSearchParams({
+                client_id: process.env.AUTH_MICROSOFT_ID!,
+                client_secret: process.env.AUTH_MICROSOFT_SECRET!,
+                grant_type: "refresh_token",
+                refresh_token: extendedToken.refreshToken,
+                scope: "openid email profile User.Read Calendars.ReadWrite Mail.Send offline_access",
+              });
+
+          const response = await fetch(tokenUrl, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              client_id: process.env.AUTH_GOOGLE_ID!,
-              client_secret: process.env.AUTH_GOOGLE_SECRET!,
-              grant_type: "refresh_token",
-              refresh_token: extendedToken.refreshToken,
-            }),
+            body,
           });
 
           const tokens = await response.json();
@@ -89,6 +126,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const extendedToken = token as ExtendedJWT;
       session.accessToken = extendedToken.accessToken;
       session.error = extendedToken.error;
+      session.provider = extendedToken.provider;
       return session;
     },
   },

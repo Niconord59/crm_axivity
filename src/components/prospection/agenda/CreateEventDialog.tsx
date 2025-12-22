@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCalendarEvent } from "@/hooks/use-google-calendar";
+import { useCreateCalendarEvent } from "@/hooks/use-calendar";
 import { useCreateInteraction } from "@/hooks/use-interactions";
 import { useUpdateProspectStatus } from "@/hooks/use-prospects";
 import {

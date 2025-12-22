@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useSendEmail, generateFollowUpEmail } from "@/hooks/use-gmail";
+import { useSendEmail, generateFollowUpEmail } from "@/hooks/use-email";
 import { toast } from "sonner";
 
 interface EmailSentData {
@@ -224,7 +224,7 @@ export function EmailComposer({
         <div className="flex items-center justify-between pt-3 border-t">
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <AtSign className="h-3 w-3" />
-            Envoyé depuis votre compte Gmail
+            Envoyé depuis votre compte connecté
           </p>
           <div className="flex items-center gap-2">
             {onCancel && (

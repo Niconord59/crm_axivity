@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useGoogleCalendarStatus } from "@/hooks/use-google-calendar";
-import { GoogleAuthButton } from "./GoogleAuthButton";
+import { useCalendarStatus } from "@/hooks/use-calendar";
+import { CalendarAuthButton } from "./CalendarAuthButton";
 import { WeekCalendar } from "./WeekCalendar";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { Calendar, Plus, RefreshCw } from "lucide-react";
@@ -25,7 +25,7 @@ interface AgendaTabProps {
 }
 
 export function AgendaTab({ prospect }: AgendaTabProps) {
-  const { isConnected, isLoading, hasError } = useGoogleCalendarStatus();
+  const { isConnected, isLoading, hasError } = useCalendarStatus();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const queryClient = useQueryClient();
@@ -50,12 +50,12 @@ export function AgendaTab({ prospect }: AgendaTabProps) {
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <Calendar className="h-12 w-12 text-muted-foreground" />
         <div className="text-center">
-          <h3 className="font-semibold">Connectez votre Google Calendar</h3>
+          <h3 className="font-semibold">Connectez votre calendrier</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Visualisez vos disponibilités et créez des RDV directement
           </p>
         </div>
-        <GoogleAuthButton />
+        <CalendarAuthButton />
       </div>
     );
   }
@@ -68,10 +68,10 @@ export function AgendaTab({ prospect }: AgendaTabProps) {
         <div className="text-center">
           <h3 className="font-semibold text-destructive">Session expirée</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Veuillez vous reconnecter à Google Calendar
+            Veuillez vous reconnecter à votre calendrier
           </p>
         </div>
-        <GoogleAuthButton />
+        <CalendarAuthButton />
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function AgendaTab({ prospect }: AgendaTabProps) {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header with actions */}
       <div className="flex items-center justify-between pb-3 gap-2 flex-wrap">
-        <GoogleAuthButton />
+        <CalendarAuthButton />
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4" />

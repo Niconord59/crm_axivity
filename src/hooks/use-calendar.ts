@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession, signIn, signOut } from "next-auth/react";
+import type { OAuthProvider } from "@/lib/auth";
 import {
   CalendarEvent,
   CalendarEventsResponse,
@@ -48,24 +49,29 @@ async function createCalendarEvent(input: CreateEventInput): Promise<CalendarEve
   return response.json();
 }
 
-// Hook to check Google Calendar connection status
-export function useGoogleCalendarStatus() {
+// Hook to check calendar connection status (provider-agnostic)
+export function useCalendarStatus() {
   const { data: session, status } = useSession();
 
   return {
     isConnected: !!session?.accessToken,
     isLoading: status === "loading",
     hasError: session?.error === "RefreshTokenError",
+    provider: session?.provider as OAuthProvider | undefined,
     session,
   };
 }
 
-// Hook to handle Google Calendar authentication
-export function useGoogleCalendarAuth() {
+// Hook to handle calendar authentication (supports both Google and Microsoft)
+export function useCalendarAuth() {
   const { data: session, status } = useSession();
 
-  const connect = async () => {
+  const connectGoogle = async () => {
     await signIn("google", { callbackUrl: window.location.href });
+  };
+
+  const connectMicrosoft = async () => {
+    await signIn("microsoft-entra-id", { callbackUrl: window.location.href });
   };
 
   const disconnect = async () => {
@@ -76,7 +82,9 @@ export function useGoogleCalendarAuth() {
     isConnected: !!session?.accessToken,
     isLoading: status === "loading",
     hasError: session?.error === "RefreshTokenError",
-    connect,
+    provider: session?.provider as OAuthProvider | undefined,
+    connectGoogle,
+    connectMicrosoft,
     disconnect,
     userEmail: session?.user?.email,
     userName: session?.user?.name,
@@ -85,7 +93,7 @@ export function useGoogleCalendarAuth() {
 
 // Hook to fetch calendar events for a week
 export function useCalendarEvents(weekDate: Date, enabled: boolean = true) {
-  const { isConnected } = useGoogleCalendarStatus();
+  const { isConnected } = useCalendarStatus();
   const { start, end } = getWeekDates(weekDate);
 
   return useQuery({
@@ -116,7 +124,7 @@ export function useCalendarEventsRange(
   endDate: Date,
   enabled: boolean = true
 ) {
-  const { isConnected } = useGoogleCalendarStatus();
+  const { isConnected } = useCalendarStatus();
 
   return useQuery({
     queryKey: ["calendar-events", startDate.toISOString(), endDate.toISOString()],
@@ -126,3 +134,7 @@ export function useCalendarEventsRange(
     staleTime: 60 * 1000,
   });
 }
+
+// Legacy exports for backward compatibility
+export const useGoogleCalendarStatus = useCalendarStatus;
+export const useGoogleCalendarAuth = useCalendarAuth;

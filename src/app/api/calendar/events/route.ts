@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-
-const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
+import { getCalendarEvents, createCalendarEvent } from "@/lib/services/calendar-service";
+import type { CreateEventInput } from "@/lib/google-calendar";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -25,33 +25,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(
-      `${GOOGLE_CALENDAR_API}/calendars/primary/events?` +
-        new URLSearchParams({
-          timeMin,
-          timeMax,
-          singleEvents: "true",
-          orderBy: "startTime",
-          maxResults: "50",
-        }),
-      {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      }
-    );
+    const provider = session.provider || "google";
+    const result = await getCalendarEvents(provider, session.accessToken, timeMin, timeMax);
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("Google Calendar API error:", error);
+    if (result.error) {
+      console.error(`${provider} Calendar API error:`, result.error);
       return NextResponse.json(
-        { error: "Erreur lors de la récupération des événements" },
-        { status: response.status }
+        { error: result.error },
+        { status: 500 }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Return in same format as before for backwards compatibility
+    return NextResponse.json({ items: result.events });
   } catch (error) {
     console.error("Calendar fetch error:", error);
     return NextResponse.json(
@@ -82,47 +68,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build URL with conferenceDataVersion if conference is requested
-    const url = new URL(`${GOOGLE_CALENDAR_API}/calendars/primary/events`);
-    if (body.conferenceData) {
-      url.searchParams.set("conferenceDataVersion", "1");
-    }
-    // Send email notifications to attendees
-    if (body.attendees?.length) {
-      url.searchParams.set("sendUpdates", "all");
-    }
+    const provider = session.provider || "google";
 
-    const response = await fetch(url.toString(), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        summary: body.summary,
-        description: body.description,
-        location: body.location,
-        start: body.start,
-        end: body.end,
-        attendees: body.attendees,
-        conferenceData: body.conferenceData,
-        reminders: body.reminders || {
-          useDefault: true,
-        },
-      }),
-    });
+    // Convert the request body to CreateEventInput format
+    const input: CreateEventInput = {
+      summary: body.summary,
+      description: body.description,
+      startDateTime: body.start.dateTime,
+      endDateTime: body.end.dateTime,
+      timeZone: body.start.timeZone,
+      attendeeEmails: body.attendees?.map((a: { email: string }) => a.email),
+      location: body.location,
+      // Determine meeting type from the body
+      meetingType: body.conferenceData ? "visio" : body.location ? "presentiel" : undefined,
+    };
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("Google Calendar API error:", error);
+    const result = await createCalendarEvent(provider, session.accessToken, input);
+
+    if (result.error) {
+      console.error(`${provider} Calendar API error:`, result.error);
       return NextResponse.json(
-        { error: "Erreur lors de la création de l'événement" },
-        { status: response.status }
+        { error: result.error },
+        { status: 500 }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(result.event);
   } catch (error) {
     console.error("Calendar create error:", error);
     return NextResponse.json(

@@ -25,6 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge, PageLoading, HealthBadge } from "@/components/shared";
 import { AppBreadcrumb } from "@/components/layout";
+import { ClientForm } from "@/components/forms/ClientForm";
 import { useClient } from "@/hooks/use-clients";
 import { useProjets } from "@/hooks/use-projets";
 import { useFactures } from "@/hooks/use-factures";
@@ -135,10 +136,15 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
-          Modifier
-        </Button>
+        <ClientForm
+          client={client}
+          trigger={
+            <Button variant="outline" size="sm">
+              <Edit className="h-4 w-4 mr-2" />
+              Modifier
+            </Button>
+          }
+        />
       </div>
 
       {/* Summary Cards */}
