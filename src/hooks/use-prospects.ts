@@ -376,10 +376,10 @@ export function useCreateProspect() {
       return { ...mapToContact(record), clientId };
     },
     onSuccess: async () => {
-      // Force refetch to update UI immediately
+      // Force refetch in correct order (prospects first, then derived queries)
+      await queryClient.refetchQueries({ queryKey: ["prospects"] });
       await queryClient.refetchQueries({ queryKey: ["prospects-with-clients"] });
-      queryClient.invalidateQueries({ queryKey: ["prospects"] });
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      await queryClient.refetchQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
     },
   });
