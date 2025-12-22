@@ -1103,7 +1103,7 @@ export function CallResultDialog({
                   </div>
                 )}
 
-                <DialogFooter className="pt-4 border-t">
+                <DialogFooter className="pt-4 border-t sm:justify-between">
                   <Button type="button" variant="outline" onClick={handleClose}>
                     Annuler
                   </Button>
