@@ -928,7 +928,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                 />
               </div>
 
-              <DialogFooter className="pt-4">
+              <DialogFooter className="pt-4 sm:justify-between">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Annuler
                 </Button>
@@ -1121,7 +1121,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                       </div>
                     </div>
 
-                    <DialogFooter className="pt-3 border-t mt-3">
+                    <DialogFooter className="pt-3 border-t mt-3 sm:justify-between">
                       <Button type="button" variant="ghost" onClick={handleSkipResult}>
                         Annuler
                       </Button>
