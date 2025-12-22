@@ -66,6 +66,7 @@ import {
 } from "@/hooks/use-prospects";
 import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
 import { useClient } from "@/hooks/use-clients";
+import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { AgendaTab } from "./agenda";
 import { ProspectProgressStepper } from "./ProspectProgressStepper";
 import { EmailComposer } from "./EmailComposer";
@@ -212,6 +213,7 @@ export function CallResultDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
+  const convertToOpportunity = useConvertToOpportunity();
 
   // Fetch client details
   const clientId = prospect?.client?.[0];
@@ -342,11 +344,24 @@ export function CallResultDialog({
       form.reset();
       onOpenChange(false);
 
-      if (data.resultat === "Qualifié") {
-        toast.info("Lead qualifié !", {
-          description: "Pensez à créer une opportunité pour ce lead.",
-          duration: 5000,
-        });
+      if (data.resultat === "Qualifié" && prospect && clientId && client) {
+        // Create the opportunity automatically
+        try {
+          await convertToOpportunity.mutateAsync({
+            contactId: prospect.id,
+            clientId: clientId,
+            contactNom: `${prospect.prenom || ""} ${prospect.nom}`.trim(),
+            clientNom: client.nom,
+            notes: data.notes || prospect.notesProspection,
+          });
+          toast.success("Opportunité créée !", {
+            description: "Le lead a été converti en opportunité dans le pipeline.",
+            duration: 5000,
+          });
+        } catch (error) {
+          console.error("Error creating opportunity:", error);
+          toast.error("Erreur lors de la création de l'opportunité");
+        }
       }
     } catch (error) {
       toast.error("Erreur lors de l'enregistrement");

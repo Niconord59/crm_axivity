@@ -19,14 +19,16 @@ src/
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
 │   ├── opportunites/       # Pipeline commercial (OpportunityCard)
+│   ├── devis/              # Génération de devis (QuoteEditorSheet, ServiceSelector)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (13 hooks Supabase)
+├── hooks/                  # React Query hooks (15 hooks Supabase)
 ├── lib/
 │   ├── supabase.ts         # Supabase client
 │   ├── auth.ts             # NextAuth.js config (Google + Microsoft)
 │   ├── utils.ts            # Helpers (cn, formatters)
 │   ├── schemas/            # Zod validation schemas
 │   ├── services/           # Calendar & Email services (multi-provider)
+│   ├── templates/          # PDF templates (devis-template.ts)
 │   └── tour-steps.ts       # Configuration des étapes du tour
 ├── providers/              # React Query + Onboarding providers
 └── types/                  # TypeScript definitions
@@ -340,6 +342,14 @@ AUTH_MICROSOFT_SECRET=your-azure-client-secret
   - Support Teams pour les visioconférences
   - Architecture multi-provider avec auto-détection
   - CalendarAuthButton avec choix du provider (Google / Microsoft 365)
+- **Génération de Devis PDF** (22 déc. 2025) : Création de devis depuis les opportunités
+  - Éditeur de devis accessible depuis le pipeline commercial
+  - Sélection de services depuis le catalogue (lignes_devis + catalogue_services)
+  - Génération PDF avec Puppeteer (rendu HTML pixel-perfect)
+  - Template professionnel avec en-tête, lignes, totaux (HT, TVA 20%, TTC)
+  - Nouveaux hooks: `use-services.ts`, `use-lignes-devis.ts`
+  - Nouveaux composants: `QuoteEditorSheet`, `QuoteLinesTable`, `ServiceSelector`
+  - API: `/api/devis/generate` (POST)
 
 ## Production Checklist
 

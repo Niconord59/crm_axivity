@@ -10,6 +10,7 @@ import {
   XCircle,
   ArrowRight,
   Clock,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 interface OpportunityCardProps {
   opportunity: Opportunite;
   onStatusChange?: (id: string, status: OpportunityStatus) => void;
+  onOpenQuote?: (id: string) => void;
   isDragging?: boolean;
 }
 
@@ -98,6 +100,7 @@ function isOverdue(dateString: string | undefined): boolean {
 export function OpportunityCard({
   opportunity,
   onStatusChange,
+  onOpenQuote,
   isDragging = false,
 }: OpportunityCardProps) {
   const statusConfig = getStatusConfig(opportunity.statut);
@@ -138,6 +141,15 @@ export function OpportunityCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {onOpenQuote && (
+                  <>
+                    <DropdownMenuItem onClick={() => onOpenQuote(opportunity.id)}>
+                      <FileText className="h-4 w-4 mr-2 text-primary" />
+                      Éditer le devis
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={() => onStatusChange(opportunity.id, "Qualifié")}>
                   <Target className="h-4 w-4 mr-2 text-blue-500" />
                   Qualifié

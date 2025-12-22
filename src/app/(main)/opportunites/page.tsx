@@ -28,6 +28,7 @@ import {
 import { opportuniteExportColumns } from "@/lib/export";
 import { PipelineChart } from "@/components/charts";
 import { OpportunityCard } from "@/components/opportunites/OpportunityCard";
+import { QuoteEditorSheet } from "@/components/devis";
 import {
   useOpportunitesParStatut,
   useUpdateOpportuniteStatut,
@@ -72,6 +73,7 @@ const KANBAN_COLUMNS: {
 
 export default function OpportunitesPage() {
   const [showChart, setShowChart] = useState(false);
+  const [quoteOpportunityId, setQuoteOpportunityId] = useState<string | null>(null);
   const { data: opportunitesGroupees, isLoading } = useOpportunitesParStatut();
   const updateStatut = useUpdateOpportuniteStatut();
 
@@ -93,6 +95,10 @@ export default function OpportunitesPage() {
 
   const handleStatusChange = (id: string, status: OpportunityStatus) => {
     updateStatut.mutate({ id, statut: status });
+  };
+
+  const handleOpenQuote = (id: string) => {
+    setQuoteOpportunityId(id);
   };
 
   if (isLoading) {
@@ -293,6 +299,7 @@ export default function OpportunitesPage() {
                                   <OpportunityCard
                                     opportunity={opp}
                                     onStatusChange={handleStatusChange}
+                                    onOpenQuote={handleOpenQuote}
                                     isDragging={snapshot.isDragging}
                                   />
                                 </div>
@@ -362,6 +369,15 @@ export default function OpportunitesPage() {
             </div>
           </div>
       </DragDropContext>
+
+      {/* Quote Editor Sheet */}
+      {quoteOpportunityId && (
+        <QuoteEditorSheet
+          opportuniteId={quoteOpportunityId}
+          isOpen={!!quoteOpportunityId}
+          onClose={() => setQuoteOpportunityId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -3,10 +3,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+interface ConvertToOpportunityParams {
+  contactId: string;
+  clientId: string;
+  contactNom: string;
+  clientNom: string;
+  valeurEstimee?: number;
+  notes?: string;
+}
+
 /**
  * Hook to convert a prospect to an opportunity.
- * This updates the contact status to "Qualifié" and optionally
- * updates the client status to "Actif" if it was "Prospect".
+ * This:
+ * 1. Creates an opportunity in the opportunites table
+ * 2. Updates the contact status to "Qualifié"
+ * 3. Updates the client status to "Actif" if it was "Prospect"
  */
 export function useConvertToOpportunity() {
   const queryClient = useQueryClient();
@@ -15,11 +26,31 @@ export function useConvertToOpportunity() {
     mutationFn: async ({
       contactId,
       clientId,
-    }: {
-      contactId: string;
-      clientId: string;
-    }) => {
-      // 1. Update contact status to "Qualifié"
+      contactNom,
+      clientNom,
+      valeurEstimee,
+      notes,
+    }: ConvertToOpportunityParams) => {
+      // 1. Create the opportunity
+      const opportunityName = `${clientNom} - ${contactNom}`;
+      const { data: opportunity, error: oppError } = await supabase
+        .from("opportunites")
+        .insert({
+          nom: opportunityName,
+          client_id: clientId,
+          contact_id: contactId,
+          statut: "Qualifié",
+          valeur_estimee: valeurEstimee || null,
+          probabilite: 20, // Default probability for new opportunities
+          notes: notes || null,
+          date_cloture_prevue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // 30 days from now
+        })
+        .select()
+        .single();
+
+      if (oppError) throw oppError;
+
+      // 2. Update contact status to "Qualifié"
       const { error: contactError } = await supabase
         .from("contacts")
         .update({ statut_prospection: "Qualifié" })
@@ -27,7 +58,7 @@ export function useConvertToOpportunity() {
 
       if (contactError) throw contactError;
 
-      // 2. Check if client is "Prospect" and update to "Actif"
+      // 3. Check if client is "Prospect" and update to "Actif"
       try {
         const { data: client } = await supabase
           .from("clients")
@@ -45,7 +76,7 @@ export function useConvertToOpportunity() {
         // Client might not exist or have been deleted, continue anyway
       }
 
-      return { contactId, clientId };
+      return { contactId, clientId, opportunityId: opportunity.id };
     },
     onSuccess: () => {
       // Invalidate all relevant queries

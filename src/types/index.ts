@@ -369,28 +369,68 @@ export interface ResultatCle extends BaseEntity {
 // T14 - CATALOGUE DE SERVICES
 // =============================================================================
 
-export interface Service extends BaseEntity {
+export interface CatalogueService extends BaseEntity {
   nom: string;
   description?: string;
-  prixUnitaire?: number;
-  unite?: string;
+  prixUnitaire: number;
+  unite: string;
   categorie?: string;
-  actif?: boolean;
+  actif: boolean;
 }
+
+// Alias pour compatibilité
+export type Service = CatalogueService;
 
 // =============================================================================
 // T15 - LIGNES DE DEVIS
 // =============================================================================
 
 export interface LigneDevis extends BaseEntity {
-  quantite?: number;
-  prixUnitaire?: number;
-  remise?: number;
-  // Calculated fields
-  montantHT?: number;
-  // Linked records
-  opportunite?: string[];
-  service?: string[];
+  opportuniteId: string;
+  serviceId?: string;
+  description?: string;
+  quantite: number;
+  prixUnitaire: number;
+  remisePourcent: number;
+  // Calculated field (stored in DB)
+  montantHT: number;
+  // Denormalized for display
+  serviceNom?: string;
+  serviceCategorie?: string;
+}
+
+// =============================================================================
+// DEVIS (QUOTE) DATA - For PDF Generation
+// =============================================================================
+
+export interface DevisData {
+  numeroDevis: string;
+  dateDevis: string;
+  dateValidite: string;
+  client: {
+    nom: string;
+    siret?: string;
+    adresse?: string;
+    codePostal?: string;
+    ville?: string;
+    pays?: string;
+  };
+  contact?: {
+    nom: string;
+    prenom?: string;
+    email?: string;
+    telephone?: string;
+    poste?: string;
+  };
+  opportunite: {
+    nom: string;
+    notes?: string;
+  };
+  lignes: LigneDevis[];
+  totalHT: number;
+  tva: number;
+  totalTTC: number;
+  conditionsPaiement: string;
 }
 
 // =============================================================================
