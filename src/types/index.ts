@@ -1,5 +1,5 @@
 // CRM Axivity - TypeScript Types
-// Based on Airtable Base: appEf6JtWFdfLwsU6
+// Based on Supabase schema
 
 // =============================================================================
 // ENUMS & CONSTANTS

@@ -35,7 +35,7 @@
 - 9 user stories covering all major features from the documentation
 - 40 functional requirements covering all sections
 - 10 measurable success criteria
-- Assumptions section documents pre-existing conditions (Airtable base, authentication)
+- Assumptions section documents pre-existing conditions (Supabase base, authentication)
 - Edge cases address error handling and empty states
 
 ## Validation Summary

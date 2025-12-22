@@ -23,7 +23,7 @@ export const tacheSchema = z.object({
     .min(1, "Le nom de la tâche est requis")
     .max(300, "Le nom ne peut pas dépasser 300 caractères"),
 
-  // Lien vers Projet (ID Airtable)
+  // Lien vers Projet (UUID)
   projetId: z
     .string()
     .min(1, "Veuillez sélectionner un projet"),

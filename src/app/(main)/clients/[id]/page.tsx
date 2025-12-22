@@ -479,7 +479,7 @@ export default function ClientDetailPage() {
                   Aucune interaction enregistrée
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Les interactions sont créées via Airtable ou les workflows N8N
+                  Les interactions sont créées via le CRM ou les workflows N8N
                 </p>
               </CardContent>
             </Card>

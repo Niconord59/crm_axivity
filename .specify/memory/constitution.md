@@ -1,18 +1,3 @@
-<!--
-## Sync Impact Report
-- Version change: 1.0.0 → 1.1.0 (2025-12-19)
-- Updated principles:
-  - III. Airtable API as Single Source of Truth → III. Supabase as Single Source of Truth
-- Updated sections:
-  - Technical Stack Requirements: React 18.3.1 → 19.2.3, added Next.js 16.0.10, Airtable → Supabase
-  - Compliance Review: Airtable → Supabase reference
-- Templates requiring updates:
-  - `.specify/templates/plan-template.md` - ✅ no changes needed
-  - `.specify/templates/spec-template.md` - ✅ no changes needed
-  - `.specify/templates/tasks-template.md` - ✅ no changes needed
-- Follow-up TODOs: None
--->
-
 # CRM Axivity Constitution
 
 ## Core Principles
@@ -50,18 +35,16 @@ All data operations MUST go through Supabase. The React application is a present
 - CRUD operations MUST use the Supabase client (`lib/supabase.ts`)
 - Authentication is handled via Supabase Auth
 
-**Rationale**: Supabase serves as the "nervous system" of the agency, enabling both the web interface and N8N automations to operate on the same data source without synchronization issues. Migration from Airtable completed December 2025.
-
-> **Legacy Note**: Original implementation used Airtable REST API (Base ID: `appEf6JtWFdfLwsU6`). Airtable client preserved in `lib/airtable.ts` for reference.
+**Rationale**: Supabase serves as the "nervous system" of the agency, enabling both the web interface and N8N automations to operate on the same data source without synchronization issues.
 
 ### IV. Automation-Ready Architecture
 
-All data structures and UI flows MUST support automated workflows via N8N/Make integration:
+All data structures and UI flows MUST support automated workflows via N8N integration:
 
 - Links between tables MUST be bidirectional where specified
 - Status fields MUST use consistent enum values across the system
 - Date fields MUST be present for time-based automation triggers
-- Email-accessible fields MUST use `Membre Equipe` link (not Collaborateur) for API access
+- User references MUST use `user_id` (UUID) for API access
 
 **Rationale**: The CRM includes 4 core N8N workflows (feedback, conversion, alerts, relances) that depend on consistent data structure.
 
@@ -71,8 +54,8 @@ All table relationships MUST maintain referential integrity:
 
 - When an Opportunity converts to a Project, both records MUST link to each other
 - Client relationships MUST cascade correctly (Client -> Contacts -> Interactions)
-- Rollup and formula fields MUST NOT be modified via API (read-only)
-- Primary fields MUST remain simple text type
+- Computed fields are handled via PostgreSQL functions/views
+- Primary keys are UUIDs
 
 **Rationale**: The 21-table architecture depends on reliable relationships for calculated fields (CA Total, % Taches Terminees, Valeur Ponderee) to function correctly.
 
@@ -97,14 +80,14 @@ Start with the minimum viable implementation. Avoid premature optimization and u
 | **Tailwind CSS** | 3.x | Utility-first styling |
 | **Recharts** | Latest | Charts and visualizations |
 | **TypeScript** | 5.x | Type safety |
-| **Supabase** | Self-hosted | Backend data layer (migrated from Airtable) |
+| **Supabase** | Self-hosted | Backend data layer |
 
 **Project Structure**:
 ```
 src/
 ├── app/                    # Routes and pages
 │   ├── (auth)/            # Authentication pages
-│   ├── (dashboard)/       # Main application with sidebar
+│   ├── (main)/            # Main application with sidebar
 │   └── portail/           # External client portal
 ├── components/
 │   ├── ui/                # Shadcn components
@@ -115,9 +98,10 @@ src/
 │   ├── clients/           # Client components
 │   └── shared/            # DataTable, StatusBadge
 ├── lib/
-│   ├── airtable.ts        # Airtable API client
+│   ├── supabase.ts        # Supabase client
 │   ├── utils.ts           # Utility functions
-│   └── hooks/             # React hooks
+│   └── schemas/           # Zod validation schemas
+├── hooks/                 # React Query hooks
 └── types/                 # TypeScript types
 ```
 
@@ -126,21 +110,21 @@ src/
 ### Before Implementation
 
 1. Read the relevant section in `Documentation/passation_projet_agence_ia.md`
-2. Verify the Airtable table structure matches expected fields
+2. Verify the Supabase table structure matches expected fields
 3. Check if N8N workflows depend on the feature being modified
 
 ### During Implementation
 
 1. Use Shadcn CLI to add new components: `npx shadcn@latest add [component]`
 2. Test responsive behavior at 3 breakpoints minimum
-3. Verify Airtable API calls work with real data
+3. Verify Supabase queries work with real data
 4. Ensure all user-facing text is in French
 
 ### After Implementation
 
 1. Test on mobile device (or mobile emulator)
-2. Verify no console errors related to Airtable API
-3. Document any new Table IDs or Field IDs used
+2. Verify no console errors related to Supabase
+3. Run `npm run build` to ensure TypeScript compiles
 
 ## Governance
 
@@ -162,4 +146,4 @@ This constitution supersedes all other development practices for the CRM Axivity
 - [ ] Bidirectional relations maintained
 - [ ] No unnecessary complexity added
 
-**Version**: 1.1.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-19
+**Version**: 2.0.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-19

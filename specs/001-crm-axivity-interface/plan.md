@@ -5,16 +5,16 @@
 
 ## Summary
 
-Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une agence IA. L'interface permet de gérer le cycle de vie client complet : prospection (opportunités), vente (pipeline), exécution (projets/tâches), facturation et fidélisation. L'application est construite avec React 19 + Next.js 16 + Shadcn/UI + Tailwind CSS, communiquant avec Supabase (migration depuis Airtable en cours). Design 100% responsive mobile-first.
+Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une agence IA. L'interface permet de gérer le cycle de vie client complet : prospection (opportunités), vente (pipeline), exécution (projets/tâches), facturation et fidélisation. L'application est construite avec React 19 + Next.js 16 + Shadcn/UI + Tailwind CSS, communiquant avec Supabase (migration depuis Supabase en cours). Design 100% responsive mobile-first.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x avec React 19.2.3
 **Primary Dependencies**: Next.js 16.0.10 (App Router + Turbopack), Shadcn/UI, Tailwind CSS 3.x, Recharts, @hello-pangea/dnd v18 (drag-and-drop)
-**Storage**: Supabase self-hosted (https://supabase.axivity.cloud) - Migration depuis Airtable en cours (85%)
+**Storage**: Supabase self-hosted (https://supabase.axivity.cloud)
 **Testing**: Vitest + React Testing Library + Playwright (E2E)
 **Target Platform**: Web (navigateurs modernes), responsive mobile-first (375px minimum)
-**Project Type**: Web application (frontend Next.js, backend = Supabase)
+**Project Type**: Web application (frontend Next.js, backend Supabase)
 **Performance Goals**: Dashboard < 3s, interactions < 2s, 60fps animations
 **Constraints**: Connexion internet requise, pas de mode offline
 **Scale/Scope**: ~10 pages principales, ~50 composants, équipe 5-15 utilisateurs
@@ -27,7 +27,7 @@ Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une a
 |-----------|--------|-------|
 | I. Mobile-First Responsive | [x] Pass | 3 breakpoints définis (<768px, 768-1024px, >1024px), bottom nav mobile, sidebar desktop |
 | II. Shadcn/UI Exclusivity | [x] Pass | Tous les composants UI via Shadcn (Card, Table, Sheet, Badge, etc.) |
-| III. Airtable API as SSOT | [x] Pass | Toutes données via API REST Airtable, pas de cache local persistant |
+| III. Supabase as SSOT | [x] Pass | Toutes données via Supabase, pas de cache local persistant |
 | IV. Automation-Ready | [x] Pass | Structure compatible N8N workflows, liens bidirectionnels, status enums cohérents |
 | V. Data Integrity | [x] Pass | Relations bidirectionnelles maintenues, rollups en lecture seule |
 | VI. Simplicity & YAGNI | [x] Pass | Implémentation conforme à la spec, pas d'abstractions superflues |
@@ -43,7 +43,7 @@ specs/001-crm-axivity-interface/
 ├── data-model.md        # Phase 1 output
 ├── quickstart.md        # Phase 1 output
 ├── contracts/           # Phase 1 output
-│   └── airtable-api.md  # API contract documentation
+│   └── supabase-api.md  # API contract documentation
 ├── checklists/
 │   └── requirements.md  # Spec validation checklist
 └── tasks.md             # Phase 2 output (/speckit.tasks)
@@ -127,8 +127,8 @@ src/
 │       ├── LoadingSkeleton.tsx   # États de chargement
 │       └── ErrorMessage.tsx      # Message d'erreur convivial
 ├── lib/
-│   ├── airtable.ts               # Client API Airtable
-│   ├── airtable-tables.ts        # Table IDs constants
+│   ├── supabase.ts               # Client API Supabase
+│   ├── supabase-tables.ts        # Table IDs constants
 │   ├── utils.ts                  # Utilitaires (cn, formatters)
 │   └── hooks/
 │       ├── useProjects.ts        # Hook projets
@@ -155,7 +155,7 @@ tests/
     └── hooks/
 ```
 
-**Structure Decision**: Web application frontend-only avec Next.js App Router. Le backend est entièrement géré par Airtable API. Structure organisée par domaine métier (projets, opportunités, tâches, etc.) pour faciliter la navigation et la maintenance.
+**Structure Decision**: Web application frontend-only avec Next.js App Router. Le backend est entièrement géré par Supabase. Structure organisée par domaine métier (projets, opportunités, tâches, etc.) pour faciliter la navigation et la maintenance.
 
 ## Complexity Tracking
 

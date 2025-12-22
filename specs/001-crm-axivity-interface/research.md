@@ -35,40 +35,40 @@
 - **react-dnd**: Bas niveau, nécessite beaucoup de code custom
 - **react-beautiful-dnd**: Abandonné, bugs non corrigés
 
-## 3. Client API Airtable
+## 3. Client API Supabase
 
 ### Decision: Fetch natif avec wrapper TypeScript custom
 
 **Rationale**:
-- SDK officiel Airtable.js trop lourd (inclut Node.js dependencies)
+- SDK officiel Supabase.js trop lourd (inclut Node.js dependencies)
 - Fetch natif suffit pour REST API simple
 - Wrapper custom permet typage TypeScript strict
 - Contrôle total sur les retries et error handling
 - Pas de dépendance externe supplémentaire
 
 **Alternatives considérées**:
-- **airtable.js**: SDK officiel mais conçu pour Node.js, bundles inutiles
+- **supabase.js**: SDK officiel mais conçu pour Node.js, bundles inutiles
 - **axios**: Overkill pour des requêtes simples, ajoute une dépendance
 
 ### Pattern recommandé:
 
 ```typescript
-// lib/airtable.ts
-const AIRTABLE_BASE_ID = 'appEf6JtWFdfLwsU6';
-const AIRTABLE_API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
+// lib/supabase.ts
+const SUPABASE_URL = 'https://supabase.axivity.cloud';
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY;
 
 async function fetchTable<T>(tableId: string, options?: RequestInit): Promise<T[]> {
   const response = await fetch(
-    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableId}`,
+    `https://api.supabase.com/v0/${SUPABASE_URL}/${tableId}`,
     {
       headers: {
-        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
         'Content-Type': 'application/json',
       },
       ...options,
     }
   );
-  if (!response.ok) throw new AirtableError(response);
+  if (!response.ok) throw new SupabaseError(response);
   const data = await response.json();
   return data.records;
 }
@@ -80,7 +80,7 @@ async function fetchTable<T>(tableId: string, options?: RequestInit): Promise<T[
 
 **Rationale**:
 - React Query gère automatiquement le cache, refetch, loading states
-- Parfait pour les données serveur (Airtable)
+- Parfait pour les données serveur (Supabase)
 - Mutations optimistes pour UX fluide (drag-drop)
 - Context API suffit pour l'état UI local (sidebar ouverte, filtres actifs)
 - Évite la complexité de Redux pour une app de cette taille
@@ -193,12 +193,12 @@ npx shadcn@latest add navigation-menu toggle switch
 // Erreur 500 -> Error Boundary
 ```
 
-## 12. Performance et Rate Limits Airtable
+## 12. Performance et Rate Limits Supabase
 
 ### Decision: Batching + Debouncing
 
 **Rationale**:
-- Airtable limite à 5 requêtes/seconde
+- Supabase limite à 5 requêtes/seconde
 - Batch les lectures lors du chargement initial
 - Debounce les recherches (300ms)
 - Optimistic updates pour les mutations fréquentes

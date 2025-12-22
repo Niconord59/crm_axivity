@@ -191,14 +191,14 @@ Pour chaque entité, vérifier :
 1. [ ] Le bouton "Nouveau X" ouvre le dialog
 2. [ ] Le formulaire affiche tous les champs
 3. [ ] La validation Zod fonctionne (erreurs en français)
-4. [ ] La soumission crée l'enregistrement dans Airtable
+4. [ ] La soumission crée l'enregistrement dans Supabase
 5. [ ] Le dialog se ferme après succès
 6. [ ] La liste se rafraîchit (invalidation React Query)
 
 ### Checkpoint Phase 3: Graphiques
 
 1. [ ] Le graphique CA s'affiche sur le dashboard
-2. [ ] Les données correspondent à Airtable
+2. [ ] Les données correspondent à Supabase
 3. [ ] Le graphique est responsive
 4. [ ] Les tooltips affichent les valeurs
 
@@ -251,13 +251,13 @@ const data = {
 };
 ```
 
-### Erreur Airtable 422
+### Erreur Supabase 422
 
 ```
 INVALID_REQUEST_UNKNOWN
 ```
 
-**Solution**: Vérifier le mapping des champs. Les noms doivent correspondre exactement aux champs Airtable.
+**Solution**: Vérifier le mapping des champs. Les noms doivent correspondre exactement aux champs Supabase.
 
 ### React Query ne rafraîchit pas
 

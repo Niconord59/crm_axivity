@@ -22,7 +22,7 @@ export const opportuniteSchema = z.object({
     .min(1, "Le nom de l'opportunité est requis")
     .max(200, "Le nom ne peut pas dépasser 200 caractères"),
 
-  // Lien vers Client (ID Airtable)
+  // Lien vers Client (UUID)
   clientId: z
     .string()
     .min(1, "Veuillez sélectionner un client"),

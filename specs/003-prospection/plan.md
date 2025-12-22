@@ -6,10 +6,10 @@ Ce plan détaille les étapes d'implémentation du module de prospection, organi
 
 ---
 
-## Phase 0 : Préparation Airtable (Prérequis)
+## Phase 0 : Préparation Supabase (Prérequis)
 
 **Durée estimée** : 30 minutes
-**À faire manuellement dans Airtable**
+**À faire manuellement dans Supabase**
 
 ### Étape 0.1 : Créer les champs sur T2-Contacts
 
@@ -52,10 +52,10 @@ src/lib/schemas/prospect.ts (nouveau)
 - csvMappingSchema
 ```
 
-### Étape 1.3 : Mise à jour airtable-tables.ts
+### Étape 1.3 : Mise à jour supabase-tables.ts
 
 ```
-src/lib/airtable-tables.ts
+src/lib/supabase-tables.ts
 - Ajouter les Field IDs des nouveaux champs T2-Contacts
 ```
 
@@ -287,7 +287,7 @@ src/components/forms/OpportuniteForm.tsx
 ## Diagramme de dépendances
 
 ```
-Phase 0 (Airtable)
+Phase 0 (Supabase)
     │
     ▼
 Phase 1 (Infrastructure)
@@ -315,7 +315,7 @@ Phase 6 (Polish)
 
 | Jour | Phases | Livrables |
 |------|--------|-----------|
-| 1 matin | Phase 0 + 1 | Champs Airtable + Types + Hooks de base |
+| 1 matin | Phase 0 + 1 | Champs Supabase + Types + Hooks de base |
 | 1 après-midi | Phase 2 | Page /prospection fonctionnelle (lecture) |
 | 2 matin | Phase 3 | Actions d'appel et dialogs |
 | 2 après-midi | Phase 4 | Import CSV complet |

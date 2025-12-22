@@ -14,9 +14,9 @@
 - [x] Configurer RLS (policies)
 
 ## Phase 3 : Migration données ✅
-- [x] ~~Exporter les données Airtable~~ (N/A - base Airtable vide)
-- [x] ~~Transformer les données~~ (N/A - base Airtable vide)
-- [x] ~~Importer dans Supabase~~ (N/A - base Airtable vide)
+- [x] ~~Exporter les données Supabase~~ (N/A - base Supabase vide)
+- [x] ~~Transformer les données~~ (N/A - base Supabase vide)
+- [x] ~~Importer dans Supabase~~ (N/A - base Supabase vide)
 - [x] Créer données de test (équipe)
 - [x] Vérifier mapping CSV import → Supabase
 - [x] Ajouter colonne linkedin manquante (migration 10)

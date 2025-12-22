@@ -21,7 +21,7 @@ export const opportuniteSchema = z.object({
     .min(1, "Le nom de l'opportunité est requis")
     .max(200, "Le nom ne peut pas dépasser 200 caractères"),
 
-  // Lien vers Client (ID Airtable)
+  // Lien vers Client (ID Supabase)
   clientId: z
     .string()
     .min(1, "Veuillez sélectionner un client"),
@@ -72,9 +72,9 @@ export const opportuniteUpdateSchema = opportuniteSchema.extend({
 });
 ```
 
-### Mapping Airtable
+### Mapping Supabase
 
-| Form Field | Airtable Field | Type |
+| Form Field | Supabase Field | Type |
 |------------|----------------|------|
 | nom | Nom Opportunité | Text |
 | clientId | Client | Link to Clients |
@@ -150,9 +150,9 @@ export const projetSchema = z.object({
 export type ProjetFormData = z.infer<typeof projetSchema>;
 ```
 
-### Mapping Airtable
+### Mapping Supabase
 
-| Form Field | Airtable Field | Type |
+| Form Field | Supabase Field | Type |
 |------------|----------------|------|
 | briefProjet | Brief Projet | Text |
 | clientId | Client | Link to Clients |
@@ -227,9 +227,9 @@ export const tacheSchema = z.object({
 export type TacheFormData = z.infer<typeof tacheSchema>;
 ```
 
-### Mapping Airtable
+### Mapping Supabase
 
-| Form Field | Airtable Field | Type |
+| Form Field | Supabase Field | Type |
 |------------|----------------|------|
 | nom | Nom Tâche | Text |
 | projetId | Projet | Link to Projets |
@@ -306,9 +306,9 @@ export const calculerMontantTTC = (montantHT: number): number => {
 };
 ```
 
-### Mapping Airtable
+### Mapping Supabase
 
-| Form Field | Airtable Field | Type |
+| Form Field | Supabase Field | Type |
 |------------|----------------|------|
 | reference | Référence | Text |
 | projetId | Projet | Link to Projets |
@@ -318,7 +318,7 @@ export const calculerMontantTTC = (montantHT: number): number => {
 | statut | Statut | Single Select |
 | notes | Notes | Long Text |
 
-**Note**: `Montant TTC` est une formule Airtable (`{Montant HT} * 1.2`), non éditable.
+**Note**: `Montant TTC` est une formule Supabase (`{Montant HT} * 1.2`), non éditable.
 
 ---
 
@@ -388,9 +388,9 @@ export const clientSchema = z.object({
 export type ClientFormData = z.infer<typeof clientSchema>;
 ```
 
-### Mapping Airtable
+### Mapping Supabase
 
-| Form Field | Airtable Field | Type |
+| Form Field | Supabase Field | Type |
 |------------|----------------|------|
 | nom | Nom | Text (Primary) |
 | email | Email | Email |

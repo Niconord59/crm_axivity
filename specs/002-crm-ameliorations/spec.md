@@ -47,17 +47,17 @@ Suite à l'implémentation de la Phase 1 (105 tâches complétées), un audit a 
 
 ### User Story 10 - Formulaires CRUD Opportunités (Priority: P1-CRITIQUE)
 
-En tant que commercial, je veux créer et modifier des opportunités directement depuis l'interface web afin de ne plus avoir à basculer vers Airtable pour la saisie de données.
+En tant que commercial, je veux créer et modifier des opportunités directement depuis l'interface web afin de ne plus avoir à basculer vers Supabase pour la saisie de données.
 
 **Why this priority**: Sans formulaires, l'application est en lecture seule et ne peut pas être utilisée comme outil de travail principal.
 
-**Independent Test**: Créer une nouvelle opportunité via le formulaire et vérifier qu'elle apparaît dans le pipeline Kanban et dans Airtable.
+**Independent Test**: Créer une nouvelle opportunité via le formulaire et vérifier qu'elle apparaît dans le pipeline Kanban et dans Supabase.
 
 **Acceptance Scenarios**:
 
 1. **Given** l'utilisateur est sur la page Opportunités, **When** il clique sur "Nouvelle opportunité", **Then** un dialog s'ouvre avec un formulaire contenant : Nom, Client (select), Valeur estimée, Probabilité, Date clôture prévue, Statut
-2. **Given** l'utilisateur remplit le formulaire, **When** il clique sur "Créer", **Then** l'opportunité est créée dans Airtable et apparaît dans la colonne correspondante du Kanban
-3. **Given** l'utilisateur clique sur une opportunité, **When** il sélectionne "Modifier", **Then** le formulaire pré-rempli s'ouvre et les modifications sont sauvegardées dans Airtable
+2. **Given** l'utilisateur remplit le formulaire, **When** il clique sur "Créer", **Then** l'opportunité est créée dans Supabase et apparaît dans la colonne correspondante du Kanban
+3. **Given** l'utilisateur clique sur une opportunité, **When** il sélectionne "Modifier", **Then** le formulaire pré-rempli s'ouvre et les modifications sont sauvegardées dans Supabase
 
 ---
 
@@ -65,7 +65,7 @@ En tant que commercial, je veux créer et modifier des opportunités directement
 
 En tant que chef de projet, je veux créer et modifier des projets directement depuis l'interface afin de gérer le cycle de vie complet des missions.
 
-**Why this priority**: Les projets sont au coeur de l'activité, leur création manuelle dans Airtable ralentit les opérations.
+**Why this priority**: Les projets sont au coeur de l'activité, leur création manuelle dans Supabase ralentit les opérations.
 
 **Independent Test**: Créer un projet, lui ajouter des tâches, et vérifier que le pourcentage de complétion se calcule correctement.
 
@@ -73,7 +73,7 @@ En tant que chef de projet, je veux créer et modifier des projets directement d
 
 1. **Given** l'utilisateur est sur la page Projets, **When** il clique sur "Nouveau projet", **Then** un dialog s'ouvre avec : Brief, Client, Budget, Dates début/fin, Statut
 2. **Given** un projet existe, **When** l'utilisateur l'édite et change le statut, **Then** le projet se déplace dans la colonne Kanban correspondante
-3. **Given** l'utilisateur crée un projet, **When** il sélectionne un client, **Then** le lien bidirectionnel est automatiquement créé dans Airtable
+3. **Given** l'utilisateur crée un projet, **When** il sélectionne un client, **Then** le lien bidirectionnel est automatiquement créé dans Supabase
 
 ---
 
@@ -310,8 +310,8 @@ En tant que manager, je veux visualiser la charge de travail de chaque membre af
 
 - Les hooks mutations (`useCreateProjet`, etc.) existent déjà dans les fichiers hooks
 - Les types TypeScript sont complets et incluent tous les champs éditables
-- L'API Airtable supporte le batch create (jusqu'à 10 records)
-- Le rate limiting Airtable (5 req/sec) est géré par le client existant
+- L'API Supabase supporte le batch create (jusqu'à 10 records)
+- Le rate limiting Supabase (5 req/sec) est géré par le client existant
 
 ---
 

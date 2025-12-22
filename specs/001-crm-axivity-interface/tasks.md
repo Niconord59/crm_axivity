@@ -31,7 +31,7 @@
 
 ### Key Achievements
 - ✅ Full Next.js 14 + Shadcn/UI application structure
-- ✅ Airtable API integration with correct field mappings
+- ✅ Supabase integration with correct field mappings
 - ✅ All 9 main pages implemented (Dashboard, Projets, Opportunités, Tâches, Clients, Factures, Équipe, Rapports, Portail)
 - ✅ React Query hooks for all entities
 - ✅ Responsive mobile-first design
@@ -76,7 +76,7 @@
 - [x] T005 [P] Add Shadcn components: button, card, input, select, checkbox, table, badge, avatar, progress, skeleton
 - [x] T006 [P] Add Shadcn components: dialog, alert-dialog, sheet, tabs, toast, tooltip, dropdown-menu
 - [x] T007 [P] Add Shadcn components: command, breadcrumb, calendar, form, textarea, separator, scroll-area, navigation-menu, toggle, switch
-- [x] T008 Create environment configuration in `.env.local` with AIRTABLE_API_KEY and AIRTABLE_BASE_ID
+- [x] T008 Create environment configuration in `.env.local` with SUPABASE_URL and SUPABASE_ANON_KEY
 - [x] T009 Create project folder structure per plan.md (app/, components/, lib/, types/)
 
 **Checkpoint**: ✅ Project scaffolding complete, dependencies installed
@@ -89,8 +89,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [x] T010 Create Airtable table IDs constants in `src/lib/airtable-tables.ts`
-- [x] T011 Implement Airtable API client with retry logic in `src/lib/airtable.ts`
+- [x] T010 Create Supabase table IDs constants in `src/lib/supabase-tables.ts`
+- [x] T011 Implement Supabase client with retry logic in `src/lib/supabase.ts`
 - [x] T012 [P] Create TypeScript types for Client and Contact in `src/types/index.ts` (consolidated)
 - [x] T013 [P] Create TypeScript types for Projet and Tache in `src/types/index.ts` (consolidated)
 - [x] T014 [P] Create TypeScript types for Opportunite in `src/types/index.ts` (consolidated)
@@ -117,7 +117,7 @@
 
 **Goal**: Dashboard centralisé avec 4 KPIs, graphique CA mensuel et projets récents
 
-**Independent Test**: Vérifier que les 4 KPIs s'affichent correctement avec données Airtable et navigation fonctionnelle
+**Independent Test**: Vérifier que les 4 KPIs s'affichent correctement avec données Supabase et navigation fonctionnelle
 
 ### Implementation for User Story 1
 
@@ -140,7 +140,7 @@
 
 **Goal**: Page Projets avec vue liste triable, vue Kanban par statut, et panneau détail
 
-**Independent Test**: Créer/modifier un projet et vérifier les changements dans Airtable et les vues
+**Independent Test**: Créer/modifier un projet et vérifier les changements dans Supabase et les vues
 
 ### Implementation for User Story 2
 
@@ -161,7 +161,7 @@
 
 **Goal**: Kanban drag-and-drop des opportunités avec valeur pondérée par colonne
 
-**Independent Test**: Déplacer une opportunité entre colonnes et vérifier mise à jour Airtable + recalcul valeur pondérée
+**Independent Test**: Déplacer une opportunité entre colonnes et vérifier mise à jour Supabase + recalcul valeur pondérée
 
 ### Implementation for User Story 3
 
@@ -173,7 +173,7 @@
 - [x] T052 [US3] Implement optimistic update for drag-drop status change
 - [x] T053 [US3] Add mobile touch support and horizontal scroll for Kanban columns
 
-**Checkpoint**: ✅ Pipeline commercial functional - drag-drop works, values recalculate, Airtable synced
+**Checkpoint**: ✅ Pipeline commercial functional - drag-drop works, values recalculate, Supabase synced
 
 ---
 
@@ -320,7 +320,7 @@
 
 ### Lead Import Feature
 - [x] T102 Install xlsx and papaparse dependencies for CSV/XLSX parsing
-- [x] T103 Add batch create method to Airtable client in `src/lib/airtable.ts`
+- [x] T103 Add batch create method to Supabase client in `src/lib/supabase.ts`
 - [x] T104 Create LeadImportDialog component in `src/components/opportunites/LeadImportDialog.tsx`
 - [x] T105 Add import button to Opportunités page with dialog integration
 

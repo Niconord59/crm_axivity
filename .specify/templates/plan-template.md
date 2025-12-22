@@ -35,7 +35,7 @@
 |-----------|--------|-------|
 | I. Mobile-First Responsive | [ ] Pass | Design includes mobile (<768px), tablet, desktop breakpoints |
 | II. Shadcn/UI Exclusivity | [ ] Pass | Only Shadcn components used (no custom UI libraries) |
-| III. Airtable API as SSOT | [ ] Pass | All data via Airtable REST API, no local DB |
+| III. Supabase as SSOT | [ ] Pass | All data via Supabase REST API, no local DB |
 | IV. Automation-Ready | [ ] Pass | Bidirectional links, consistent status enums, date fields present |
 | V. Data Integrity | [ ] Pass | Relationships maintain referential integrity |
 | VI. Simplicity & YAGNI | [ ] Pass | No premature optimization or unnecessary abstractions |

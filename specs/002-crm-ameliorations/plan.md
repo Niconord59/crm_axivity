@@ -12,12 +12,12 @@ Phase 2 du projet CRM Axivity visant à transformer l'application de lecture-seu
 
 **Language/Version**: TypeScript 5.x avec React 18.3.1
 **Primary Dependencies**: Next.js 14 (App Router), Shadcn/UI, Tailwind CSS 3.x, Recharts 2.13, react-hook-form, Zod, xlsx, papaparse, react-big-calendar
-**Storage**: Airtable REST API (Base ID: appEf6JtWFdfLwsU6)
-**Testing**: Tests manuels + validation Airtable
+**Storage**: Supabase REST API (Base ID: appEf6JtWFdfLwsU6)
+**Testing**: Tests manuels + validation Supabase
 **Target Platform**: Web responsive (375px minimum)
 **Project Type**: Web application (frontend uniquement)
 **Performance Goals**: Formulaires < 1s, graphiques < 2s, export < 5s
-**Constraints**: API Airtable rate limits (5 req/sec), batch max 10 records
+**Constraints**: API Supabase rate limits (5 req/sec), batch max 10 records
 **Scale/Scope**: 8 améliorations majeures, ~40 nouvelles tâches
 
 ## Constitution Check
@@ -28,7 +28,7 @@ Phase 2 du projet CRM Axivity visant à transformer l'application de lecture-seu
 |-----------|--------|-------|
 | I. Mobile-First Responsive | [x] Pass | Formulaires en fullscreen sur mobile, graphiques responsifs |
 | II. Shadcn/UI Exclusivity | [x] Pass | Dialog, Form, Select, Input - tous via Shadcn |
-| III. Airtable API as SSOT | [x] Pass | POST/PATCH via airtable.ts existant |
+| III. Supabase as SSOT | [x] Pass | POST/PATCH via supabase.ts existant |
 | IV. Automation-Ready | [x] Pass | Statuts cohérents, liens bidirectionnels maintenus |
 | V. Data Integrity | [x] Pass | Validation Zod, pas de modification de rollups/formulas |
 | VI. Simplicity & YAGNI | [x] Pass | Composants réutilisables, pas de sur-architecture |
@@ -262,9 +262,9 @@ Phase 1 (Infrastructure)
 
 | Risque | Impact | Mitigation |
 |--------|--------|------------|
-| Rate limiting Airtable | Création en batch échoue | Batch max 10, délai 200ms entre appels |
+| Rate limiting Supabase | Création en batch échoue | Batch max 10, délai 200ms entre appels |
 | Conflits de modification | Données écrasées | Timestamps, refresh après save |
-| Champs Link Airtable | Création impossible via API | Utiliser IDs existants, pas de création de liens |
+| Champs Link Supabase | Création impossible via API | Utiliser IDs existants, pas de création de liens |
 | Performance graphiques | Lenteur avec beaucoup de données | Pagination, lazy loading, memoization |
 
 ## Complexity Tracking
@@ -277,7 +277,7 @@ Avant livraison de chaque phase :
 
 - [ ] Mobile responsive (375px, 768px, 1024px)
 - [ ] Composants Shadcn exclusivement
-- [ ] Données persistées dans Airtable
+- [ ] Données persistées dans Supabase
 - [ ] Pas d'erreurs console
 - [ ] Textes en français
 - [ ] Loading states implémentés

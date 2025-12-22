@@ -2,7 +2,7 @@
 
 **Input**: Design documents from `/specs/002-crm-ameliorations/`
 **Prerequisites**: Phase 1 complète (105 tâches), plan.md, spec.md
-**Tests**: Tests manuels + validation Airtable
+**Tests**: Tests manuels + validation Supabase
 
 **Organization**: Tasks grouped by improvement area (8 areas: A1-A8)
 
@@ -66,7 +66,7 @@
 - [x] T113 [US10] Create OpportuniteForm component in `src/components/forms/OpportuniteForm.tsx` ✅
 - [x] T114 [US10] Add "Nouvelle opportunité" button with FormDialog to `src/app/opportunites/page.tsx` ✅
 
-**Checkpoint**: ✅ Création d'opportunité fonctionnelle avec sync Airtable
+**Checkpoint**: ✅ Création d'opportunité fonctionnelle avec sync Supabase
 
 ### A1 - Formulaire Projets (US11) ✅
 
@@ -114,7 +114,7 @@
 - [x] T132 [US16] Add PipelineChart to Opportunités page header (collapsible) ✅
 - [x] T133 [P] [US16] Create ProgressionChart (AreaChart) in `src/components/charts/ProgressionChart.tsx` ✅
 
-**Checkpoint**: ✅ 3 graphiques affichés avec données Airtable réelles (14 décembre 2025)
+**Checkpoint**: ✅ 3 graphiques affichés avec données Supabase réelles (14 décembre 2025)
 
 **Fichiers créés** :
 - `src/components/shared/ChartContainer.tsx` - Wrapper responsive pour graphiques
@@ -381,7 +381,7 @@ Before marking any task as complete:
 - [ ] French labels and messages
 - [ ] Loading state handled
 - [ ] Error state handled
-- [ ] Airtable sync verified
+- [ ] Supabase sync verified
 - [ ] No console errors
 - [ ] Shadcn components only
 
@@ -393,4 +393,4 @@ Before marking any task as complete:
 - All dates formatted in French locale (DD MMM YYYY)
 - All currency formatted in EUR (€)
 - Batch operations max 10 records per call
-- Add 200ms delay between Airtable calls to respect rate limits
+- Add 200ms delay between Supabase calls to respect rate limits

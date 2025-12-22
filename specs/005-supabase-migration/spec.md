@@ -2,7 +2,7 @@
 
 ## Résumé
 
-Migration du backend Airtable vers Supabase self-hosted pour améliorer les performances, ajouter l'authentification utilisateur et les permissions basées sur les rôles.
+Migration du backend Supabase vers Supabase self-hosted pour améliorer les performances, ajouter l'authentification utilisateur et les permissions basées sur les rôles.
 
 ## Statut
 
@@ -14,7 +14,7 @@ Migration du backend Airtable vers Supabase self-hosted pour améliorer les perf
 
 1. ✅ Déployer Supabase via Coolify (template intégré)
 2. ✅ Créer le schéma de base de données (21 tables)
-3. ✅ Migrer les hooks React Query d'Airtable vers Supabase
+3. ✅ Migrer les hooks React Query d'Supabase vers Supabase
 4. ✅ Activer l'authentification utilisateur
 5. ✅ Implémenter les rôles et permissions (RLS)
 6. ✅ Adapter les workflows N8N
@@ -22,7 +22,7 @@ Migration du backend Airtable vers Supabase self-hosted pour améliorer les perf
 
 ## Avantages de la migration
 
-| Critère | Airtable | Supabase |
+| Critère | Supabase | Supabase |
 |---------|----------|----------|
 | Latence | 200-500ms | 10-50ms |
 | Temps réel | ❌ Polling | ✅ WebSockets |
@@ -141,6 +141,6 @@ Migration du backend Airtable vers Supabase self-hosted pour améliorer les perf
 
 ## Prochaines étapes (optionnelles)
 
-1. [ ] Migrer les données de production depuis Airtable
+1. [ ] Migrer les données de production depuis Supabase
 2. [ ] Activer le temps réel (WebSockets) pour les mises à jour live
 3. [ ] Configurer les backups automatiques

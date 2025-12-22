@@ -50,7 +50,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { airtable, AIRTABLE_TABLES } from "@/lib/airtable";
+import { supabase } from "@/lib/supabase";
 import type { Contact, ProspectStatus } from "@/types";
 import {
   Tabs,
@@ -85,14 +85,16 @@ import { useClients } from "@/hooks/use-clients";
 import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
 import { AgendaTab } from "./agenda";
 
-// Interface pour les champs contacts Airtable
-interface ContactFields {
-  "Nom Complet"?: string;
-  "Email"?: string;
-  "Téléphone"?: string;
-  "Rôle"?: string;
-  "Statut Prospection"?: string;
-  "Client"?: string[];
+// Interface pour les contacts Supabase
+interface ContactRecord {
+  id: string;
+  nom: string;
+  prenom?: string;
+  email?: string;
+  telephone?: string;
+  poste?: string;
+  statut_prospection?: string;
+  client_id?: string;
 }
 
 interface ProspectFormProps {
@@ -117,10 +119,10 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
-  // État pour les données validées du formulaire (avant création dans Airtable)
+  // État pour les données validées du formulaire (avant création)
   const [validatedFormData, setValidatedFormData] = useState<ProspectFormData | null>(null);
 
-  // État pour le lead créé (après création dans Airtable)
+  // État pour le lead créé (après création)
   const [createdProspect, setCreatedProspect] = useState<{
     id: string;
     clientId: string;
@@ -166,34 +168,29 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const selectedClientName = form.watch("entreprise");
 
   // Fetch contacts existants pour le client sélectionné
-  // Note: Dans Airtable, {Client} retourne le nom (primary field), pas l'ID
   const { data: existingContacts, isLoading: isLoadingContacts } = useQuery({
-    queryKey: ["client-contacts", selectedClientId, selectedClientName],
+    queryKey: ["client-contacts", selectedClientId],
     queryFn: async () => {
-      if (!selectedClientId || !selectedClientName) return [];
+      if (!selectedClientId) return [];
 
-      // Échapper les apostrophes pour la formule Airtable
-      const escapedName = selectedClientName.replace(/'/g, "''");
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, nom, prenom, email, telephone, poste, statut_prospection")
+        .eq("client_id", selectedClientId)
+        .order("nom", { ascending: true });
 
-      // Récupérer les contacts liés à ce client (filtrer par nom car {Client} retourne le primary field)
-      const records = await airtable.getRecords<ContactFields>(
-        AIRTABLE_TABLES.CONTACTS,
-        {
-          filterByFormula: `FIND('${escapedName}', ARRAYJOIN({Client}))`,
-          sort: [{ field: "Nom Complet", direction: "asc" }],
-        }
-      );
+      if (error) throw error;
 
-      return records.map((record) => ({
+      return (data || []).map((record: ContactRecord) => ({
         id: record.id,
-        nom: record.fields["Nom Complet"] || "",
-        email: record.fields["Email"],
-        telephone: record.fields["Téléphone"],
-        role: record.fields["Rôle"],
-        statutProspection: record.fields["Statut Prospection"] as ProspectStatus | undefined,
+        nom: record.prenom ? `${record.prenom} ${record.nom}` : record.nom,
+        email: record.email,
+        telephone: record.telephone,
+        role: record.poste,
+        statutProspection: record.statut_prospection as ProspectStatus | undefined,
       }));
     },
-    enabled: !!selectedClientId && !!selectedClientName,
+    enabled: !!selectedClientId,
   });
 
   // Déterminer si on a des contacts existants

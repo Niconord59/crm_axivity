@@ -7,7 +7,7 @@
 
 - Node.js 18.x ou supérieur
 - npm ou pnpm
-- Clé API Airtable (avec accès à la base `appEf6JtWFdfLwsU6`)
+- Clé API Supabase (avec accès à la base `appEf6JtWFdfLwsU6`)
 
 ## Setup Initial
 
@@ -55,8 +55,8 @@ npm install -D @types/react-big-calendar
 
 Créer `.env.local`:
 ```env
-NEXT_PUBLIC_AIRTABLE_API_KEY=pat_xxxxxxxxxxxxx
-NEXT_PUBLIC_AIRTABLE_BASE_ID=appEf6JtWFdfLwsU6
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxxxxxxx
+NEXT_PUBLIC_SUPABASE_URL=appEf6JtWFdfLwsU6
 ```
 
 ### 4. Structure initiale
@@ -78,11 +78,11 @@ mkdir -p src/app/portail/\[clientId\]/{projets,factures}
 
 ## Fichiers de Base
 
-### lib/airtable-tables.ts
+### lib/supabase-tables.ts
 
 ```typescript
-export const AIRTABLE_BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID!;
-export const AIRTABLE_API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY!;
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const TABLES = {
   CLIENTS: 'tbljVwWGbg2Yq9toR',
@@ -96,32 +96,32 @@ export const TABLES = {
 } as const;
 ```
 
-### lib/airtable.ts
+### lib/supabase.ts
 
 ```typescript
-import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './airtable-tables';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-tables';
 
-const BASE_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
+const BASE_URL = `https://api.supabase.com/v0/${SUPABASE_URL}`;
 
-interface AirtableRecord<T> {
+interface SupabaseRecord<T> {
   id: string;
   createdTime: string;
   fields: T;
 }
 
-interface AirtableResponse<T> {
-  records: AirtableRecord<T>[];
+interface SupabaseResponse<T> {
+  records: SupabaseRecord<T>[];
   offset?: string;
 }
 
-class AirtableError extends Error {
+class SupabaseError extends Error {
   constructor(
     public status: number,
     public type: string,
     message: string
   ) {
     super(message);
-    this.name = 'AirtableError';
+    this.name = 'SupabaseError';
   }
 }
 
@@ -138,7 +138,7 @@ async function fetchWithRetry(
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
         ...options.headers,
       },
@@ -152,7 +152,7 @@ async function fetchWithRetry(
 
     if (!response.ok) {
       const error = await response.json();
-      throw new AirtableError(
+      throw new SupabaseError(
         response.status,
         error.error?.type || 'UNKNOWN',
         error.error?.message || 'Unknown error'
@@ -161,7 +161,7 @@ async function fetchWithRetry(
 
     return response;
   }
-  throw new AirtableError(429, 'RATE_LIMIT', 'Rate limit exceeded after retries');
+  throw new SupabaseError(429, 'RATE_LIMIT', 'Rate limit exceeded after retries');
 }
 
 export async function fetchRecords<T>(
@@ -172,7 +172,7 @@ export async function fetchRecords<T>(
   const url = `${BASE_URL}/${tableId}?${searchParams}`;
 
   const response = await fetchWithRetry(url, { method: 'GET' });
-  const data: AirtableResponse<T> = await response.json();
+  const data: SupabaseResponse<T> = await response.json();
 
   return data.records.map(record => ({
     id: record.id,
@@ -187,7 +187,7 @@ export async function fetchRecord<T>(
   const url = `${BASE_URL}/${tableId}/${recordId}`;
 
   const response = await fetchWithRetry(url, { method: 'GET' });
-  const record: AirtableRecord<T> = await response.json();
+  const record: SupabaseRecord<T> = await response.json();
 
   return {
     id: record.id,
@@ -205,7 +205,7 @@ export async function createRecord<T>(
     method: 'POST',
     body: JSON.stringify({ fields }),
   });
-  const record: AirtableRecord<T> = await response.json();
+  const record: SupabaseRecord<T> = await response.json();
 
   return {
     id: record.id,
@@ -224,7 +224,7 @@ export async function updateRecord<T>(
     method: 'PATCH',
     body: JSON.stringify({ fields }),
   });
-  const record: AirtableRecord<T> = await response.json();
+  const record: SupabaseRecord<T> = await response.json();
 
   return {
     id: record.id,
@@ -315,7 +315,7 @@ Ouvrir http://localhost:3000
 - [ ] Page d'accueil s'affiche
 - [ ] Pas d'erreur console
 - [ ] Variables d'environnement chargées
-- [ ] Requête Airtable test réussie (ajouter un console.log temporaire)
+- [ ] Requête Supabase test réussie (ajouter un console.log temporaire)
 
 ## Prochaines étapes
 

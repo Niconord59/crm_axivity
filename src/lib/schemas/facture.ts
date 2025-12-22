@@ -19,7 +19,7 @@ export const factureSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  // Lien vers Projet (ID Airtable)
+  // Lien vers Projet (UUID)
   projetId: z
     .string()
     .min(1, "Veuillez sélectionner un projet"),

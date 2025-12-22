@@ -20,11 +20,9 @@ src/
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
 │   ├── opportunites/       # Pipeline commercial (OpportunityCard)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (13 hooks - migrés vers Supabase)
+├── hooks/                  # React Query hooks (13 hooks Supabase)
 ├── lib/
-│   ├── supabase.ts         # Supabase client (NOUVEAU - principal)
-│   ├── airtable.ts         # API client (LEGACY)
-│   ├── airtable-tables.ts  # Table IDs (LEGACY)
+│   ├── supabase.ts         # Supabase client
 │   ├── utils.ts            # Helpers (cn, formatters)
 │   ├── schemas/            # Zod validation schemas
 │   └── tour-steps.ts       # Configuration des étapes du tour
@@ -94,25 +92,25 @@ npm start       # Production server
   - `app/api/calendar/events/route.ts` : API GET/POST events
   - `app/api/gmail/send/route.ts` : API POST pour envoyer des emails
   - `providers/session-provider.tsx` : SessionProvider wrapper
-- **Champs Airtable** (T2-Contacts) ✅:
-  - "Statut Prospection" (Single Select) : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
-  - "Date Rappel" (Date)
-  - "Source Lead" (Single Select)
-  - "Notes Prospection" (Long Text)
-  - "Type RDV" (Single Select) : Visio, Présentiel
-  - "Lien Visio" (URL)
-- **Champs Airtable** (T1-Clients) ✅ - Ajoutés le 16 déc. 2025 :
-  - "SIRET" (Single Line Text) : Numéro SIRET entreprise
-  - "Adresse" (Single Line Text) : Adresse postale
-  - "Code Postal" (Single Line Text)
-  - "Ville" (Single Line Text)
-  - "Pays" (Single Line Text) : Défaut "France"
+- **Champs Supabase** (contacts) :
+  - `statut_prospection` (ENUM) : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
+  - `date_rappel` (DATE)
+  - `source_lead` (TEXT)
+  - `notes_prospection` (TEXT)
+  - `type_rdv` (ENUM) : Visio, Présentiel
+  - `lien_visio` (TEXT)
+- **Champs Supabase** (clients) :
+  - `siret` (TEXT) : Numéro SIRET entreprise
+  - `adresse` (TEXT) : Adresse postale
+  - `code_postal` (TEXT)
+  - `ville` (TEXT)
+  - `pays` (TEXT) : Défaut "France"
 - **Variables d'environnement Google**:
   - `AUTH_SECRET` : Secret NextAuth (openssl rand -base64 32)
   - `AUTH_GOOGLE_ID` : Google OAuth Client ID
   - `AUTH_GOOGLE_SECRET` : Google OAuth Client Secret
 
-### 004-onboarding-tour (Tour Guidé - IMPLEMENTED)
+### 004-onboarding-tour (Tour Guidé - COMPLETE)
 - **Status**: 100% - Complete
 - **Specs**: `specs/004-onboarding-tour/`
 - **Content**:
@@ -130,54 +128,39 @@ npm start       # Production server
   - `lib/tour-steps.ts` : Configuration des 11 étapes du tour
   - `providers/onboarding-provider.tsx` : Context provider pour le tour
 
-### 005-supabase-migration (Migration Backend - IN PROGRESS)
-- **Status**: 95% - Phase 7 complète
+### 005-supabase-migration (Migration Backend - COMPLETE)
+- **Status**: 100% - Complète
 - **Specs**: `specs/005-supabase-migration/`
 - **Content**:
-  - Migration du backend Airtable vers Supabase self-hosted
+  - Backend Supabase self-hosted
   - Déploiement via Coolify (template intégré)
-  - 10 hooks React Query migrés
+  - 13 hooks React Query
   - 14 fichiers de migration SQL
   - Row Level Security (5 rôles utilisateur)
   - Auth UI complète (login, register, forgot-password, reset-password)
-  - 4 workflows N8N adaptés pour Supabase
-- **Phases complétées**:
-  - ✅ Phase 1 : Infrastructure (Supabase déployé)
-  - ✅ Phase 2 : Schéma & Auth (21 tables créées)
-  - ✅ Phase 4 : Refactoring hooks (10 hooks migrés)
-  - ✅ Phase 5 : Auth UI (pages login/register/reset-password)
-  - ✅ Phase 6 : Rôles UI (invitation utilisateurs, gestion équipe)
-  - ✅ Phase 7 : N8N workflows (4 workflows adaptés)
-- **Phases restantes**:
-  - ⏳ Phase 3 : Migration données (données test uniquement)
-- **Auth UI** (18 déc. 2025):
+  - 4 workflows N8N
+- **Auth UI**:
   - Pages : `/login`, `/register`, `/forgot-password`, `/reset-password`
   - Route groups : `(auth)` standalone, `(main)` avec sidebar
   - Proxy Next.js 16 : `src/proxy.ts` (remplace middleware.ts)
   - Helper : `src/lib/supabase/proxy.ts`
   - SMTP : Resend configuré (sandbox mode pour dev)
-- **Hooks migrés** (Supabase) :
+- **Hooks Supabase** :
   - `use-clients.ts`, `use-projets.ts`, `use-taches.ts`
   - `use-opportunites.ts`, `use-factures.ts`, `use-prospects.ts`
   - `use-equipe.ts`, `use-interactions.ts`
   - `use-convert-opportunity.ts`, `use-import-leads.ts`
-- **Mapping colonnes important** :
-  - `nom_complet` → `nom` + `prenom` (contacts)
-  - `secteur_activite` → `secteur` (clients)
-  - `role` → `poste` (contacts)
-  - `notes` → `resume` (interactions)
 
 ## Documentation
 
 - **Passation projet**: `Documentation/passation_projet_agence_ia.md`
 - **Roadmap Phase 2**: `Documentation/Ameliorations_Phase2_Roadmap.md`
-- **Guide construction Airtable**: `Documentation/Guide de Construction _ Base Airtable pour Agence IA.md`
 
-## Supabase Integration (ACTIVE)
+## Supabase (Backend)
 
 - **URL**: `https://supabase.axivity.cloud`
 - **Client**: `lib/supabase.ts`
-- **Migrations**: `supabase/migrations/` (5 fichiers SQL)
+- **Migrations**: `supabase/migrations/` (14 fichiers SQL)
 - **Déploiement**: Coolify (template Supabase intégré)
 - **Variables d'environnement**:
   - `NEXT_PUBLIC_SUPABASE_URL`
@@ -200,8 +183,8 @@ npm start       # Production server
 | `10_contacts_linkedin_column.sql` | Colonne LinkedIn contacts | ✅ |
 | `11_update_user_roles.sql` | Mise à jour rôles | ✅ |
 | `12_equipe_profile_unique.sql` | Contrainte unique équipe | ✅ |
-| `13_projets_feedback_column.sql` | Colonne feedback_envoye | ⚠️ À exécuter |
-| `14_invoice_status_en_retard.sql` | Statut "En retard" factures | ⚠️ À exécuter |
+| `13_projets_feedback_column.sql` | Colonne feedback_envoye | ✅ |
+| `14_invoice_status_en_retard.sql` | Statut "En retard" factures | ✅ |
 
 ### Rôles utilisateur Supabase
 
@@ -213,19 +196,9 @@ npm start       # Production server
 | `membre` | Ses tâches + projets assignés |
 | `client` | Portail client (lecture seule) |
 
-### Mapping Airtable → Supabase
+## N8N Workflows
 
-| Airtable | Supabase | Notes |
-|----------|----------|-------|
-| `nom_complet` | `nom` + `prenom` | Champs séparés |
-| `secteur_activite` | `secteur` | Renommé |
-| `role` (contacts) | `poste` | Poste du contact |
-| `notes` (interactions) | `resume` | Résumé |
-| `participant_interne_id` | `user_id` | Lien profiles |
-
-## N8N Workflows Supabase (Phase 7 - 19 déc. 2025)
-
-4 workflows adaptés d'Airtable vers Supabase, disponibles dans `Workflows_n8n/`:
+4 workflows disponibles dans `Workflows_n8n/`:
 
 | Workflow | Fichier | Déclencheur |
 |----------|---------|-------------|
@@ -246,32 +219,13 @@ npm start       # Production server
    ```
    Note: Utiliser `={{ }}` pour les expressions dynamiques, pas `{{ }}`
 
-### Colonnes requises
-
-Exécuter les migrations 13 et 14 avant d'activer les workflows :
-```sql
--- Migration 13: feedback_envoye pour projets
-ALTER TABLE projets ADD COLUMN IF NOT EXISTS feedback_envoye BOOLEAN DEFAULT false;
-
--- Migration 14: Statut 'En retard' pour factures
-ALTER TYPE invoice_status ADD VALUE IF NOT EXISTS 'En retard';
-```
-
-## Airtable Integration (LEGACY - Déprécié)
-
-- **Base ID**: `appEf6JtWFdfLwsU6`
-- **API Key**: `.env.local` (`NEXT_PUBLIC_AIRTABLE_API_KEY`)
-- **Tables**: 21 tables (voir `lib/airtable-tables.ts`)
-- **Rate Limit**: 5 req/sec, batch max 10 records
-- **Status**: Migration vers Supabase en cours
-
 ## Gates (Non-négociables)
 
 1. **Mobile-First**: Responsive sur 3 breakpoints
 2. **Shadcn/UI Only**: Aucun autre framework UI
-3. **Airtable SSOT**: Pas de base locale
+3. **Supabase SSOT**: Pas de base locale
 4. **Automation-Ready**: Statuts cohérents, liens bidirectionnels
-5. **Data Integrity**: Pas de modification rollups/formulas
+5. **Data Integrity**: Relations bidirectionnelles maintenues
 6. **YAGNI**: Simplicité, pas de sur-architecture
 
 ## Recent Changes
@@ -279,99 +233,19 @@ ALTER TYPE invoice_status ADD VALUE IF NOT EXISTS 'En retard';
 - 001-crm-axivity-interface: Phase 1 complète (Dashboard, Kanban, Pages, Hooks)
 - 002-crm-ameliorations: Planification des améliorations Phase 2 (51 tâches)
 - **Migration Next.js 16** : Upgrade vers Next.js 16.0.10 + React 19.2.3 + Turbopack (15 déc. 2025)
-- **Fix TacheForm** : Correction SelectItem value vide pour le champ Responsable (15 déc. 2025)
-- **003-prospection IMPLEMENTÉ** : Module complet de gestion des leads (15 déc. 2025)
-  - Page `/prospection` avec KPIs, filtres, liste de leads
-  - Import CSV avec wizard 3 étapes (upload, mapping, preview)
-  - Suivi des appels (CallResultDialog avec résultats et rappels)
-  - Création manuelle de prospects (ProspectForm)
-  - Conversion Lead → Opportunité avec mise à jour statuts
-- **004-onboarding-tour IMPLEMENTÉ** : Tour guidé pour nouveaux utilisateurs (15 déc. 2025)
-  - Solution custom (react-joyride incompatible React 19)
-  - 11 étapes avec navigation inter-pages
-  - Persistance localStorage + auto-démarrage première visite
-  - Raccourcis clavier (→←, Esc, ?)
+- **003-prospection COMPLET** : Module complet de gestion des leads (15 déc. 2025)
+- **004-onboarding-tour COMPLET** : Tour guidé pour nouveaux utilisateurs (15 déc. 2025)
 - **Google Calendar Integration** : Intégration dans le module prospection (15 déc. 2025)
-  - Onglet "Agenda" dans CallResultDialog avec vue semaine
-  - Authentification Google OAuth via NextAuth.js v5
-  - Création de RDV pré-remplis avec infos du lead
-  - Nouveau statut "RDV planifié" (badge violet)
-  - Onglet "Appel" renommé en "Résultat"
-  - Notes et checkbox masqués pour "RDV planifié" (évite doublons)
-  - Rafraîchissement automatique de la liste après mise à jour statut
-- **Gmail Integration (Phase 8)** : Envoi d'emails de suivi (16 déc. 2025)
-  - Option "Message vocal laissé" pour "Pas répondu"
-  - Toggle "Envoyer un email de suivi" avec EmailComposer intégré
-  - Template email pré-rempli avec infos prospect + mention voicemail
-  - Envoi via Gmail API (scope gmail.send)
-  - Interaction Email créée automatiquement avec contenu complet
-  - Historique enrichi : emails affichés avec style distinct (fond bleu)
-  - Résumé dynamique des actions (voicemail + email) sous checkbox interaction
-- **Champs Airtable ajoutés** (T2-Contacts) : "Type RDV" (Visio/Présentiel), "Lien Visio" (URL)
-- **Onglet "RDV en cours"** : Pour les visio, affiche lien Meet + prise de notes en direct
-- **Champs Airtable Clients (Phase 9)** : Ajout SIRET, Adresse, Code Postal, Ville, Pays (16 déc. 2025)
-  - Import CSV enrichi avec 17 champs mappables (entreprise + contact)
-  - Affichage SIRET et adresse complète dans l'onglet "Entreprise" du CallResultDialog
-  - Modèle CSV disponible : `modele_import_leads.csv`
-- **Logo Axivity dans la sidebar** (16 déc. 2025)
-  - Logo déplacé vers `public/images/logo-axivity.png`
-  - Remplace le texte "A CRM Axivity" par le logo officiel
-  - Utilisation de `next/image` pour optimisation
-- **UX LeadCard améliorée (Phase 10)** (16 déc. 2025)
-  - Bouton d'action dynamique selon le statut du lead :
-    - À appeler → "Appeler" (Phone)
-    - Appelé - pas répondu / Rappeler → "Rappeler" (PhoneCall)
-    - RDV planifié → "Voir RDV" (Calendar)
-    - Qualifié → "Convertir" (ArrowRight)
-    - Non qualifié / Perdu → "Voir fiche" (FileText)
-  - Suppression du bouton "Qualifier" redondant (qualification via dialog)
-  - Header CallResultDialog simplifié : juste le nom avec icône User
-  - Suppression du formulaire OpportuniteForm de la page (conversion via CallResultDialog)
-- **Migration Supabase** (17 déc. 2025)
+- **Gmail Integration** : Envoi d'emails de suivi (16 déc. 2025)
+- **005-supabase-migration COMPLET** : Backend Supabase self-hosted (19 déc. 2025)
   - Déploiement Supabase self-hosted via Coolify
-  - Client Supabase configuré (`lib/supabase.ts`)
-  - Migrations SQL prêtes (21 tables, RLS, triggers)
-  - 5 rôles utilisateur (admin, manager, commercial, membre, client)
-  - Variables d'environnement ajoutées
-- **Migration Hooks Supabase** (18 déc. 2025)
-  - 10 hooks React Query migrés d'Airtable vers Supabase
-  - Correction des mappings de colonnes (nom_complet → nom/prenom, etc.)
-  - Table `equipe` créée pour T10-Équipe
-  - Colonnes manquantes ajoutées (date_rdv_prevu, objet, date_terminee)
-  - Build TypeScript validé
-  - Script `05_dev_quick_fix.sql` pour désactiver RLS en dev
-- **Auth UI Supabase** (18 déc. 2025)
-  - Pages auth : `/login`, `/register`, `/forgot-password`, `/reset-password`
-  - Route groups Next.js : `(auth)` pages standalone, `(main)` pages avec sidebar
-  - Migration middleware → proxy (Next.js 16 best practice)
-  - Fichiers : `src/proxy.ts`, `src/lib/supabase/proxy.ts`
-  - Protection des routes avec redirection automatique
-  - Header avec dropdown utilisateur et déconnexion
-  - SMTP Resend configuré (sandbox pour dev, production checklist documentée)
-- **UI Improvements Prospection (Phase 11)** (19 déc. 2025)
-  - CallResultDialog en flexbox : plus de scroll page, modal en `h-[90vh] flex flex-col`
-  - Alignement boutons LeadCard : flexbox avec `mt-auto` pour alignement vertical
-  - Fix filtre "Tous les statuts" : affiche maintenant tous les prospects
-  - Positionnement croix fermeture : header avec `pr-14`, badge inline avec nom
-  - Fix bug React Query : condition `enabled` corrigée, `keepPreviousData` retiré
+  - 13 hooks React Query
+  - 21 tables, RLS, triggers
+  - 5 rôles utilisateur
+  - Auth UI complète
+  - 4 workflows N8N
 - **Pipeline Commercial Redesign** (19 déc. 2025)
-  - Nouveau composant `OpportunityCard` : couleurs par statut, barre de progression, badges date
-  - KPI Cards : Pipeline actif, Valeur pondérée, Gagnées (valeur), Perdues (count)
-  - En-têtes colonnes améliorés : icônes et dégradés
-  - Layout CSS Grid responsive pleine largeur (`grid-cols-1 md:2 lg:4 xl:5`)
-  - États vides avec icônes pour colonnes sans opportunités
-  - Menu dropdown pour changement rapide de statut
-- **Phase 6 - Rôles UI** (19 déc. 2025)
-  - Invitation utilisateurs via email avec Supabase Auth
-  - Callback auth pour redirection vers reset-password
-  - Fix Promise.race pour updateUser qui ne résolvait pas
-  - Création automatique du record équipe à l'invitation
-- **Phase 7 - N8N Workflows Supabase** (19 déc. 2025)
-  - 4 workflows adaptés d'Airtable vers Supabase
-  - Remplacement des nodes Airtable par Supabase
-  - Correction syntaxe expressions : `={{ }}` au lieu de `{{ }}`
-  - Adaptation des noms de colonnes (snake_case)
-  - Migrations 13 et 14 pour colonnes requises
+- **Nettoyage références legacy** (19 déc. 2025) : Suppression de toutes les références à l'ancien backend
 
 ## Production Checklist
 

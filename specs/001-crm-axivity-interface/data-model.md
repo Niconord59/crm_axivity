@@ -5,13 +5,13 @@
 
 ## Overview
 
-Ce document décrit le modèle de données TypeScript pour l'interface CRM Axivity. Les types correspondent aux tables Airtable existantes et incluent les champs calculés (rollups/formulas) en lecture seule.
+Ce document décrit le modèle de données TypeScript pour l'interface CRM Axivity. Les types correspondent aux tables Supabase existantes et incluent les champs calculés (rollups/formulas) en lecture seule.
 
-## Airtable Table IDs
+## Supabase Table IDs
 
 ```typescript
-// lib/airtable-tables.ts
-export const AIRTABLE_BASE_ID = 'appEf6JtWFdfLwsU6';
+// lib/supabase-tables.ts
+export const SUPABASE_URL = 'https://supabase.axivity.cloud';
 
 export const TABLES = {
   CLIENTS: 'tbljVwWGbg2Yq9toR',
@@ -48,7 +48,7 @@ export const TABLES = {
 export type ClientStatut = 'Prospect' | 'Actif' | 'Ancien' | 'En pause';
 
 export interface Client {
-  id: string;                          // Airtable Record ID
+  id: string;                          // Supabase Record ID
   nomClient: string;                   // Nom du Client (primary field)
   statut: ClientStatut;                // Statut
   dateCreation: string;                // Date de Création (ISO date)
@@ -415,25 +415,25 @@ export const STATUT_COLORS: Record<string, string> = {
 };
 ```
 
-## Airtable Record Wrapper
+## Supabase Record Wrapper
 
 ```typescript
 // types/index.ts
 
-// Wrapper générique pour les records Airtable
-export interface AirtableRecord<T> {
+// Wrapper générique pour les records Supabase
+export interface SupabaseRecord<T> {
   id: string;
   createdTime: string;
   fields: T;
 }
 
-export interface AirtableResponse<T> {
-  records: AirtableRecord<T>[];
+export interface SupabaseResponse<T> {
+  records: SupabaseRecord<T>[];
   offset?: string;  // Pour pagination
 }
 
 // Helper pour extraire les fields
-export function unwrapRecords<T>(response: AirtableResponse<T>): (T & { id: string })[] {
+export function unwrapRecords<T>(response: SupabaseResponse<T>): (T & { id: string })[] {
   return response.records.map(record => ({
     id: record.id,
     ...record.fields,

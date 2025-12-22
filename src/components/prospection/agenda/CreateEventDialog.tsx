@@ -206,7 +206,7 @@ export function CreateEventDialog({
               : "";
 
           // Create interaction and update prospect status if we have a contact ID
-          // Note: Client field in Airtable is auto-populated via Contact lookup
+          // Note: Client field is auto-populated via Contact lookup
           if (prospect.id) {
             try {
               // 1. Create interaction
@@ -216,7 +216,7 @@ export function CreateEventDialog({
                 date: start.toISOString(), // Full ISO with time
                 resume: `RDV prévu le ${formattedDate}${meetingInfo}\n\n${description}${event.htmlLink ? `\n\nLien Google Calendar: ${event.htmlLink}` : ""}`,
                 contact: [prospect.id],
-                // Client is auto-populated via Contact lookup in Airtable
+                // Client is auto-populated via Contact lookup
               });
 
               // 2. Update prospect status to "RDV planifié" and save the RDV date, type and link

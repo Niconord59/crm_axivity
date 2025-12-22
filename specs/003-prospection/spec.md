@@ -31,7 +31,7 @@ Créer une page `/prospection` dédiée qui permet :
 
 ## Architecture des données
 
-### Tables Airtable impactées
+### Tables Supabase impactées
 
 | Table | Modifications |
 |-------|---------------|
@@ -409,7 +409,7 @@ export const callResultSchema = z.object({
 });
 ```
 
-### API Airtable - Batch Import
+### API Supabase - Batch Import
 
 ```typescript
 // Création batch (max 10 records par requête)
@@ -488,7 +488,7 @@ Projets
 
 | Tâche | Effort |
 |-------|--------|
-| Champs Airtable (T2-Contacts) | 0.5h |
+| Champs Supabase (T2-Contacts) | 0.5h |
 | Hook useProspects | 1h |
 | Hook useImportLeads | 2h |
 | Page /prospection | 2h |
@@ -512,9 +512,9 @@ Projets
 - `react-hook-form` + `zod` : Formulaires et validation
 - `@tanstack/react-query` : Gestion des requêtes
 
-### Modifications Airtable requises
+### Modifications Supabase requises
 
-Avant de coder, créer manuellement dans Airtable :
+Avant de coder, créer manuellement dans Supabase :
 
 1. **T2-Contacts** : Ajouter les 4 champs
    - `Statut Prospection` (Single Select)
@@ -727,7 +727,7 @@ Message de prévisualisation de l'interaction mis à jour en temps réel.
 2. **Given** l'utilisateur ouvre un CallResultDialog, **When** il consulte l'onglet "Entreprise", **Then** il voit le SIRET et l'adresse complète
 3. **Given** un client existant est importé avec de nouvelles infos, **When** l'import se termine, **Then** les champs de facturation sont mis à jour
 
-### Nouveaux champs Airtable (T1-Clients)
+### Nouveaux champs Supabase (T1-Clients)
 
 | Champ | Type | Field ID | Description |
 |-------|------|----------|-------------|

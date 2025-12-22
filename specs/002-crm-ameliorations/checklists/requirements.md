@@ -109,7 +109,7 @@
 
 ---
 
-## Airtable Integration Validation
+## Supabase Integration Validation
 
 | Operation | Table | Status | Notes |
 |-----------|-------|--------|-------|

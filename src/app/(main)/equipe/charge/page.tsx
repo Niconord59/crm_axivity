@@ -77,7 +77,7 @@ export default function ChargeEquipePage() {
     return <PageLoading />;
   }
 
-  // All team members (no "Actif" field exists in Airtable)
+  // All team members (all team members)
   const membresActifs = equipe || [];
 
   // Calculate statistics

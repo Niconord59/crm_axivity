@@ -6,10 +6,10 @@
 
 ---
 
-## Phase 0 : Préparation Airtable [COMPLETE]
+## Phase 0 : Préparation Supabase [COMPLETE]
 
 ### T0.1 - Créer champ "Statut Prospection" sur T2-Contacts
-- [x] Ouvrir T2-Contacts dans Airtable
+- [x] Ouvrir T2-Contacts dans Supabase
 - [x] Ajouter champ Single Select "Statut Prospection"
 - [x] Options : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
 - [x] Noter le Field ID
@@ -50,8 +50,8 @@
 - [x] Créer `callResultSchema` (validation résultat appel)
 - [x] Créer `csvMappingSchema` (validation mapping import)
 
-### T1.3 - Mettre à jour airtable-tables.ts
-- [x] Field IDs seront ajoutés après création dans Airtable (Phase 0)
+### T1.3 - Mettre à jour supabase-tables.ts
+- [x] Field IDs seront ajoutés après création dans Supabase (Phase 0)
 - [x] Champs documentés dans code et CLAUDE.md
 
 ### T1.4 - Créer hook useProspects
@@ -337,7 +337,7 @@
 
 ## Phase 9 : Champs de facturation Clients [COMPLETE]
 
-### T9.1 - Créer champs Airtable sur T1-Clients
+### T9.1 - Créer champs Supabase sur T1-Clients
 - [x] Créer champ "SIRET" (Single Line Text) via MCP Rube
 - [x] Créer champ "Adresse" (Single Line Text)
 - [x] Créer champ "Code Postal" (Single Line Text)
@@ -434,7 +434,7 @@
 
 | Phase | Tâches | Effort |
 |-------|--------|--------|
-| Phase 0 : Airtable | 5 | 0.5h |
+| Phase 0 : Supabase | 5 | 0.5h |
 | Phase 1 : Infrastructure | 5 | 3h |
 | Phase 2 : Page principale | 5 | 4h |
 | Phase 3 : Actions | 5 | 4h |

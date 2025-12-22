@@ -13,7 +13,7 @@ En tant que membre de l'équipe de l'agence IA, je veux accéder à un tableau d
 
 **Why this priority**: Le dashboard est le point d'entrée principal de l'application. Sans lui, les utilisateurs ne peuvent pas naviguer efficacement ni avoir une vision globale de l'activité.
 
-**Independent Test**: Peut être testé en vérifiant que les 4 KPIs s'affichent correctement avec des données provenant d'Airtable, et que la navigation vers les autres sections est fonctionnelle.
+**Independent Test**: Peut être testé en vérifiant que les 4 KPIs s'affichent correctement avec des données provenant d'Supabase, et que la navigation vers les autres sections est fonctionnelle.
 
 **Acceptance Scenarios**:
 
@@ -29,7 +29,7 @@ En tant que chef de projet, je veux visualiser et gérer tous les projets de l'a
 
 **Why this priority**: La gestion des projets est au coeur de l'activité de l'agence. Les projets génèrent le CA et nécessitent un suivi quotidien.
 
-**Independent Test**: Peut être testé en créant/modifiant un projet et en vérifiant que les changements sont reflétés dans Airtable et dans les différentes vues.
+**Independent Test**: Peut être testé en créant/modifiant un projet et en vérifiant que les changements sont reflétés dans Supabase et dans les différentes vues.
 
 **Acceptance Scenarios**:
 
@@ -45,12 +45,12 @@ En tant que commercial, je veux gérer le pipeline de ventes sous forme de Kanba
 
 **Why this priority**: Le pipeline commercial est essentiel pour la croissance de l'agence. La visualisation Kanban permet une gestion intuitive des opportunités.
 
-**Independent Test**: Peut être testé en déplaçant une opportunité d'une colonne à une autre et en vérifiant que la valeur pondérée se recalcule et que Airtable est mis à jour.
+**Independent Test**: Peut être testé en déplaçant une opportunité d'une colonne à une autre et en vérifiant que la valeur pondérée se recalcule et que Supabase est mis à jour.
 
 **Acceptance Scenarios**:
 
 1. **Given** l'utilisateur accède à la page Opportunités, **When** la page s'affiche, **Then** il voit un Kanban avec colonnes : Lead, Qualifié, Proposition envoyée, Négociation, Gagnée, Perdue
-2. **Given** une opportunité est dans la colonne "Proposition envoyée", **When** l'utilisateur la drag vers "Négociation", **Then** le statut est mis à jour dans Airtable et la valeur pondérée de la colonne est recalculée
+2. **Given** une opportunité est dans la colonne "Proposition envoyée", **When** l'utilisateur la drag vers "Négociation", **Then** le statut est mis à jour dans Supabase et la valeur pondérée de la colonne est recalculée
 3. **Given** l'utilisateur consulte une colonne, **When** il regarde le total, **Then** il voit la somme des valeurs pondérées (Valeur Estimée x Probabilité) de toutes les opportunités de cette colonne
 
 ---
@@ -110,7 +110,7 @@ En tant que dirigeant de l'agence, je veux accéder à un dashboard stratégique
 
 **Why this priority**: Le dashboard CEO est important mais moins urgent que les fonctionnalités opérationnelles quotidiennes.
 
-**Independent Test**: Peut être testé en vérifiant que les métriques agrégées (CA total, taux conversion, marge moyenne) sont calculées correctement à partir des données Airtable.
+**Independent Test**: Peut être testé en vérifiant que les métriques agrégées (CA total, taux conversion, marge moyenne) sont calculées correctement à partir des données Supabase.
 
 **Acceptance Scenarios**:
 
@@ -178,18 +178,18 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 
 1. **Given** l'utilisateur est sur la page Opportunités, **When** il clique sur "Importer", **Then** une boîte de dialogue d'import s'ouvre
 2. **Given** l'utilisateur dépose un fichier CSV/XLSX, **When** le fichier est parsé, **Then** il voit les colonnes détectées avec mapping automatique
-3. **Given** l'utilisateur a configuré le mapping, **When** il clique sur "Importer", **Then** les leads sont créés dans Airtable avec une barre de progression
+3. **Given** l'utilisateur a configuré le mapping, **When** il clique sur "Importer", **Then** les leads sont créés dans Supabase avec une barre de progression
 4. **Given** l'import est terminé, **When** l'utilisateur ferme la boîte de dialogue, **Then** le pipeline commercial est rafraîchi avec les nouveaux leads
 
 ---
 
 ### Edge Cases
 
-- Que se passe-t-il quand Airtable renvoie une erreur réseau ? L'interface affiche un message d'erreur convivial avec option de réessayer.
+- Que se passe-t-il quand Supabase renvoie une erreur réseau ? L'interface affiche un message d'erreur convivial avec option de réessayer.
 - Que se passe-t-il quand un projet n'a aucune tâche ? Le pourcentage de complétion affiche 0% avec un message explicatif.
 - Que se passe-t-il quand un utilisateur accède à une fiche client sans aucun projet/facture ? Les onglets concernés affichent "Aucune donnée" avec option de créer.
 - Que se passe-t-il sur mobile quand le Kanban a beaucoup de colonnes ? Les colonnes sont scrollables horizontalement avec indicateurs visuels.
-- Que se passe-t-il si un champ rollup/formula Airtable renvoie une erreur ? L'interface affiche "N/A" au lieu de planter.
+- Que se passe-t-il si un champ rollup/formula Supabase renvoie une erreur ? L'interface affiche "N/A" au lieu de planter.
 
 ## Requirements *(mandatory)*
 
@@ -216,13 +216,13 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 - **FR-012**: La page Opportunités DOIT afficher un Kanban avec colonnes : Lead, Qualifié, Proposition envoyée, Négociation, Gagnée, Perdue
 - **FR-013**: Chaque colonne DOIT afficher la somme des valeurs pondérées de ses opportunités
 - **FR-014**: Les opportunités DOIVENT être déplaçables par drag-and-drop entre colonnes
-- **FR-015**: Un déplacement de colonne DOIT mettre à jour le statut dans Airtable
+- **FR-015**: Un déplacement de colonne DOIT mettre à jour le statut dans Supabase
 
 **Tâches**
 - **FR-016**: La page Tâches DOIT offrir une vue Liste filtrable par responsable et projet
 - **FR-017**: La page Tâches DOIT offrir une vue Calendrier mensuel
 - **FR-018**: Les tâches en retard DOIVENT être visuellement identifiables (badge rouge)
-- **FR-019**: Le checkbox de complétion DOIT mettre à jour le statut dans Airtable
+- **FR-019**: Le checkbox de complétion DOIT mettre à jour le statut dans Supabase
 
 **Clients**
 - **FR-020**: La page Clients DOIT afficher une liste searchable de tous les clients
@@ -249,8 +249,8 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 - **FR-033**: Le portail client DOIT afficher les factures du client avec leur statut
 
 **Données & API**
-- **FR-034**: Toutes les données DOIVENT être lues depuis l'API Airtable en temps réel
-- **FR-035**: Toutes les modifications DOIVENT être écrites vers l'API Airtable
+- **FR-034**: Toutes les données DOIVENT être lues depuis l'API Supabase en temps réel
+- **FR-035**: Toutes les modifications DOIVENT être écrites vers l'API Supabase
 - **FR-036**: Les erreurs API DOIVENT être gérées avec des messages utilisateur conviviaux
 - **FR-037**: L'interface DOIT afficher un état de chargement (skeleton) pendant les requêtes API
 
@@ -273,10 +273,10 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 ## Assumptions
 
 - Les utilisateurs sont déjà authentifiés via un système d'authentification existant (non inclus dans ce scope)
-- La base Airtable avec les 21 tables est déjà configurée et opérationnelle (Base ID: appEf6JtWFdfLwsU6)
+- La base Supabase avec les 21 tables est déjà configurée et opérationnelle (Base ID: appEf6JtWFdfLwsU6)
 - Les workflows N8N sont gérés séparément et ne font pas partie de cette interface
 - L'interface est destinée à des utilisateurs francophones (textes en français)
-- Les utilisateurs ont accès à une connexion internet stable pour les appels API Airtable
+- Les utilisateurs ont accès à une connexion internet stable pour les appels API Supabase
 - Le taux de TVA par défaut est de 20% pour le calcul du montant TTC
 
 ## Success Criteria *(mandatory)*
@@ -288,7 +288,7 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 - **SC-003**: Les utilisateurs peuvent mettre à jour le statut d'une opportunité (drag-and-drop) en moins de 2 secondes
 - **SC-004**: Les utilisateurs peuvent marquer une tâche comme terminée en 1 clic
 - **SC-005**: L'interface est utilisable sur smartphone sans zoom ni scroll horizontal involontaire sur les pages principales
-- **SC-006**: 100% des données affichées correspondent aux données Airtable (pas de cache obsolète visible)
+- **SC-006**: 100% des données affichées correspondent aux données Supabase (pas de cache obsolète visible)
 - **SC-007**: Les erreurs API affichent un message compréhensible dans 100% des cas (pas d'écran blanc ou de message technique)
 - **SC-008**: Les membres de l'équipe peuvent gérer leurs tâches quotidiennes entièrement depuis mobile
 - **SC-009**: Le CEO peut consulter les métriques stratégiques sans assistance technique
