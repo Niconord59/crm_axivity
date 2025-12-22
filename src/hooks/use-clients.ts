@@ -97,8 +97,8 @@ export function useCreateClient() {
       if (error) throw error;
       return mapToClient(record);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["clients"] });
     },
   });
 }
@@ -132,8 +132,8 @@ export function useUpdateClient() {
       if (error) throw error;
       return mapToClient(record);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    onSuccess: async (_, variables) => {
+      await queryClient.refetchQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["client", variables.id] });
     },
   });
@@ -151,8 +151,8 @@ export function useDeleteClient() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["clients"] });
     },
   });
 }
