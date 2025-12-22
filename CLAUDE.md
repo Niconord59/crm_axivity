@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-19
+Auto-generated from all feature plans. Last updated: 2025-12-22
 
 ## Active Technologies
 
@@ -23,8 +23,10 @@ src/
 ├── hooks/                  # React Query hooks (13 hooks Supabase)
 ├── lib/
 │   ├── supabase.ts         # Supabase client
+│   ├── auth.ts             # NextAuth.js config (Google + Microsoft)
 │   ├── utils.ts            # Helpers (cn, formatters)
 │   ├── schemas/            # Zod validation schemas
+│   ├── services/           # Calendar & Email services (multi-provider)
 │   └── tour-steps.ts       # Configuration des étapes du tour
 ├── providers/              # React Query + Onboarding providers
 └── types/                  # TypeScript definitions
@@ -75,22 +77,25 @@ npm start       # Production server
   - Suivi des appels (statuts, rappels, notes)
   - Conversion Lead → Opportunité
   - KPIs de prospection (à appeler, rappels, taux qualification, retards)
-  - **Intégration Google Calendar** (Phase 7) : Planifier des RDV depuis le CallResultDialog
-  - **Intégration Gmail** (Phase 8) : Envoyer des emails de suivi après "Pas répondu"
+  - **Intégration Calendar** : Planifier des RDV (Google Calendar ou Microsoft 365)
+  - **Intégration Email** : Envoyer des emails de suivi (Gmail ou Outlook)
 - **Nouveaux composants**:
   - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer
-  - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, GoogleAuthButton
+  - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, CalendarAuthButton
 - **Nouveaux hooks**:
   - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
   - `use-import-leads.ts` : useImportLeads (CSV parsing, mapping, batch import)
   - `use-convert-opportunity.ts` : useConvertToOpportunity
-  - `use-google-calendar.ts` : useCalendarEvents, useCreateCalendarEvent, useGoogleCalendarStatus
-  - `use-gmail.ts` : useSendEmail, generateFollowUpEmail
-- **Auth Google (Calendar + Gmail)**:
-  - `lib/auth.ts` : Configuration NextAuth.js v5 avec Google OAuth + calendar + gmail.send scopes
+  - `use-calendar.ts` : useCalendarEvents, useCreateCalendarEvent, useCalendarStatus, useCalendarAuth
+  - `use-email.ts` : useSendEmail, generateFollowUpEmail
+- **Services multi-provider**:
+  - `lib/services/calendar-service.ts` : Abstraction Calendar (Google + Microsoft Graph)
+  - `lib/services/email-service.ts` : Abstraction Email (Gmail + Microsoft Graph)
+- **Auth OAuth (Calendar + Email)**:
+  - `lib/auth.ts` : Configuration NextAuth.js v5 avec Google + Microsoft providers
   - `app/api/auth/[...nextauth]/route.ts` : Handler NextAuth
-  - `app/api/calendar/events/route.ts` : API GET/POST events
-  - `app/api/gmail/send/route.ts` : API POST pour envoyer des emails
+  - `app/api/calendar/events/route.ts` : API GET/POST events (auto-détection provider)
+  - `app/api/email/send/route.ts` : API POST pour envoyer des emails (auto-détection provider)
   - `providers/session-provider.tsx` : SessionProvider wrapper
 - **Champs Supabase** (contacts) :
   - `statut_prospection` (ENUM) : À appeler, Appelé - pas répondu, Rappeler, RDV planifié, Qualifié, Non qualifié, Perdu
@@ -105,10 +110,6 @@ npm start       # Production server
   - `code_postal` (TEXT)
   - `ville` (TEXT)
   - `pays` (TEXT) : Défaut "France"
-- **Variables d'environnement Google**:
-  - `AUTH_SECRET` : Secret NextAuth (openssl rand -base64 32)
-  - `AUTH_GOOGLE_ID` : Google OAuth Client ID
-  - `AUTH_GOOGLE_SECRET` : Google OAuth Client Secret
 
 ### 004-onboarding-tour (Tour Guidé - COMPLETE)
 - **Status**: 100% - Complete
@@ -219,6 +220,93 @@ npm start       # Production server
    ```
    Note: Utiliser `={{ }}` pour les expressions dynamiques, pas `{{ }}`
 
+## OAuth Providers (Calendar + Email)
+
+L'application supporte deux providers OAuth pour le calendrier et l'email :
+
+| Provider | Calendar | Email | Visio |
+|----------|----------|-------|-------|
+| **Google** | Google Calendar API | Gmail API | Google Meet |
+| **Microsoft** | Microsoft Graph API | Microsoft Graph API | Teams |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CalendarAuthButton                           │
+│              [Google]     [Microsoft 365]                       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   NextAuth.js v5                                │
+│   Google Provider          │       MicrosoftEntraID Provider    │
+│   - calendar scope         │       - Calendars.ReadWrite        │
+│   - gmail.send scope       │       - Mail.Send                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Session (JWT)                                 │
+│   { accessToken, provider: "google" | "microsoft" }             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              API Routes (auto-détection provider)               │
+│   /api/calendar/events     │       /api/email/send              │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Services Layer                                │
+│   calendar-service.ts      │       email-service.ts             │
+│   - Google Calendar API    │       - Gmail API                  │
+│   - Microsoft Graph API    │       - Microsoft Graph API        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Variables d'environnement OAuth
+
+```env
+# NextAuth Secret
+AUTH_SECRET=generate-with-openssl-rand-base64-32
+
+# Google OAuth
+AUTH_GOOGLE_ID=your-google-client-id.apps.googleusercontent.com
+AUTH_GOOGLE_SECRET=your-google-client-secret
+
+# Microsoft Azure AD OAuth
+AUTH_MICROSOFT_ID=your-azure-client-id
+AUTH_MICROSOFT_SECRET=your-azure-client-secret
+```
+
+### Configuration Azure AD
+
+1. **Portal Azure** : https://portal.azure.com
+2. **App registrations** → New registration
+3. **Redirect URI** (Web) :
+   - Dev : `http://localhost:3000/api/auth/callback/microsoft-entra-id`
+   - Prod : `https://crm.axivity.cloud/api/auth/callback/microsoft-entra-id`
+4. **API Permissions** (Delegated) :
+   - `User.Read`
+   - `Calendars.ReadWrite`
+   - `Mail.Send`
+   - `offline_access`
+
+### Configuration Google Cloud
+
+1. **Google Cloud Console** : https://console.cloud.google.com
+2. **APIs & Services** → Credentials → OAuth 2.0 Client ID
+3. **Redirect URI** :
+   - Dev : `http://localhost:3000/api/auth/callback/google`
+   - Prod : `https://crm.axivity.cloud/api/auth/callback/google`
+4. **Scopes** :
+   - `openid email profile`
+   - `https://www.googleapis.com/auth/calendar`
+   - `https://www.googleapis.com/auth/calendar.events`
+   - `https://www.googleapis.com/auth/gmail.send`
+
 ## Gates (Non-négociables)
 
 1. **Mobile-First**: Responsive sur 3 breakpoints
@@ -246,6 +334,12 @@ npm start       # Production server
   - 4 workflows N8N
 - **Pipeline Commercial Redesign** (19 déc. 2025)
 - **Nettoyage références legacy** (19 déc. 2025) : Suppression de toutes les références à l'ancien backend
+- **Microsoft 365 Integration** (22 déc. 2025) : Ajout de Microsoft comme provider alternatif
+  - Support Microsoft Calendar (Outlook) via Microsoft Graph API
+  - Support Microsoft Email (Outlook) via Microsoft Graph API
+  - Support Teams pour les visioconférences
+  - Architecture multi-provider avec auto-détection
+  - CalendarAuthButton avec choix du provider (Google / Microsoft 365)
 
 ## Production Checklist
 
