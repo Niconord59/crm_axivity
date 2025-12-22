@@ -11,10 +11,10 @@ import {
 
 interface TourTriggerProps {
   onClick: () => void;
-  hasCompletedTour: boolean;
+  hasSeenTour: boolean;
 }
 
-export function TourTrigger({ onClick, hasCompletedTour }: TourTriggerProps) {
+export function TourTrigger({ onClick, hasSeenTour }: TourTriggerProps) {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -27,7 +27,7 @@ export function TourTrigger({ onClick, hasCompletedTour }: TourTriggerProps) {
             data-tour="help-button"
           >
             <HelpCircle className="h-5 w-5" />
-            {!hasCompletedTour && (
+            {!hasSeenTour && (
               <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />

@@ -8,6 +8,7 @@ import { tourSteps } from "@/lib/tour-steps";
 interface OnboardingContextValue {
   startTour: () => void;
   hasCompletedTour: boolean;
+  hasSeenTour: boolean;
   isInitialized: boolean;
 }
 
@@ -30,6 +31,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     isOpen,
     currentStep,
     hasCompletedTour,
+    hasSkippedTour,
     isInitialized,
     startTour,
     nextStep,
@@ -39,6 +41,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     setIsOpen,
   } = useOnboardingTour();
 
+  const hasSeenTour = hasCompletedTour || hasSkippedTour;
+
   const handleNext = () => nextStep(tourSteps.length);
   const handleClose = () => setIsOpen(false);
 
@@ -47,6 +51,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       value={{
         startTour,
         hasCompletedTour,
+        hasSeenTour,
         isInitialized,
       }}
     >

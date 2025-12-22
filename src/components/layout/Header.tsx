@@ -20,7 +20,7 @@ import { useAuthContext } from "@/providers/auth-provider";
 
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
-  const { startTour, hasCompletedTour, isInitialized } = useOnboarding();
+  const { startTour, hasSeenTour, isInitialized } = useOnboarding();
   const { user, signOut, isLoading } = useAuthContext();
 
   // Keyboard shortcuts
@@ -78,7 +78,7 @@ export function Header() {
           {isInitialized && (
             <TourTrigger
               onClick={startTour}
-              hasCompletedTour={hasCompletedTour}
+              hasSeenTour={hasSeenTour}
             />
           )}
 
