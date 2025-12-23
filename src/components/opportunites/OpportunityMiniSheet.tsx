@@ -12,7 +12,6 @@ import {
   FileText,
   Plus,
   Minus,
-  RotateCcw,
   StickyNote,
   Target,
   Loader2,
@@ -162,19 +161,6 @@ export function OpportunityMiniSheet({
 
   const handleDecrement = (amount: number) => {
     setMontant((prev) => Math.max(0, prev - amount));
-  };
-
-  const handleReset = () => {
-    if (opportunity) {
-      setMontant(opportunity.valeurEstimee || 0);
-      setProbabilite(opportunity.probabilite || 50);
-      setNotes(opportunity.notes || "");
-      setDateCloture(
-        opportunity.dateClotureEstimee
-          ? new Date(opportunity.dateClotureEstimee)
-          : undefined
-      );
-    }
   };
 
   const valeurPonderee = montant * (probabilite / 100);
@@ -419,28 +405,16 @@ export function OpportunityMiniSheet({
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              {/* Save / Reset */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  disabled={!hasChanges}
-                  className="flex-1"
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={!hasChanges || updateOpportunite.isPending}
-                  className="flex-1"
-                >
-                  {updateOpportunite.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : null}
-                  Enregistrer
-                </Button>
-              </div>
+              <Button
+                onClick={handleSave}
+                disabled={!hasChanges || updateOpportunite.isPending}
+                className="w-full"
+              >
+                {updateOpportunite.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                Enregistrer
+              </Button>
 
               {/* Open Quote Editor */}
               {onOpenQuoteEditor && (
