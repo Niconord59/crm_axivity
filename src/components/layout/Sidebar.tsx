@@ -16,6 +16,7 @@ import {
   Menu,
   Shield,
   Building2,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -88,6 +89,11 @@ const adminNavItems: NavItem[] = [
     title: "Mon entreprise",
     href: "/admin/entreprise",
     icon: Building2,
+  },
+  {
+    title: "Catalogue services",
+    href: "/admin/catalogue",
+    icon: Package,
   },
   {
     title: "Utilisateurs",

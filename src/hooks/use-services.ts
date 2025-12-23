@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { CatalogueService } from "@/types";
 
@@ -90,6 +90,133 @@ export function useServiceCategories() {
       )];
 
       return categories;
+    },
+  });
+}
+
+// ============================================
+// MUTATIONS
+// ============================================
+
+interface CreateServiceData {
+  nom: string;
+  description?: string;
+  prixUnitaire: number;
+  unite?: string;
+  categorie?: string;
+  actif?: boolean;
+}
+
+export function useCreateService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateServiceData) => {
+      const insertData = {
+        nom: data.nom,
+        description: data.description || null,
+        prix_unitaire: data.prixUnitaire,
+        unite: data.unite || "forfait",
+        categorie: data.categorie || null,
+        actif: data.actif ?? true,
+      };
+
+      const { data: record, error } = await supabase
+        .from("catalogue_services")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToService(record);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["service-categories"] });
+    },
+  });
+}
+
+interface UpdateServiceData {
+  id: string;
+  nom?: string;
+  description?: string;
+  prixUnitaire?: number;
+  unite?: string;
+  categorie?: string;
+  actif?: boolean;
+}
+
+export function useUpdateService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: UpdateServiceData) => {
+      const updateData: Record<string, unknown> = {};
+
+      if (data.nom !== undefined) updateData.nom = data.nom;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.prixUnitaire !== undefined) updateData.prix_unitaire = data.prixUnitaire;
+      if (data.unite !== undefined) updateData.unite = data.unite;
+      if (data.categorie !== undefined) updateData.categorie = data.categorie;
+      if (data.actif !== undefined) updateData.actif = data.actif;
+
+      const { data: record, error } = await supabase
+        .from("catalogue_services")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToService(record);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["service", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["service-categories"] });
+    },
+  });
+}
+
+export function useDeleteService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("catalogue_services")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["service-categories"] });
+    },
+  });
+}
+
+export function useToggleServiceActive() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, actif }: { id: string; actif: boolean }) => {
+      const { data: record, error } = await supabase
+        .from("catalogue_services")
+        .update({ actif })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToService(record);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["service", variables.id] });
     },
   });
 }
