@@ -140,8 +140,8 @@ npm start       # Production server
 - **Content**:
   - Backend Supabase self-hosted
   - Déploiement via Coolify (template intégré)
-  - 13 hooks React Query
-  - 14 fichiers de migration SQL
+  - 16 hooks React Query
+  - 18 fichiers de migration SQL
   - Row Level Security (5 rôles utilisateur)
   - Auth UI complète (login, register, forgot-password, reset-password)
   - 4 workflows N8N
@@ -157,6 +157,31 @@ npm start       # Production server
   - `use-equipe.ts`, `use-interactions.ts`
   - `use-convert-opportunity.ts`, `use-import-leads.ts`
   - `use-services.ts`, `use-lignes-devis.ts`, `use-devis.ts`
+
+### 006-devis (Module Devis - COMPLETE)
+- **Status**: 100% - 45/45 tâches
+- **Specs**: `specs/006-devis/`
+- **Content**:
+  - Éditeur de devis accessible depuis le pipeline commercial
+  - Sélection de services depuis le catalogue
+  - Lignes de devis avec calculs automatiques (HT, TVA, TTC)
+  - Génération PDF avec Puppeteer (template professionnel)
+  - Prévisualisation avant génération finale
+  - Historique des devis avec numérotation séquentielle (DEV-YYYY-NNN)
+  - Statuts de suivi : brouillon, envoyé, accepté, refusé, expiré
+  - Envoi par email via Resend avec PDF en pièce jointe
+- **Composants**:
+  - `components/devis/QuoteEditorSheet.tsx` : Sheet principal avec onglets
+  - `components/devis/QuoteLinesTable.tsx` : Table des lignes CRUD
+  - `components/devis/ServiceSelector.tsx` : Sélecteur de service
+- **Hooks**:
+  - `use-services.ts` : Catalogue des services
+  - `use-lignes-devis.ts` : CRUD lignes de devis
+  - `use-devis.ts` : Historique et envoi email
+- **APIs**:
+  - `/api/devis/generate` : Génération PDF finale
+  - `/api/devis/preview` : Prévisualisation temporaire
+  - `/api/devis/send` : Envoi email via Resend
 
 ## Documentation
 
