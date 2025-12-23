@@ -197,12 +197,13 @@ export function LeadCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden transition-all duration-200 h-full flex flex-col",
+        "group relative overflow-hidden transition-all duration-200 h-full flex flex-col cursor-pointer",
         "hover:shadow-md hover:-translate-y-0.5",
         "border-l-4",
         statusConfig.border,
         isUrgent && "ring-2 ring-red-200 ring-offset-1"
       )}
+      onClick={() => onCall(prospect)}
     >
       <CardContent className="p-4 flex flex-col flex-1">
         {/* Header avec Avatar */}
@@ -236,6 +237,7 @@ export function LeadCard({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity -mr-1"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -290,7 +292,10 @@ export function LeadCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={handleCopyPhone}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyPhone();
+                    }}
                     className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full group/btn"
                   >
                     <Phone className="h-3 w-3 shrink-0" />
@@ -309,7 +314,10 @@ export function LeadCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={handleCopyEmail}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyEmail();
+                    }}
                     className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full group/btn"
                   >
                     <Mail className="h-3 w-3 shrink-0" />
@@ -394,7 +402,10 @@ export function LeadCard({
           variant={actionButton.variant}
           size="sm"
           className="w-full h-8 text-xs font-medium mt-auto"
-          onClick={() => onCall(prospect)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCall(prospect);
+          }}
         >
           <ActionIcon className="h-3.5 w-3.5 mr-1.5" />
           {actionButton.label}
