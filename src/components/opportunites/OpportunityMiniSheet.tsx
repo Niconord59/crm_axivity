@@ -411,7 +411,7 @@ export function OpportunityMiniSheet({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Notes sur l'opportunité, budget annoncé par le client..."
                 rows={4}
-                className="resize-none"
+                className="resize-y min-h-[100px]"
               />
             </div>
 
