@@ -58,6 +58,37 @@ export const prospectSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  // Informations de facturation (optionnelles, auto-remplies via API)
+  siret: z
+    .string()
+    .max(14, "Le SIRET doit contenir 14 chiffres")
+    .optional()
+    .or(z.literal("")),
+
+  adresse: z
+    .string()
+    .max(500, "L'adresse ne peut pas dépasser 500 caractères")
+    .optional()
+    .or(z.literal("")),
+
+  codePostal: z
+    .string()
+    .max(10, "Le code postal ne peut pas dépasser 10 caractères")
+    .optional()
+    .or(z.literal("")),
+
+  ville: z
+    .string()
+    .max(100, "La ville ne peut pas dépasser 100 caractères")
+    .optional()
+    .or(z.literal("")),
+
+  pays: z
+    .string()
+    .max(100, "Le pays ne peut pas dépasser 100 caractères")
+    .optional()
+    .or(z.literal("")),
+
   // === CONTACT ===
   // Nom du contact (obligatoire)
   nom: z
@@ -127,6 +158,12 @@ export const prospectDefaultValues: Partial<ProspectFormData> = {
   secteurActivite: "",
   siteWeb: "",
   telephoneEntreprise: "",
+  // Facturation
+  siret: "",
+  adresse: "",
+  codePostal: "",
+  ville: "",
+  pays: "France",
   // Contact
   nom: "",
   prenom: "",

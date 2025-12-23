@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,17 +12,14 @@ import {
   Building2,
   User,
   Users,
-  Check,
-  ChevronsUpDown,
-  PlusCircle,
   Phone,
   CalendarIcon,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   Mail,
   History,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -63,15 +60,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -84,6 +72,9 @@ import { useCreateProspect, useUpdateProspectStatus } from "@/hooks/use-prospect
 import { useClients } from "@/hooks/use-clients";
 import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
 import { AgendaTab } from "./agenda";
+import { CompanySearch } from "./CompanySearch";
+import type { CompanyInfo } from "@/hooks/use-company-search";
+import { useSearchGooglePlaces } from "@/hooks/use-google-places";
 
 // Interface pour les contacts Supabase
 interface ContactRecord {
@@ -116,7 +107,6 @@ type CallResult = typeof CALL_RESULTS[number]["value"];
 export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("entreprise");
-  const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
   // État pour les données validées du formulaire (avant création)
@@ -149,7 +139,11 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
   const createProspect = useCreateProspect();
   const updateProspectStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
+  const searchGooglePlaces = useSearchGooglePlaces();
   const { data: clients, isLoading: isLoadingClients } = useClients();
+
+  // State for Google Places enrichment loading
+  const [isEnrichingData, setIsEnrichingData] = useState(false);
 
   const form = useForm<ProspectFormData>({
     resolver: zodResolver(prospectSchema),
@@ -201,29 +195,17 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     clientId: hasExistingContacts ? selectedClientId : undefined,
   });
 
-  // Filter clients based on search
-  const filteredClients = useMemo(() => {
-    if (!clients || !searchValue) return clients || [];
-    const search = searchValue.toLowerCase();
-    return clients.filter((client) =>
-      client.nom.toLowerCase().includes(search)
-    );
-  }, [clients, searchValue]);
-
-  // Check if search matches an existing client exactly
-  const exactMatch = useMemo(() => {
-    if (!clients || !searchValue) return null;
-    return clients.find(
-      (client) => client.nom.toLowerCase() === searchValue.toLowerCase()
-    );
-  }, [clients, searchValue]);
-
-  const handleSelectClient = (client: {
+  // Handler for selecting an existing client from CRM
+  const handleSelectExistingClient = (client: {
     id: string;
     nom: string;
     secteurActivite?: string;
     siteWeb?: string;
     telephone?: string;
+    siret?: string;
+    adresse?: string;
+    codePostal?: string;
+    ville?: string;
   }) => {
     form.setValue("clientId", client.id);
     form.setValue("entreprise", client.nom);
@@ -237,18 +219,76 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     if (client.telephone) {
       form.setValue("telephoneEntreprise", client.telephone);
     }
+    // Billing info
+    if (client.siret) {
+      form.setValue("siret", client.siret);
+    }
+    if (client.adresse) {
+      form.setValue("adresse", client.adresse);
+    }
+    if (client.codePostal) {
+      form.setValue("codePostal", client.codePostal);
+    }
+    if (client.ville) {
+      form.setValue("ville", client.ville);
+    }
     setSearchValue(client.nom);
-    setComboboxOpen(false);
   };
 
-  const handleCreateNewClient = () => {
+  // Handler for selecting a company from government API
+  const handleSelectApiCompany = async (company: CompanyInfo) => {
+    form.setValue("clientId", undefined); // New company, not in CRM yet
+    form.setValue("entreprise", company.nom);
+    // Auto-fill billing info from API
+    form.setValue("siret", company.siret || "");
+    form.setValue("adresse", company.adresse || "");
+    form.setValue("codePostal", company.codePostal || "");
+    form.setValue("ville", company.ville || "");
+    form.setValue("pays", "France");
+    // Activity can go to sector
+    if (company.activite) {
+      form.setValue("secteurActivite", company.activite);
+    }
+    setSearchValue(company.nom);
+
+    // Enrich with Google Places data (telephone + website)
+    setIsEnrichingData(true);
+    try {
+      const placesResult = await searchGooglePlaces.mutateAsync({
+        query: company.nom,
+        city: company.ville,
+      });
+
+      if (placesResult) {
+        if (placesResult.telephone) {
+          form.setValue("telephoneEntreprise", placesResult.telephone);
+        }
+        if (placesResult.siteWeb) {
+          form.setValue("siteWeb", placesResult.siteWeb);
+        }
+      }
+    } catch (error) {
+      // Silently fail - Google Places enrichment is optional
+      console.warn("Could not enrich company data with Google Places:", error);
+    } finally {
+      setIsEnrichingData(false);
+    }
+  };
+
+  // Handler for manual company creation
+  const handleCreateManualCompany = (name: string) => {
     form.setValue("clientId", undefined);
-    form.setValue("entreprise", searchValue);
-    // Réinitialiser les champs entreprise pour une nouvelle entreprise
+    form.setValue("entreprise", name);
+    // Reset billing fields for manual entry
+    form.setValue("siret", "");
+    form.setValue("adresse", "");
+    form.setValue("codePostal", "");
+    form.setValue("ville", "");
+    form.setValue("pays", "France");
     form.setValue("secteurActivite", "");
     form.setValue("siteWeb", "");
     form.setValue("telephoneEntreprise", "");
-    setComboboxOpen(false);
+    setSearchValue(name);
   };
 
   // Valider les données du formulaire et passer à l'onglet Résultat
@@ -274,6 +314,12 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
         secteurActivite: validatedFormData.secteurActivite || undefined,
         siteWeb: validatedFormData.siteWeb || undefined,
         telephoneEntreprise: validatedFormData.telephoneEntreprise || undefined,
+        // Facturation
+        siret: validatedFormData.siret || undefined,
+        adresse: validatedFormData.adresse || undefined,
+        codePostal: validatedFormData.codePostal || undefined,
+        ville: validatedFormData.ville || undefined,
+        pays: validatedFormData.pays || undefined,
         // Contact
         nom: validatedFormData.nom,
         prenom: validatedFormData.prenom || undefined,
@@ -363,6 +409,12 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
           secteurActivite: validatedFormData.secteurActivite || undefined,
           siteWeb: validatedFormData.siteWeb || undefined,
           telephoneEntreprise: validatedFormData.telephoneEntreprise || undefined,
+          // Facturation
+          siret: validatedFormData.siret || undefined,
+          adresse: validatedFormData.adresse || undefined,
+          codePostal: validatedFormData.codePostal || undefined,
+          ville: validatedFormData.ville || undefined,
+          pays: validatedFormData.pays || undefined,
           // Contact
           nom: validatedFormData.nom,
           prenom: validatedFormData.prenom || undefined,
@@ -535,96 +587,48 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
 
             {/* ONGLET ENTREPRISE */}
             <TabsContent value="entreprise" className="space-y-4 mt-4">
-              {/* Recherche / Création entreprise */}
+              {/* Recherche / Création entreprise avec autocomplétion API */}
               <div className="space-y-2">
                 <Label>Entreprise *</Label>
-                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={comboboxOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      {form.watch("entreprise") || "Rechercher ou créer une entreprise..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Rechercher une entreprise..."
-                        value={searchValue}
-                        onValueChange={setSearchValue}
-                      />
-                      <CommandList>
-                        {isLoadingClients ? (
-                          <CommandEmpty>Chargement...</CommandEmpty>
-                        ) : (
-                          <>
-                            {filteredClients.length === 0 && !searchValue && (
-                              <CommandEmpty>Aucune entreprise trouvée</CommandEmpty>
-                            )}
-
-                            {filteredClients.length > 0 && (
-                              <CommandGroup heading="Entreprises existantes">
-                                {filteredClients.slice(0, 10).map((client) => (
-                                  <CommandItem
-                                    key={client.id}
-                                    value={client.nom}
-                                    onSelect={() => handleSelectClient(client)}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        form.watch("clientId") === client.id
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                                    {client.nom}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            )}
-
-                            {searchValue && !exactMatch && (
-                              <>
-                                {filteredClients.length > 0 && <CommandSeparator />}
-                                <CommandGroup>
-                                  <CommandItem
-                                    onSelect={handleCreateNewClient}
-                                    className="text-primary"
-                                  >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Créer "{searchValue}"
-                                  </CommandItem>
-                                </CommandGroup>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {form.formState.errors.entreprise && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.entreprise.message}
-                  </p>
-                )}
+                <CompanySearch
+                  value={form.watch("entreprise") || ""}
+                  selectedClientId={form.watch("clientId")}
+                  clients={clients?.map(c => ({
+                    id: c.id,
+                    nom: c.nom,
+                    secteurActivite: c.secteurActivite,
+                    siteWeb: c.siteWeb,
+                    telephone: c.telephone,
+                    siret: c.siret,
+                    adresse: c.adresse,
+                    codePostal: c.codePostal,
+                    ville: c.ville,
+                  }))}
+                  isLoadingClients={isLoadingClients}
+                  onSelectExisting={handleSelectExistingClient}
+                  onSelectNew={handleSelectApiCompany}
+                  onCreateManual={handleCreateManualCompany}
+                  error={form.formState.errors.entreprise?.message}
+                />
               </div>
 
               {/* Informations complémentaires */}
               <div className="space-y-3 pt-2">
-                <p className="text-sm text-muted-foreground">
-                  Informations complémentaires (optionnel)
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    Informations complémentaires (optionnel)
+                  </p>
+                  {isEnrichingData && (
+                    <div className="flex items-center gap-1.5 text-xs text-blue-600">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Recherche Google Maps...</span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="secteurActivite">Secteur d'activité</Label>
+                    <Label htmlFor="secteurActivite">Secteur d&apos;activité</Label>
                     <Input
                       id="secteurActivite"
                       placeholder="Ex: Tech, Santé..."
@@ -633,21 +637,92 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="siteWeb">Site web</Label>
-                    <Input
-                      id="siteWeb"
-                      placeholder="https://..."
-                      {...form.register("siteWeb")}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="siteWeb"
+                        placeholder="https://..."
+                        {...form.register("siteWeb")}
+                        className={cn(isEnrichingData && "pr-8")}
+                      />
+                      {isEnrichingData && (
+                        <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="telephoneEntreprise">Téléphone entreprise</Label>
+                  <div className="relative">
+                    <Input
+                      id="telephoneEntreprise"
+                      type="tel"
+                      placeholder="+33 1 00 00 00 00"
+                      {...form.register("telephoneEntreprise")}
+                      className={cn(isEnrichingData && "pr-8")}
+                    />
+                    {isEnrichingData && (
+                      <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Informations de facturation */}
+              <div className="space-y-3 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Informations de facturation (auto-remplies si sélection depuis l&apos;annuaire)
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="siret">N° SIRET</Label>
                   <Input
-                    id="telephoneEntreprise"
-                    type="tel"
-                    placeholder="+33 1 00 00 00 00"
-                    {...form.register("telephoneEntreprise")}
+                    id="siret"
+                    placeholder="12345678901234"
+                    maxLength={14}
+                    {...form.register("siret")}
+                  />
+                  {form.watch("siret") && (
+                    <p className="text-xs text-muted-foreground">
+                      {form.watch("siret")?.length || 0}/14 chiffres
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="adresse">Adresse</Label>
+                  <Input
+                    id="adresse"
+                    placeholder="123 rue Example"
+                    {...form.register("adresse")}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="codePostal">Code postal</Label>
+                    <Input
+                      id="codePostal"
+                      placeholder="75001"
+                      {...form.register("codePostal")}
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="ville">Ville</Label>
+                    <Input
+                      id="ville"
+                      placeholder="Paris"
+                      {...form.register("ville")}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pays">Pays</Label>
+                  <Input
+                    id="pays"
+                    placeholder="France"
+                    {...form.register("pays")}
                   />
                 </div>
               </div>

@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-22
+Auto-generated from all feature plans. Last updated: 2025-12-23
 
 ## Active Technologies
 
@@ -82,7 +82,7 @@ npm start       # Production server
   - **Intégration Calendar** : Planifier des RDV (Google Calendar ou Microsoft 365)
   - **Intégration Email** : Envoyer des emails de suivi (Gmail ou Outlook)
 - **Nouveaux composants**:
-  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer
+  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer, CompanySearch
   - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, CalendarAuthButton
 - **Nouveaux hooks**:
   - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
@@ -90,6 +90,9 @@ npm start       # Production server
   - `use-convert-opportunity.ts` : useConvertToOpportunity
   - `use-calendar.ts` : useCalendarEvents, useCreateCalendarEvent, useCalendarStatus, useCalendarAuth
   - `use-email.ts` : useSendEmail, generateFollowUpEmail
+  - `use-company-search.ts` : useCompanySearch, useCompanySearchState (API recherche-entreprises.api.gouv.fr)
+  - `use-debounce.ts` : useDebouncedValue, useDebouncedCallback
+  - `use-google-places.ts` : useSearchGooglePlaces, enrichCompanyWithPlaces (Google Places API)
 - **Services multi-provider**:
   - `lib/services/calendar-service.ts` : Abstraction Calendar (Google + Microsoft Graph)
   - `lib/services/email-service.ts` : Abstraction Email (Gmail + Microsoft Graph)
@@ -281,7 +284,20 @@ AUTH_GOOGLE_SECRET=your-google-client-secret
 # Microsoft Azure AD OAuth
 AUTH_MICROSOFT_ID=your-azure-client-id
 AUTH_MICROSOFT_SECRET=your-azure-client-secret
+
+# Google Places API (optional - for company phone/website enrichment)
+GOOGLE_PLACES_API_KEY=your-google-places-api-key
 ```
+
+### Configuration Google Places API (optionnel)
+
+1. **Google Cloud Console** : https://console.cloud.google.com
+2. **APIs & Services** → Enable **Places API**
+3. **APIs & Services** → Credentials → Create API Key
+4. **Restrict key** : HTTP referrers or IP addresses
+5. Ajouter la clé dans `.env.local` : `GOOGLE_PLACES_API_KEY=...`
+
+Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site web ne sont pas auto-remplis.
 
 ### Configuration Azure AD
 
@@ -349,7 +365,15 @@ AUTH_MICROSOFT_SECRET=your-azure-client-secret
   - Template professionnel avec en-tête, lignes, totaux (HT, TVA 20%, TTC)
   - Nouveaux hooks: `use-services.ts`, `use-lignes-devis.ts`
   - Nouveaux composants: `QuoteEditorSheet`, `QuoteLinesTable`, `ServiceSelector`
-  - API: `/api/devis/generate` (POST)
+- **Recherche Entreprises API Gouvernement** (23 déc. 2025) : Auto-complétion pour création de leads
+  - Intégration API recherche-entreprises.api.gouv.fr
+  - Recherche en temps réel (debounced) pendant la saisie
+  - Auto-remplissage SIRET, adresse, code postal, ville, secteur d'activité
+  - Enrichissement Google Places API : téléphone + site web
+  - Nouveaux champs formulaire: SIRET, adresse, code postal, ville, pays
+  - Nouveaux hooks: `use-company-search.ts`, `use-debounce.ts`, `use-google-places.ts`
+  - Nouveau composant: `CompanySearch.tsx`
+  - API: `/api/places/search` (POST) - Google Places enrichment
 
 ## Production Checklist
 
