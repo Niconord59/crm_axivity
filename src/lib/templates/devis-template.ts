@@ -17,13 +17,88 @@ function formatDate(dateString: string): string {
   });
 }
 
+// Escape HTML to prevent XSS
+function escapeHtml(text: string | undefined | null): string {
+  if (!text) return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export function generateDevisHTML(data: DevisData): string {
+  // Get company info with fallback values
+  const company = data.entreprise || {
+    nom: "Mon Entreprise",
+    couleurPrincipale: "#2563eb",
+  };
+
+  const primaryColor = company.couleurPrincipale || "#2563eb";
+
+  // Build company info lines for header
+  const companyInfoLines: string[] = [];
+  if (company.formeJuridique) {
+    companyInfoLines.push(escapeHtml(company.formeJuridique));
+  }
+  if (company.adresse) {
+    companyInfoLines.push(escapeHtml(company.adresse));
+  }
+  if (company.codePostal || company.ville) {
+    companyInfoLines.push(
+      `${escapeHtml(company.codePostal)} ${escapeHtml(company.ville)}`.trim()
+    );
+  }
+  if (company.pays && company.pays !== "France") {
+    companyInfoLines.push(escapeHtml(company.pays));
+  }
+  if (company.siret) {
+    companyInfoLines.push(`SIRET: ${escapeHtml(company.siret)}`);
+  }
+  if (company.email) {
+    companyInfoLines.push(escapeHtml(company.email));
+  }
+
+  // Build footer info
+  const footerParts: string[] = [];
+  footerParts.push(escapeHtml(company.nom));
+  if (company.formeJuridique && company.capital) {
+    footerParts[0] += ` - ${escapeHtml(company.formeJuridique)} au capital de ${escapeHtml(company.capital)}`;
+  }
+  if (company.rcs) {
+    footerParts.push(escapeHtml(company.rcs));
+  }
+  if (company.tvaIntracommunautaire) {
+    footerParts.push(`TVA ${escapeHtml(company.tvaIntracommunautaire)}`);
+  }
+
+  const footerLine1 = footerParts.join(" - ");
+
+  const footerAddressParts: string[] = [];
+  if (company.adresse) {
+    footerAddressParts.push(escapeHtml(company.adresse));
+  }
+  if (company.codePostal || company.ville) {
+    footerAddressParts.push(
+      `${escapeHtml(company.codePostal)} ${escapeHtml(company.ville)}`.trim()
+    );
+  }
+  if (company.telephone) {
+    footerAddressParts.push(`Tél: ${escapeHtml(company.telephone)}`);
+  }
+  if (company.email) {
+    footerAddressParts.push(escapeHtml(company.email));
+  }
+
+  const footerLine2 = footerAddressParts.join(" - ");
+
   const linesHTML = data.lignes
     .map(
       (ligne, index) => `
       <tr>
         <td class="line-num">${index + 1}</td>
-        <td class="description">${ligne.description || ligne.serviceNom || "-"}</td>
+        <td class="description">${escapeHtml(ligne.description || ligne.serviceNom) || "-"}</td>
         <td class="qty">${ligne.quantite}</td>
         <td class="price">${formatCurrency(ligne.prixUnitaire)}</td>
         <td class="discount">${ligne.remisePourcent > 0 ? `${ligne.remisePourcent}%` : "-"}</td>
@@ -33,13 +108,59 @@ export function generateDevisHTML(data: DevisData): string {
     )
     .join("");
 
+  // Build header HTML (logo or custom header image or text)
+  let headerHTML = "";
+
+  if (company.headerDevisUrl) {
+    // Custom header image
+    headerHTML = `
+      <div class="custom-header">
+        <img src="${escapeHtml(company.headerDevisUrl)}" alt="En-tête" class="header-image" />
+      </div>
+      <div class="header-below">
+        <div class="quote-info">
+          <div class="quote-title">DEVIS</div>
+          <div class="quote-number">${escapeHtml(data.numeroDevis)}</div>
+          <div class="quote-dates">
+            <p><strong>Date :</strong> ${formatDate(data.dateDevis)}</p>
+            <p><strong>Valide jusqu'au :</strong> ${formatDate(data.dateValidite)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Default header with logo or company name
+    const logoOrName = company.logoUrl
+      ? `<img src="${escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.nom)}" class="company-logo" />`
+      : `<div class="company-name">${escapeHtml(company.nom)}</div>`;
+
+    headerHTML = `
+      <div class="header">
+        <div class="company">
+          ${logoOrName}
+          <div class="company-info">
+            ${companyInfoLines.join("<br>")}
+          </div>
+        </div>
+        <div class="quote-info">
+          <div class="quote-title">DEVIS</div>
+          <div class="quote-number">${escapeHtml(data.numeroDevis)}</div>
+          <div class="quote-dates">
+            <p><strong>Date :</strong> ${formatDate(data.dateDevis)}</p>
+            <p><strong>Valide jusqu'au :</strong> ${formatDate(data.dateValidite)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Devis ${data.numeroDevis}</title>
+  <title>Devis ${escapeHtml(data.numeroDevis)}</title>
   <style>
     * {
       margin: 0;
@@ -56,22 +177,47 @@ export function generateDevisHTML(data: DevisData): string {
       padding: 40px;
     }
 
+    .custom-header {
+      margin-bottom: 20px;
+    }
+
+    .header-image {
+      width: 100%;
+      max-height: 150px;
+      object-fit: contain;
+    }
+
+    .header-below {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 3px solid ${primaryColor};
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
       margin-bottom: 40px;
       padding-bottom: 20px;
-      border-bottom: 3px solid #2563eb;
+      border-bottom: 3px solid ${primaryColor};
     }
 
     .company {
       max-width: 300px;
     }
 
+    .company-logo {
+      max-width: 200px;
+      max-height: 80px;
+      object-fit: contain;
+      margin-bottom: 12px;
+    }
+
     .company-name {
       font-size: 28pt;
       font-weight: 700;
-      color: #2563eb;
+      color: ${primaryColor};
       margin-bottom: 8px;
     }
 
@@ -94,7 +240,7 @@ export function generateDevisHTML(data: DevisData): string {
 
     .quote-number {
       font-size: 14pt;
-      color: #2563eb;
+      color: ${primaryColor};
       font-weight: 600;
       margin-bottom: 8px;
     }
@@ -160,7 +306,7 @@ export function generateDevisHTML(data: DevisData): string {
       color: #1a1a1a;
       padding: 15px;
       background: #f0f9ff;
-      border-left: 4px solid #2563eb;
+      border-left: 4px solid ${primaryColor};
       border-radius: 0 8px 8px 0;
     }
 
@@ -171,7 +317,7 @@ export function generateDevisHTML(data: DevisData): string {
     }
 
     thead {
-      background: #2563eb;
+      background: ${primaryColor};
       color: white;
     }
 
@@ -257,7 +403,7 @@ export function generateDevisHTML(data: DevisData): string {
     }
 
     .totals-row.grand-total {
-      background: #2563eb;
+      background: ${primaryColor};
       color: white;
       font-size: 14pt;
       font-weight: 700;
@@ -346,36 +492,17 @@ export function generateDevisHTML(data: DevisData): string {
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="company">
-      <div class="company-name">AXIVITY</div>
-      <div class="company-info">
-        Agence d'Intelligence Artificielle<br>
-        123 Avenue de l'Innovation<br>
-        75001 Paris, France<br>
-        SIRET: 123 456 789 00012<br>
-        contact@axivity.cloud
-      </div>
-    </div>
-    <div class="quote-info">
-      <div class="quote-title">DEVIS</div>
-      <div class="quote-number">${data.numeroDevis}</div>
-      <div class="quote-dates">
-        <p><strong>Date :</strong> ${formatDate(data.dateDevis)}</p>
-        <p><strong>Valide jusqu'au :</strong> ${formatDate(data.dateValidite)}</p>
-      </div>
-    </div>
-  </div>
+  ${headerHTML}
 
   <div class="parties">
     <div class="party">
       <div class="party-label">Client</div>
-      <div class="party-name">${data.client.nom}</div>
+      <div class="party-name">${escapeHtml(data.client.nom)}</div>
       <div class="party-details">
-        ${data.client.adresse ? `${data.client.adresse}<br>` : ""}
-        ${data.client.codePostal || ""} ${data.client.ville || ""}<br>
-        ${data.client.pays || "France"}
-        ${data.client.siret ? `<br>SIRET: ${data.client.siret}` : ""}
+        ${data.client.adresse ? `${escapeHtml(data.client.adresse)}<br>` : ""}
+        ${escapeHtml(data.client.codePostal) || ""} ${escapeHtml(data.client.ville) || ""}<br>
+        ${escapeHtml(data.client.pays) || "France"}
+        ${data.client.siret ? `<br>SIRET: ${escapeHtml(data.client.siret)}` : ""}
       </div>
     </div>
     ${
@@ -383,11 +510,11 @@ export function generateDevisHTML(data: DevisData): string {
         ? `
     <div class="party">
       <div class="party-label">Contact</div>
-      <div class="party-name">${data.contact.prenom || ""} ${data.contact.nom}</div>
+      <div class="party-name">${escapeHtml(data.contact.prenom) || ""} ${escapeHtml(data.contact.nom)}</div>
       <div class="party-details">
-        ${data.contact.poste ? `${data.contact.poste}<br>` : ""}
-        ${data.contact.email ? `${data.contact.email}<br>` : ""}
-        ${data.contact.telephone || ""}
+        ${data.contact.poste ? `${escapeHtml(data.contact.poste)}<br>` : ""}
+        ${data.contact.email ? `${escapeHtml(data.contact.email)}<br>` : ""}
+        ${escapeHtml(data.contact.telephone) || ""}
       </div>
     </div>
     `
@@ -398,8 +525,8 @@ export function generateDevisHTML(data: DevisData): string {
   <div class="object">
     <div class="object-label">Objet</div>
     <div class="object-content">
-      ${data.opportunite.nom}
-      ${data.opportunite.notes ? `<br><br><em>${data.opportunite.notes}</em>` : ""}
+      ${escapeHtml(data.opportunite.nom)}
+      ${data.opportunite.notes ? `<br><br><em>${escapeHtml(data.opportunite.notes)}</em>` : ""}
     </div>
   </div>
 
@@ -439,7 +566,7 @@ export function generateDevisHTML(data: DevisData): string {
   <div class="terms">
     <div class="terms-title">Conditions de paiement</div>
     <div class="terms-content">
-      ${data.conditionsPaiement}<br>
+      ${escapeHtml(data.conditionsPaiement)}<br>
       Ce devis est valable 30 jours à compter de sa date d'émission.
     </div>
   </div>
@@ -450,14 +577,14 @@ export function generateDevisHTML(data: DevisData): string {
       <div class="signature-line">Date et signature</div>
     </div>
     <div class="signature-box">
-      <div class="signature-label">Le Prestataire - AXIVITY</div>
+      <div class="signature-label">Le Prestataire - ${escapeHtml(company.nom)}</div>
       <div class="signature-line">Date et signature</div>
     </div>
   </div>
 
   <div class="footer">
-    AXIVITY - SAS au capital de 10 000 € - RCS Paris 123 456 789 - TVA FR12345678900<br>
-    123 Avenue de l'Innovation, 75001 Paris - Tél: +33 1 23 45 67 89 - contact@axivity.cloud
+    ${footerLine1}<br>
+    ${footerLine2}
   </div>
 </body>
 </html>

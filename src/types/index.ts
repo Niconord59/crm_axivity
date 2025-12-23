@@ -403,10 +403,31 @@ export interface LigneDevis extends BaseEntity {
 // DEVIS (QUOTE) DATA - For PDF Generation
 // =============================================================================
 
+export interface DevisCompanyInfo {
+  nom: string;
+  formeJuridique?: string;
+  capital?: string;
+  siret?: string;
+  rcs?: string;
+  tvaIntracommunautaire?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
+  pays?: string;
+  telephone?: string;
+  email?: string;
+  siteWeb?: string;
+  logoUrl?: string;
+  headerDevisUrl?: string;
+  couleurPrincipale?: string;
+}
+
 export interface DevisData {
   numeroDevis: string;
   dateDevis: string;
   dateValidite: string;
+  // Company info (from parametres_entreprise)
+  entreprise?: DevisCompanyInfo;
   client: {
     nom: string;
     siret?: string;

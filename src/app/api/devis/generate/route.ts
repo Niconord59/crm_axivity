@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { createClient } from "@supabase/supabase-js";
 import { generateDevisHTML } from "@/lib/templates/devis-template";
-import type { DevisData, LigneDevis } from "@/types";
+import type { DevisData, DevisCompanyInfo, LigneDevis } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
 const supabase = createClient(
@@ -19,10 +19,10 @@ function generateQuoteNumber(): string {
   return `DEV-${year}${month}-${random}`;
 }
 
-// Calculate validity date (30 days from now)
-function getValidityDate(): string {
+// Calculate validity date
+function getValidityDate(days: number = 30): string {
   const date = new Date();
-  date.setDate(date.getDate() + 30);
+  date.setDate(date.getDate() + days);
   return date.toISOString().split("T")[0];
 }
 
@@ -74,6 +74,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch company settings
+    const { data: companySettings } = await supabase
+      .from("parametres_entreprise")
+      .select("*")
+      .limit(1)
+      .single();
+
+    // Build company info for quote
+    const entreprise: DevisCompanyInfo | undefined = companySettings
+      ? {
+          nom: companySettings.nom,
+          formeJuridique: companySettings.forme_juridique,
+          capital: companySettings.capital,
+          siret: companySettings.siret,
+          rcs: companySettings.rcs,
+          tvaIntracommunautaire: companySettings.tva_intracommunautaire,
+          adresse: companySettings.adresse,
+          codePostal: companySettings.code_postal,
+          ville: companySettings.ville,
+          pays: companySettings.pays,
+          telephone: companySettings.telephone,
+          email: companySettings.email,
+          siteWeb: companySettings.site_web,
+          logoUrl: companySettings.logo_url,
+          headerDevisUrl: companySettings.header_devis_url,
+          couleurPrincipale: companySettings.couleur_principale,
+        }
+      : undefined;
+
+    // Get quote settings with defaults
+    const validiteJours = companySettings?.validite_devis_jours || 30;
+    const tauxTva = (companySettings?.taux_tva_defaut || 20) / 100;
+    const conditionsPaiement =
+      companySettings?.conditions_paiement_defaut ||
+      "Paiement à 30 jours fin de mois";
+
     // Fetch quote lines
     const { data: lignesData, error: lignesError } = await supabase
       .from("lignes_devis")
@@ -112,9 +148,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Calculate totals
-    const TVA_RATE = 0.20;
     const totalHT = lignes.reduce((sum, l) => sum + (l.montantHT || 0), 0);
-    const tva = totalHT * TVA_RATE;
+    const tva = totalHT * tauxTva;
     const totalTTC = totalHT + tva;
 
     // Extract client and contact from joined data (may be array or object depending on relation)
@@ -128,7 +163,8 @@ export async function POST(request: NextRequest) {
     const devisData: DevisData = {
       numeroDevis: generateQuoteNumber(),
       dateDevis: new Date().toISOString().split("T")[0],
-      dateValidite: getValidityDate(),
+      dateValidite: getValidityDate(validiteJours),
+      entreprise,
       client: {
         nom: client?.nom || "Client inconnu",
         siret: client?.siret,
@@ -154,7 +190,7 @@ export async function POST(request: NextRequest) {
       totalHT,
       tva,
       totalTTC,
-      conditionsPaiement: "Paiement à 30 jours fin de mois",
+      conditionsPaiement,
     };
 
     // Generate HTML

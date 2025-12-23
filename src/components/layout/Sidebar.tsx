@@ -15,6 +15,7 @@ import {
   BarChart3,
   Menu,
   Shield,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,11 @@ const secondaryNavItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
+  {
+    title: "Mon entreprise",
+    href: "/admin/entreprise",
+    icon: Building2,
+  },
   {
     title: "Utilisateurs",
     href: "/admin/users",
