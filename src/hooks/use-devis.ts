@@ -28,6 +28,9 @@ export interface Devis {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  // Invoice conversion
+  factureId: string | null;
+  dateConversion: string | null;
   // Joined data
   clientNom?: string;
   opportuniteNom?: string;
@@ -60,6 +63,8 @@ function mapToDevis(record: Record<string, unknown>): Devis {
     createdBy: record.created_by as string | null,
     createdAt: record.created_at as string,
     updatedAt: record.updated_at as string,
+    factureId: record.facture_id as string | null,
+    dateConversion: record.date_conversion as string | null,
     clientNom: client?.nom,
     opportuniteNom: opportunite?.nom,
   };

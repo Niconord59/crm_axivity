@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   Mail,
   Copy,
+  Receipt,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -145,6 +146,7 @@ export function QuoteEditorSheet({
     targetOpportuniteId: "",
   });
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isConverting, setIsConverting] = useState<string | null>(null);
 
   // Fetch opportunity data
   const { data: opportunite, isLoading: oppLoading } = useOpportunite(
@@ -451,6 +453,56 @@ export function QuoteEditorSheet({
     }
   };
 
+  const handleConvertToInvoice = async (devisId: string, numeroDevis: string) => {
+    setIsConverting(devisId);
+
+    try {
+      const response = await fetch("/api/factures/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ devisId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erreur lors de la conversion");
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+
+      // Get filename from headers
+      const factureNumero = response.headers.get("X-Facture-Numero");
+      const filename = factureNumero ? `${factureNumero}.pdf` : `facture-${devisId}.pdf`;
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(
+        `Le devis ${numeroDevis} a été converti en facture ${factureNumero || ""}`
+      );
+
+      // Refresh history
+      refetchHistory();
+    } catch (error) {
+      console.error("Error converting to invoice:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Impossible de convertir en facture"
+      );
+    } finally {
+      setIsConverting(null);
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="sm:max-w-2xl w-full flex flex-col p-0">
@@ -741,6 +793,34 @@ export function QuoteEditorSheet({
                                   <XCircle className="h-4 w-4 mr-2" />
                                   Refusé
                                 </DropdownMenuItem>
+                                {(devis.statut === "accepte" || devis.statut === "envoye") && !devis.factureId && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => handleConvertToInvoice(devis.id, devis.numeroDevis)}
+                                      disabled={isConverting === devis.id}
+                                      className="text-emerald-600 font-medium"
+                                    >
+                                      {isConverting === devis.id ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Conversion...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Receipt className="h-4 w-4 mr-2" />
+                                          Convertir en facture
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {devis.factureId && (
+                                  <DropdownMenuItem disabled className="text-muted-foreground">
+                                    <Receipt className="h-4 w-4 mr-2" />
+                                    Déjà converti en facture
+                                  </DropdownMenuItem>
+                                )}
                                 {devis.pdfUrl && (
                                   <>
                                     <DropdownMenuSeparator />

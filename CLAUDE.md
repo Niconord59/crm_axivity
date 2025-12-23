@@ -141,7 +141,7 @@ npm start       # Production server
   - Backend Supabase self-hosted
   - Déploiement via Coolify (template intégré)
   - 16 hooks React Query
-  - 18 fichiers de migration SQL
+  - 19 fichiers de migration SQL
   - Row Level Security (5 rôles utilisateur)
   - Auth UI complète (login, register, forgot-password, reset-password)
   - 4 workflows N8N
@@ -170,6 +170,7 @@ npm start       # Production server
   - Historique des devis avec numérotation séquentielle (DEV-YYYY-NNN)
   - Statuts de suivi : brouillon, envoyé, accepté, refusé, expiré
   - Envoi par email via Resend avec PDF en pièce jointe
+  - **Conversion Devis → Facture** : Génère une facture PDF depuis un devis accepté
 - **Composants**:
   - `components/devis/QuoteEditorSheet.tsx` : Sheet principal avec onglets
   - `components/devis/QuoteLinesTable.tsx` : Table des lignes CRUD
@@ -182,6 +183,12 @@ npm start       # Production server
   - `/api/devis/generate` : Génération PDF finale
   - `/api/devis/preview` : Prévisualisation temporaire
   - `/api/devis/send` : Envoi email via Resend
+  - `/api/factures/generate` : Conversion devis → facture PDF
+- **Templates PDF**:
+  - `lib/templates/devis-template.ts` : Template HTML devis
+  - `lib/templates/facture-template.ts` : Template HTML facture
+- **Migration SQL**:
+  - `19_factures_numerotation.sql` : Compteur séquentiel FAC-YYYY-NNN
 
 ## Documentation
 

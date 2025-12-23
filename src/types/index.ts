@@ -470,6 +470,46 @@ export const DEVIS_STATUS_LABELS: Record<DevisStatus, string> = {
 };
 
 // =============================================================================
+// FACTURE DATA - For PDF Generation
+// =============================================================================
+
+export interface FactureCompanyInfo extends DevisCompanyInfo {
+  iban?: string;
+  bic?: string;
+}
+
+export interface FactureData {
+  numeroFacture: string;
+  dateEmission: string;
+  dateEcheance: string;
+  // Company info (from parametres_entreprise)
+  entreprise?: FactureCompanyInfo;
+  client: {
+    nom: string;
+    siret?: string;
+    adresse?: string;
+    codePostal?: string;
+    ville?: string;
+    pays?: string;
+  };
+  contact?: {
+    nom: string;
+    prenom?: string;
+    email?: string;
+    telephone?: string;
+    poste?: string;
+  };
+  objet: string;
+  devisReference?: string;
+  lignes: LigneDevis[];
+  totalHT: number;
+  tauxTva: number;
+  tva: number;
+  totalTTC: number;
+  conditionsPaiement: string;
+}
+
+// =============================================================================
 // T16 - FEEDBACK CLIENT
 // =============================================================================
 
