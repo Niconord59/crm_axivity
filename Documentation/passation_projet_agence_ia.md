@@ -813,6 +813,82 @@ Système de visite guidée interactive custom (react-joyride incompatible avec R
 
 ---
 
+### Phase 8 : Module Devis ✅ TERMINÉ
+
+> **STATUT** : 100% - Implémenté
+> **Date** : 22-23 décembre 2025
+
+#### Contexte
+
+Besoin de générer des devis professionnels directement depuis les opportunités du pipeline commercial, avec suivi de l'historique et envoi par email.
+
+#### Fonctionnalités Implémentées
+
+| Feature | Description | Statut |
+|---------|-------------|--------|
+| Éditeur de devis | Sheet dans le pipeline avec onglets Éditeur/Historique | ✅ |
+| Catalogue services | Sélection depuis `catalogue_services` | ✅ |
+| Lignes de devis | Gestion CRUD des lignes avec calculs automatiques | ✅ |
+| Duplication | Copie rapide d'une ligne existante | ✅ |
+| Génération PDF | Puppeteer avec template HTML professionnel | ✅ |
+| Prévisualisation | Aperçu PDF avant génération finale | ✅ |
+| Numérotation | Séquentielle par année (DEV-2025-001) | ✅ |
+| Historique | Table `devis` avec tous les devis générés | ✅ |
+| Statuts | brouillon, envoyé, accepté, refusé, expiré | ✅ |
+| Envoi email | Via Resend API avec PDF en pièce jointe | ✅ |
+
+#### Architecture Technique
+
+**Tables Supabase** :
+- `catalogue_services` : Services productisés de l'agence
+- `lignes_devis` : Lignes de devis liées aux opportunités
+- `devis` : Historique des devis générés (migration `18_devis_table.sql`)
+- `devis_compteur` : Compteur de numérotation par année
+
+**APIs Next.js** :
+- `POST /api/devis/generate` : Génère le PDF final et l'enregistre
+- `POST /api/devis/preview` : Génère un PDF temporaire pour aperçu
+- `POST /api/devis/send` : Envoie le devis par email via Resend
+
+**Composants** (`src/components/devis/`) :
+- `QuoteEditorSheet.tsx` : Sheet principal avec onglets
+- `QuoteLinesTable.tsx` : Table des lignes avec actions CRUD
+- `ServiceSelector.tsx` : Dialog de sélection de service
+
+**Hooks** (`src/hooks/`) :
+- `use-services.ts` : useServices, useCatalogueServices
+- `use-lignes-devis.ts` : useLignesDevis, useCreateLigneDevis, useUpdateLigneDevis, useDeleteLigneDevis
+- `use-devis.ts` : useDevisByOpportunite, useSendDevisEmail
+
+#### Flux de création de devis
+
+```
+Pipeline Commercial → Bouton "Devis"
+         ↓
+   QuoteEditorSheet (Onglet Éditeur)
+         ↓
+   Ajouter services → Configurer lignes
+         ↓
+   Prévisualiser (optionnel)
+         ↓
+   Générer PDF → Sauvegarde dans Storage + Table devis
+         ↓
+   Onglet Historique → Voir/Envoyer par email
+```
+
+#### Variables d'environnement requises
+
+```env
+# Resend (envoi d'emails)
+RESEND_API_KEY=re_xxxxxxxxxx
+
+# Supabase Storage (PDFs)
+NEXT_PUBLIC_SUPABASE_URL=https://supabase.axivity.cloud
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+---
+
 ## 8. Contacts et Ressources
 
 ### Documentation
@@ -829,5 +905,5 @@ Système de visite guidée interactive custom (react-joyride incompatible avec R
 ---
 
 *Document généré le 14 décembre 2025*
-*Dernière mise à jour : 15 décembre 2025*
-*Version : 1.8* - Tour Guidé Onboarding implémenté (Phase 7 - 100%)
+*Dernière mise à jour : 23 décembre 2025*
+*Version : 1.9* - Module Devis implémenté (Phase 8 - 100%)

@@ -21,7 +21,7 @@ src/
 │   ├── opportunites/       # Pipeline commercial (OpportunityCard)
 │   ├── devis/              # Génération de devis (QuoteEditorSheet, ServiceSelector)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (15 hooks Supabase)
+├── hooks/                  # React Query hooks (16 hooks Supabase)
 ├── lib/
 │   ├── supabase.ts         # Supabase client
 │   ├── auth.ts             # NextAuth.js config (Google + Microsoft)
@@ -156,6 +156,7 @@ npm start       # Production server
   - `use-opportunites.ts`, `use-factures.ts`, `use-prospects.ts`
   - `use-equipe.ts`, `use-interactions.ts`
   - `use-convert-opportunity.ts`, `use-import-leads.ts`
+  - `use-services.ts`, `use-lignes-devis.ts`, `use-devis.ts`
 
 ## Documentation
 
@@ -166,7 +167,7 @@ npm start       # Production server
 
 - **URL**: `https://supabase.axivity.cloud`
 - **Client**: `lib/supabase.ts`
-- **Migrations**: `supabase/migrations/` (14 fichiers SQL)
+- **Migrations**: `supabase/migrations/` (18 fichiers SQL)
 - **Déploiement**: Coolify (template Supabase intégré)
 - **Variables d'environnement**:
   - `NEXT_PUBLIC_SUPABASE_URL`
@@ -191,6 +192,7 @@ npm start       # Production server
 | `12_equipe_profile_unique.sql` | Contrainte unique équipe | ✅ |
 | `13_projets_feedback_column.sql` | Colonne feedback_envoye | ✅ |
 | `14_invoice_status_en_retard.sql` | Statut "En retard" factures | ✅ |
+| `18_devis_table.sql` | Table devis + numérotation séquentielle | ✅ |
 
 ### Rôles utilisateur Supabase
 
@@ -358,13 +360,19 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Support Teams pour les visioconférences
   - Architecture multi-provider avec auto-détection
   - CalendarAuthButton avec choix du provider (Google / Microsoft 365)
-- **Génération de Devis PDF** (22 déc. 2025) : Création de devis depuis les opportunités
+- **Génération de Devis PDF** (22-23 déc. 2025) : Système complet de devis
   - Éditeur de devis accessible depuis le pipeline commercial
   - Sélection de services depuis le catalogue (lignes_devis + catalogue_services)
   - Génération PDF avec Puppeteer (rendu HTML pixel-perfect)
   - Template professionnel avec en-tête, lignes, totaux (HT, TVA 20%, TTC)
-  - Nouveaux hooks: `use-services.ts`, `use-lignes-devis.ts`
+  - **Historique des devis** : Table `devis` avec numérotation séquentielle (DEV-2025-001)
+  - **Statuts** : brouillon, envoyé, accepté, refusé, expiré
+  - **Envoi par email** : Via Resend API avec pièce jointe PDF
+  - **Prévisualisation** : Génération PDF temporaire avant création finale
+  - **Duplication lignes** : Copie rapide des lignes de devis
+  - Nouveaux hooks: `use-services.ts`, `use-lignes-devis.ts`, `use-devis.ts`
   - Nouveaux composants: `QuoteEditorSheet`, `QuoteLinesTable`, `ServiceSelector`
+  - APIs: `/api/devis/generate`, `/api/devis/preview`, `/api/devis/send`
 - **Recherche Entreprises API Gouvernement** (23 déc. 2025) : Auto-complétion pour création de leads
   - Intégration API recherche-entreprises.api.gouv.fr
   - Recherche en temps réel (debounced) pendant la saisie
