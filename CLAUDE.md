@@ -12,13 +12,13 @@ Auto-generated from all feature plans. Last updated: 2025-12-23
 src/
 ├── app/                    # Next.js App Router pages
 ├── components/
-│   ├── ui/                 # Shadcn/UI components (28 installed)
+│   ├── ui/                 # Shadcn/UI components (29 installed)
 │   ├── layout/             # Sidebar, Header, AppLayout
 │   ├── shared/             # KPICard, StatusBadge, SearchCommand, etc.
 │   ├── forms/              # Formulaires CRUD
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
-│   ├── opportunites/       # Pipeline commercial (OpportunityCard)
+│   ├── opportunites/       # Pipeline commercial (OpportunityCard, OpportunityMiniSheet)
 │   ├── devis/              # Génération de devis (QuoteEditorSheet, ServiceSelector)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
 ├── hooks/                  # React Query hooks (16 hooks Supabase)
@@ -424,6 +424,17 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Statuts initiaux : À appeler, Rappeler, RDV planifié, RDV effectué, Qualifié
   - Création automatique d'interaction selon le type de contact
   - Nouveaux types dans schema: `FIRST_CONTACT_TYPES`, `INITIAL_STATUTS`
+- **OpportunityMiniSheet** (23 déc. 2025) : Édition rapide des opportunités
+  - Drawer latéral accessible en cliquant sur une carte du Kanban
+  - Montants rapides : boutons présets (5k, 10k, 25k, 50k, 100k, 200k €)
+  - Incréments/décréments : +1k, +5k / -1k, -5k
+  - Slider probabilité : 0-100% par pas de 5%
+  - Calcul valeur pondérée en temps réel
+  - Sélecteur de date de clôture (calendrier français)
+  - Zone de notes redimensionnable verticalement
+  - Transition vers l'éditeur de devis complet
+  - Nouveau composant: `OpportunityMiniSheet.tsx`
+  - Nouveau composant UI: `slider.tsx` (shadcn/ui)
 
 ## Production Checklist
 
