@@ -167,7 +167,10 @@ export function OpportunityMiniSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-md overflow-y-auto">
+      <SheetContent
+        className="sm:max-w-md overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <SheetHeader>
           <SheetTitle>Opportunité</SheetTitle>
         </SheetHeader>
