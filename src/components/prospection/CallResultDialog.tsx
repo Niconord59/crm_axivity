@@ -32,6 +32,9 @@ import {
   Users,
   TrendingUp,
   Copy,
+  Plus,
+  StickyNote,
+  Send,
 } from "lucide-react";
 import {
   Dialog,
@@ -251,6 +254,10 @@ export function CallResultDialog({
   const [wantToSendEmail, setWantToSendEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
+  // State for manual note in History tab
+  const [manualNote, setManualNote] = useState("");
+  const [isSavingManualNote, setIsSavingManualNote] = useState(false);
+
   // Use appropriate result options based on context
   const resultOptions = isRdvContext ? RDV_RESULTS : CALL_RESULTS;
 
@@ -374,10 +381,35 @@ export function CallResultDialog({
   const handleClose = () => {
     form.reset();
     setLiveNotes("");
+    setManualNote("");
     setLeftVoicemail(false);
     setWantToSendEmail(false);
     setEmailSent(false);
     onOpenChange(false);
+  };
+
+  const handleSaveManualNote = async () => {
+    if (!prospect || !manualNote.trim() || !prospect.client?.[0]) return;
+
+    setIsSavingManualNote(true);
+    try {
+      await createInteraction.mutateAsync({
+        objet: "Note manuelle",
+        type: "Note",
+        date: new Date().toISOString(),
+        resume: manualNote.trim(),
+        contact: [prospect.id],
+        client: prospect.client,
+      });
+
+      toast.success("Note ajoutée");
+      setManualNote("");
+    } catch (error) {
+      toast.error("Erreur lors de l'ajout de la note");
+      console.error(error);
+    } finally {
+      setIsSavingManualNote(false);
+    }
   };
 
   const handleSaveLiveNotes = async () => {
@@ -681,6 +713,43 @@ export function CallResultDialog({
           {/* Interaction History Tab */}
           <TabsContent value="history" className="mt-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full p-6">
+              {/* Manual Note Form */}
+              <div className="mb-6 p-4 bg-amber-50/50 border border-amber-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                    <StickyNote className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <Label className="font-medium text-amber-900">Ajouter une note</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Écrire une note..."
+                    value={manualNote}
+                    onChange={(e) => setManualNote(e.target.value)}
+                    className="min-h-[60px] resize-y bg-white"
+                    rows={2}
+                  />
+                  <Button
+                    onClick={handleSaveManualNote}
+                    disabled={isSavingManualNote || !manualNote.trim() || !prospect?.client?.[0]}
+                    size="icon"
+                    className="h-[60px] w-12 shrink-0 bg-amber-600 hover:bg-amber-700"
+                  >
+                    {isSavingManualNote ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {!prospect?.client?.[0] && (
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Ce lead doit être lié à un client pour ajouter des notes
+                  </p>
+                )}
+              </div>
+
               {interactionsLoading ? (
                 <div className="flex items-center justify-center h-32">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -705,6 +774,7 @@ export function CallResultDialog({
                       const isEmail = interaction.type === "Email";
                       const isCall = interaction.type === "Appel";
                       const isMeeting = interaction.type === "Réunion";
+                      const isNote = interaction.type === "Note";
 
                       const iconBg = isEmail
                         ? "bg-blue-100 text-blue-600"
@@ -712,6 +782,8 @@ export function CallResultDialog({
                         ? "bg-orange-100 text-orange-600"
                         : isMeeting
                         ? "bg-violet-100 text-violet-600"
+                        : isNote
+                        ? "bg-amber-100 text-amber-600"
                         : "bg-gray-100 text-gray-600";
 
                       return (
@@ -727,6 +799,8 @@ export function CallResultDialog({
                               <Phone className="h-4 w-4" />
                             ) : isMeeting ? (
                               <Video className="h-4 w-4" />
+                            ) : isNote ? (
+                              <StickyNote className="h-4 w-4" />
                             ) : (
                               <MessageSquare className="h-4 w-4" />
                             )}
@@ -734,7 +808,11 @@ export function CallResultDialog({
 
                           <div className={cn(
                             "p-4 rounded-xl border transition-colors",
-                            isEmail ? "bg-blue-50/50 border-blue-200" : "bg-muted/30"
+                            isEmail
+                              ? "bg-blue-50/50 border-blue-200"
+                              : isNote
+                              ? "bg-amber-50/50 border-amber-200"
+                              : "bg-muted/30"
                           )}>
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <span className="font-medium text-sm">{interaction.objet}</span>
