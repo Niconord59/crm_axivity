@@ -27,6 +27,28 @@ export const PROSPECT_SOURCES = [
 
 export type ProspectSource = (typeof PROSPECT_SOURCES)[number];
 
+// Type de premier contact (pour leads historiques ou non-appels)
+export const FIRST_CONTACT_TYPES = [
+  "Appel",
+  "Email",
+  "LinkedIn",
+  "Physique",
+  "Autre",
+] as const;
+
+export type FirstContactType = (typeof FIRST_CONTACT_TYPES)[number];
+
+// Statuts initiaux disponibles pour création directe (leads historiques)
+export const INITIAL_STATUTS = [
+  "À appeler",
+  "Rappeler",
+  "RDV planifié",
+  "RDV effectué",
+  "Qualifié",
+] as const;
+
+export type InitialStatut = (typeof INITIAL_STATUTS)[number];
+
 // Schéma pour la création manuelle d'un prospect
 export const prospectSchema = z.object({
   // === ENTREPRISE ===
@@ -129,6 +151,12 @@ export const prospectSchema = z.object({
     errorMap: () => ({ message: "Veuillez sélectionner une source" }),
   }),
 
+  // Type de premier contact (pour leads historiques)
+  typeContact: z.enum(FIRST_CONTACT_TYPES).optional(),
+
+  // Statut initial (pour création directe sans passer par résultat appel)
+  statutInitial: z.enum(INITIAL_STATUTS).optional(),
+
   // Notes prospection (optionnel)
   notesProspection: z
     .string()
@@ -171,6 +199,8 @@ export const prospectDefaultValues: Partial<ProspectFormData> = {
   telephone: "",
   role: "",
   sourceLead: "Appel entrant",
+  typeContact: undefined,
+  statutInitial: undefined,
   notesProspection: "",
 };
 

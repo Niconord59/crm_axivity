@@ -20,6 +20,10 @@ import {
   History,
   MessageSquare,
   Loader2,
+  Linkedin,
+  Handshake,
+  MoreHorizontal,
+  Zap,
 } from "lucide-react";
 import {
   Dialog,
@@ -67,6 +71,8 @@ import {
   type ProspectFormData,
   prospectDefaultValues,
   PROSPECT_SOURCES,
+  FIRST_CONTACT_TYPES,
+  INITIAL_STATUTS,
 } from "@/lib/schemas/prospect";
 import { useCreateProspect, useUpdateProspectStatus } from "@/hooks/use-prospects";
 import { useClients } from "@/hooks/use-clients";
@@ -125,6 +131,9 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
 
   // Sous-onglet actif dans l'onglet Résultat
   const [resultSubTab, setResultSubTab] = useState<"call" | "agenda">("call");
+
+  // Mode création directe (pour leads historiques)
+  const [directCreationMode, setDirectCreationMode] = useState(false);
 
   // États pour le formulaire de résultat d'appel
   const [selectedResult, setSelectedResult] = useState<CallResult | null>(null);
@@ -297,6 +306,82 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     // Stocker les données validées pour les utiliser lors de la création
     // Le useEffect se charge de passer à l'onglet "resultat" automatiquement
     setValidatedFormData(data);
+  };
+
+  // Création directe du lead (pour leads historiques ou non-appels)
+  const handleDirectCreation = async (data: ProspectFormData) => {
+    if (!data.statutInitial) {
+      toast.error("Veuillez sélectionner un statut initial");
+      return;
+    }
+
+    setIsSubmittingResult(true);
+    keepDialogOpenRef.current = true;
+
+    try {
+      // Construire les notes avec le contexte
+      let notesFinales = data.notesProspection || "";
+      const timestamp = format(new Date(), "dd/MM/yyyy HH:mm");
+      const typeContactLabel = data.typeContact || "Contact";
+      if (!notesFinales) {
+        notesFinales = `[${timestamp}] Lead créé - Premier contact: ${typeContactLabel}`;
+      }
+
+      const result = await createProspect.mutateAsync({
+        // Entreprise
+        entreprise: data.entreprise,
+        clientId: data.clientId,
+        secteurActivite: data.secteurActivite || undefined,
+        siteWeb: data.siteWeb || undefined,
+        telephoneEntreprise: data.telephoneEntreprise || undefined,
+        // Facturation
+        siret: data.siret || undefined,
+        adresse: data.adresse || undefined,
+        codePostal: data.codePostal || undefined,
+        ville: data.ville || undefined,
+        pays: data.pays || undefined,
+        // Contact
+        nom: data.nom,
+        prenom: data.prenom || undefined,
+        email: data.email || undefined,
+        telephone: data.telephone || undefined,
+        role: data.role || undefined,
+        sourceLead: data.sourceLead,
+        notesProspection: notesFinales,
+        // Statut initial choisi
+        statutProspection: data.statutInitial,
+      });
+
+      // Créer une interaction si type de contact fourni
+      if (data.typeContact && result.clientId) {
+        const interactionType = data.typeContact === "Appel" ? "Appel"
+          : data.typeContact === "Email" ? "Email"
+          : data.typeContact === "Physique" ? "Réunion"
+          : "Autre";
+
+        await createInteraction.mutateAsync({
+          objet: `Premier contact - ${data.typeContact}`,
+          type: interactionType,
+          date: new Date().toISOString(),
+          resume: data.notesProspection || `Premier contact via ${data.typeContact}`,
+          contact: [result.id],
+          client: [result.clientId],
+        });
+      }
+
+      toast.success("Lead créé avec succès", {
+        description: `${data.prenom ? data.prenom + " " : ""}${data.nom} - Statut: ${data.statutInitial}`,
+      });
+
+      onSuccess?.();
+      handleClose();
+    } catch (error) {
+      toast.error("Erreur lors de la création du lead");
+      console.error(error);
+      keepDialogOpenRef.current = false;
+    } finally {
+      setIsSubmittingResult(false);
+    }
   };
 
   // Créer le lead pour l'accès à l'Agenda (statut "RDV planifié" par défaut)
@@ -496,6 +581,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     setDateRappel(undefined);
     setNotesAppel("");
     setCreerInteraction(true);
+    setDirectCreationMode(false);
   };
 
   // Fermer sans créer le lead (annuler)
@@ -997,19 +1083,112 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                 <Label htmlFor="notesProspection">Notes</Label>
                 <Textarea
                   id="notesProspection"
-                  placeholder="Contexte de l'appel, besoins exprimés..."
+                  placeholder="Contexte du contact, besoins exprimés..."
                   {...form.register("notesProspection")}
                   rows={3}
                 />
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Section création directe (leads historiques) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-medium">Création directe</span>
+                  </div>
+                  <Checkbox
+                    id="directCreationMode"
+                    checked={directCreationMode}
+                    onCheckedChange={(checked) => {
+                      setDirectCreationMode(checked as boolean);
+                      if (!checked) {
+                        form.setValue("typeContact", undefined);
+                        form.setValue("statutInitial", undefined);
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pour les leads historiques ou premiers contacts non téléphoniques (email, LinkedIn, physique)
+                </p>
+
+                {directCreationMode && (
+                  <div className="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    {/* Type de premier contact */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Type de premier contact</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {FIRST_CONTACT_TYPES.map((type) => {
+                          const isSelected = form.watch("typeContact") === type;
+                          const Icon = type === "Appel" ? Phone
+                            : type === "Email" ? Mail
+                            : type === "LinkedIn" ? Linkedin
+                            : type === "Physique" ? Handshake
+                            : MoreHorizontal;
+                          return (
+                            <Button
+                              key={type}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => form.setValue("typeContact", type)}
+                              className={cn(
+                                "gap-1.5",
+                                isSelected && "ring-2 ring-offset-1"
+                              )}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {type}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Statut initial */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Statut initial *</Label>
+                      <Select
+                        value={form.watch("statutInitial") || ""}
+                        onValueChange={(value) => form.setValue("statutInitial", value as ProspectFormData["statutInitial"])}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner le statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INITIAL_STATUTS.map((statut) => (
+                            <SelectItem key={statut} value={statut}>
+                              {statut}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="pt-4 sm:justify-between">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Annuler
                 </Button>
-                <Button type="submit">
-                  Suivant
-                </Button>
+                <div className="flex gap-2">
+                  {directCreationMode ? (
+                    <Button
+                      type="button"
+                      onClick={form.handleSubmit(handleDirectCreation)}
+                      disabled={isSubmittingResult || !form.watch("statutInitial")}
+                    >
+                      {isSubmittingResult ? "Création..." : "Créer le lead"}
+                    </Button>
+                  ) : (
+                    <Button type="submit">
+                      Suivant
+                    </Button>
+                  )}
+                </div>
               </DialogFooter>
             </TabsContent>
 
