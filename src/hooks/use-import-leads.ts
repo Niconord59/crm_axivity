@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Papa from "papaparse";
 import { supabase } from "@/lib/supabase";
 import type { ProspectSource } from "@/types";
+import { getNafLabel } from "@/lib/naf-codes";
 
 // Field mapping for CSV import
 export interface ColumnMapping {
@@ -101,12 +102,90 @@ const VALID_SOURCES: ProspectSource[] = [
   "Autre",
 ];
 
+// Enrichment data from APIs
+interface EnrichmentData {
+  siret?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
+  secteurActivite?: string;
+  telephone?: string;
+  siteWeb?: string;
+}
+
+// Search company by name using French government API
+async function searchCompanyByName(companyName: string): Promise<EnrichmentData | null> {
+  try {
+    const url = new URL("https://recherche-entreprises.api.gouv.fr/search");
+    url.searchParams.set("q", companyName);
+    url.searchParams.set("per_page", "1");
+    url.searchParams.set("page", "1");
+    url.searchParams.set("etat_administratif", "A");
+
+    const response = await fetch(url.toString(), {
+      headers: { "Accept": "application/json" },
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (!data.results || data.results.length === 0) return null;
+
+    const entreprise = data.results[0];
+    const siege = entreprise.siege || {};
+
+    // Get activity label
+    const activiteLabel = entreprise.libelle_activite_principale
+      || siege.libelle_activite_principale
+      || getNafLabel(entreprise.activite_principale)
+      || getNafLabel(siege.activite_principale);
+
+    return {
+      siret: siege.siret,
+      adresse: siege.adresse,
+      codePostal: siege.code_postal,
+      ville: siege.libelle_commune,
+      secteurActivite: activiteLabel,
+    };
+  } catch (error) {
+    console.warn("Error searching company:", error);
+    return null;
+  }
+}
+
+// Enrich with Google Places (phone + website)
+async function enrichWithGooglePlaces(companyName: string, city?: string): Promise<{ telephone?: string; siteWeb?: string }> {
+  try {
+    const response = await fetch("/api/places/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: companyName, city }),
+    });
+
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    if (!data.result) return {};
+
+    return {
+      telephone: data.result.telephone,
+      siteWeb: data.result.siteWeb,
+    };
+  } catch (error) {
+    console.warn("Error enriching with Google Places:", error);
+    return {};
+  }
+}
+
 export function useImportLeads() {
   const [state, setState] = useState<ImportState>(initialState);
+  const [enableEnrichment, setEnableEnrichment] = useState(true);
+  const [enrichmentProgress, setEnrichmentProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Reset state
   const reset = useCallback(() => {
     setState(initialState);
+    setEnrichmentProgress(null);
   }, []);
 
   // Parse CSV file
@@ -234,6 +313,39 @@ export function useImportLeads() {
     let updated = 0;
     let errors = 0;
 
+    // Cache for enrichment data (to avoid duplicate API calls for same company)
+    const enrichmentCache = new Map<string, EnrichmentData | null>();
+
+    // Helper to get enrichment data with caching
+    const getEnrichmentData = async (companyName: string): Promise<EnrichmentData | null> => {
+      const cacheKey = companyName.toLowerCase().trim();
+      if (enrichmentCache.has(cacheKey)) {
+        return enrichmentCache.get(cacheKey) || null;
+      }
+
+      // Search company via government API
+      const govData = await searchCompanyByName(companyName);
+
+      // Enrich with Google Places for phone/website
+      let placesData: { telephone?: string; siteWeb?: string } = {};
+      if (govData) {
+        placesData = await enrichWithGooglePlaces(companyName, govData.ville);
+      } else {
+        placesData = await enrichWithGooglePlaces(companyName);
+      }
+
+      const enrichedData: EnrichmentData | null = govData || placesData.telephone || placesData.siteWeb
+        ? {
+            ...govData,
+            telephone: placesData.telephone,
+            siteWeb: placesData.siteWeb || govData?.siteWeb,
+          }
+        : null;
+
+      enrichmentCache.set(cacheKey, enrichedData);
+      return enrichedData;
+    };
+
     // Process in batches of 10
     const batchSize = 10;
     for (let i = 0; i < state.rawData.length; i += batchSize) {
@@ -280,6 +392,25 @@ export function useImportLeads() {
           });
           errors++;
           continue;
+        }
+
+        // Enrich lead data if enabled and missing info
+        if (enableEnrichment) {
+          const needsEnrichment = !lead.siret || !lead.adresse || !lead.ville || !lead.secteurActivite;
+          if (needsEnrichment) {
+            setEnrichmentProgress({ current: i + 1, total });
+            const enrichedData = await getEnrichmentData(lead.entreprise);
+            if (enrichedData) {
+              // Only fill in missing fields (don't overwrite CSV data)
+              if (!lead.siret && enrichedData.siret) lead.siret = enrichedData.siret;
+              if (!lead.adresse && enrichedData.adresse) lead.adresse = enrichedData.adresse;
+              if (!lead.codePostal && enrichedData.codePostal) lead.codePostal = enrichedData.codePostal;
+              if (!lead.ville && enrichedData.ville) lead.ville = enrichedData.ville;
+              if (!lead.secteurActivite && enrichedData.secteurActivite) lead.secteurActivite = enrichedData.secteurActivite;
+              if (!lead.siteWeb && enrichedData.siteWeb) lead.siteWeb = enrichedData.siteWeb;
+              // For telephone, only use enriched data for company phone (not contact phone)
+            }
+          }
         }
 
         try {
@@ -417,6 +548,7 @@ export function useImportLeads() {
       results,
     };
 
+    setEnrichmentProgress(null);
     setState((prev) => ({
       ...prev,
       isImporting: false,
@@ -425,7 +557,7 @@ export function useImportLeads() {
     }));
 
     return summary;
-  }, [state.mapping, state.rawData]);
+  }, [state.mapping, state.rawData, enableEnrichment]);
 
   // Go back to previous step
   const goBack = useCallback(() => {
@@ -443,5 +575,9 @@ export function useImportLeads() {
     goBack,
     reset,
     totalLeads: state.rawData.length,
+    // Enrichment options
+    enableEnrichment,
+    setEnableEnrichment,
+    enrichmentProgress,
   };
 }

@@ -9,6 +9,7 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -37,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useImportLeads, type ColumnMapping } from "@/hooks/use-import-leads";
@@ -90,6 +92,9 @@ export function LeadImportDialog({
     importLeads,
     goBack,
     reset,
+    enableEnrichment,
+    setEnableEnrichment,
+    enrichmentProgress,
   } = useImportLeads();
 
   const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
@@ -396,6 +401,25 @@ export function LeadImportDialog({
               )}
             </div>
 
+            {/* Enrichment option */}
+            <div className="flex items-start space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <Checkbox
+                id="enableEnrichment"
+                checked={enableEnrichment}
+                onCheckedChange={(checked) => setEnableEnrichment(checked as boolean)}
+                disabled={isImporting}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="enableEnrichment" className="flex items-center gap-2 cursor-pointer font-medium text-blue-900">
+                  <Sparkles className="h-4 w-4 text-blue-600" />
+                  Auto-complétion des données entreprise
+                </Label>
+                <p className="text-xs text-blue-700">
+                  Enrichit automatiquement les leads avec SIRET, adresse, secteur d&apos;activité et site web via l&apos;API gouvernementale et Google Places.
+                </p>
+              </div>
+            </div>
+
             {/* Preview table */}
             <div className="border rounded-lg overflow-x-auto">
               <Table>
@@ -437,9 +461,21 @@ export function LeadImportDialog({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Import en cours... {progress}%</span>
+                  <span className="text-sm">
+                    {enrichmentProgress && enableEnrichment ? (
+                      <>Enrichissement et import... {progress}%</>
+                    ) : (
+                      <>Import en cours... {progress}%</>
+                    )}
+                  </span>
                 </div>
                 <Progress value={progress} />
+                {enrichmentProgress && enableEnrichment && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    Enrichissement: {enrichmentProgress.current}/{enrichmentProgress.total} leads
+                  </p>
+                )}
               </div>
             )}
           </div>
