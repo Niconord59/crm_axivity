@@ -10,20 +10,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Generate sequential quote number using the database function
-async function generateQuoteNumber(): Promise<string> {
-  const { data, error } = await supabase.rpc("generer_numero_devis");
-
-  if (error) {
-    console.error("Error generating quote number:", error);
-    // Fallback to random if function fails
-    const now = new Date();
-    const year = now.getFullYear();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `DEV-${year}-${random}`;
-  }
-
-  return data as string;
+// Generate preview quote number
+function generatePreviewQuoteNumber(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  return `DEV-${year}-XXX`;
 }
 
 // Calculate validity date
@@ -159,15 +150,15 @@ export async function POST(request: NextRequest) {
     const tva = totalHT * tauxTva;
     const totalTTC = totalHT + tva;
 
-    // Extract client and contact from joined data (may be array or object depending on relation)
+    // Extract client and contact from joined data
     const clientData = opportunite.clients;
     const client = Array.isArray(clientData) ? clientData[0] : clientData;
 
     const contactData = opportunite.contacts;
     const contact = Array.isArray(contactData) ? contactData[0] : contactData;
 
-    // Generate sequential quote number
-    const numeroDevis = await generateQuoteNumber();
+    // Generate preview quote number (not saved)
+    const numeroDevis = generatePreviewQuoteNumber();
     const dateDevis = new Date().toISOString().split("T")[0];
     const dateValidite = getValidityDate(validiteJours);
 
@@ -233,71 +224,18 @@ export async function POST(request: NextRequest) {
     // Convert Uint8Array to Buffer for NextResponse
     const buffer = Buffer.from(pdfBuffer);
 
-    // Save devis record to database
-    const pdfFilename = `${numeroDevis}.pdf`;
-
-    // Create devis record
-    const { data: devisRecord, error: devisError } = await supabase
-      .from("devis")
-      .insert({
-        numero_devis: numeroDevis,
-        opportunite_id: opportuniteId,
-        client_id: client?.id || null,
-        contact_id: contact?.id || null,
-        statut: "brouillon",
-        date_devis: dateDevis,
-        date_validite: dateValidite,
-        total_ht: totalHT,
-        tva: tva,
-        total_ttc: totalTTC,
-        taux_tva: tauxTva * 100,
-        conditions_paiement: conditionsPaiement,
-        pdf_filename: pdfFilename,
-      })
-      .select()
-      .single();
-
-    // If devis record created, upload PDF to storage
-    if (devisRecord && !devisError) {
-      const filePath = `${devisRecord.id}/${pdfFilename}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("devis-pdf")
-        .upload(filePath, buffer, {
-          contentType: "application/pdf",
-          upsert: true,
-        });
-
-      if (!uploadError) {
-        // Get public URL and update devis
-        const { data: urlData } = supabase.storage
-          .from("devis-pdf")
-          .getPublicUrl(filePath);
-
-        await supabase
-          .from("devis")
-          .update({
-            pdf_url: urlData.publicUrl,
-            pdf_filename: filePath,
-          })
-          .eq("id", devisRecord.id);
-      }
-    }
-
-    // Return PDF
+    // Return PDF without saving
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${pdfFilename}"`,
-        "X-Devis-Id": devisRecord?.id || "",
-        "X-Devis-Numero": numeroDevis,
+        "Content-Disposition": `inline; filename="apercu-devis.pdf"`,
       },
     });
   } catch (error) {
-    console.error("Error generating PDF:", error);
+    console.error("Error generating PDF preview:", error);
     return NextResponse.json(
-      { error: "Error generating PDF", details: String(error) },
+      { error: "Error generating PDF preview", details: String(error) },
       { status: 500 }
     );
   }

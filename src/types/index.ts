@@ -455,6 +455,21 @@ export interface DevisData {
 }
 
 // =============================================================================
+// DEVIS STORED (Historique)
+// =============================================================================
+
+export const DEVIS_STATUSES = ["brouillon", "envoye", "accepte", "refuse", "expire"] as const;
+export type DevisStatus = (typeof DEVIS_STATUSES)[number];
+
+export const DEVIS_STATUS_LABELS: Record<DevisStatus, string> = {
+  brouillon: "Brouillon",
+  envoye: "Envoyé",
+  accepte: "Accepté",
+  refuse: "Refusé",
+  expire: "Expiré",
+};
+
+// =============================================================================
 // T16 - FEEDBACK CLIENT
 // =============================================================================
 
