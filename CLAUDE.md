@@ -196,8 +196,23 @@ npm start       # Production server
 
 ## Documentation
 
-- **Passation projet**: `Documentation/passation_projet_agence_ia.md`
-- **Roadmap Phase 2**: `Documentation/Ameliorations_Phase2_Roadmap.md`
+| Fichier | Description |
+|---------|-------------|
+| `passation_projet_agence_ia.md` | Guide de passation du projet CRM Axivity |
+| `Ameliorations_Phase2_Roadmap.md` | Roadmap des améliorations Phase 2 |
+| `Guide de Construction _ Base Airtable pour Agence IA.md` | Guide de construction de la base Airtable originale |
+| `Migration_Supabase_Plan.md` | Plan de migration Airtable → Supabase |
+
+## Specs (Spécifications par feature)
+
+| Dossier | Feature | Status |
+|---------|---------|--------|
+| `specs/001-crm-axivity-interface/` | Interface CRM de base | ✅ Complet |
+| `specs/002-crm-ameliorations/` | Améliorations Phase 2 | 📋 Planifié |
+| `specs/003-prospection/` | Module Prospection | ✅ Complet |
+| `specs/004-onboarding-tour/` | Tour guidé onboarding | ✅ Complet |
+| `specs/005-supabase-migration/` | Migration Supabase | ✅ Complet |
+| `specs/006-devis/` | Module Devis & Factures | ✅ Complet |
 
 ## Supabase (Backend)
 
@@ -426,15 +441,22 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Nouveaux types dans schema: `FIRST_CONTACT_TYPES`, `INITIAL_STATUTS`
 - **OpportunityMiniSheet** (23 déc. 2025) : Édition rapide des opportunités
   - Drawer latéral accessible en cliquant sur une carte du Kanban
-  - Montants rapides : boutons présets (5k, 10k, 25k, 50k, 100k, 200k €)
-  - Incréments/décréments : +1k, +5k / -1k, -5k
-  - Slider probabilité : 0-100% par pas de 5%
-  - Calcul valeur pondérée en temps réel
-  - Sélecteur de date de clôture (calendrier français)
-  - Zone de notes redimensionnable verticalement
-  - Transition vers l'éditeur de devis complet
+  - **Onglet Infos** :
+    - Montants rapides : boutons présets (5k, 10k, 25k, 50k, 100k, 200k €)
+    - Incréments/décréments : +1k, +5k / -1k, -5k
+    - Slider probabilité : 0-100% par pas de 5%
+    - Calcul valeur pondérée en temps réel
+    - Sélecteur de date de clôture (calendrier français)
+    - Zone de notes redimensionnable verticalement
+    - Transition vers l'éditeur de devis complet
+  - **Onglet Historique** :
+    - Timeline des interactions liées au contact de l'opportunité
+    - Formulaire d'ajout de note manuelle (style ambre)
+    - Icônes par type : Appel (orange), Email (bleu), Réunion (violet), Note (ambre)
+    - Continuité du suivi entre prospection et phase commerciale
   - Nouveau composant: `OpportunityMiniSheet.tsx`
   - Nouveau composant UI: `slider.tsx` (shadcn/ui)
+- **LeadCard cliquable** (23 déc. 2025) : Clic direct sur la carte pour ouvrir le formulaire
 
 ## Production Checklist
 
