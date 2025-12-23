@@ -27,7 +27,7 @@ import {
 } from "@/components/shared";
 import { opportuniteExportColumns } from "@/lib/export";
 import { PipelineChart } from "@/components/charts";
-import { OpportunityCard } from "@/components/opportunites/OpportunityCard";
+import { OpportunityCard, OpportunityMiniSheet } from "@/components/opportunites";
 import { QuoteEditorSheet } from "@/components/devis";
 import {
   useOpportunitesParStatut,
@@ -74,6 +74,7 @@ const KANBAN_COLUMNS: {
 export default function OpportunitesPage() {
   const [showChart, setShowChart] = useState(false);
   const [quoteOpportunityId, setQuoteOpportunityId] = useState<string | null>(null);
+  const [miniSheetOpportunityId, setMiniSheetOpportunityId] = useState<string | null>(null);
   const { data: opportunitesGroupees, isLoading } = useOpportunitesParStatut();
   const updateStatut = useUpdateOpportuniteStatut();
 
@@ -99,6 +100,10 @@ export default function OpportunitesPage() {
 
   const handleOpenQuote = (id: string) => {
     setQuoteOpportunityId(id);
+  };
+
+  const handleOpenMiniSheet = (id: string) => {
+    setMiniSheetOpportunityId(id);
   };
 
   if (isLoading) {
@@ -300,6 +305,7 @@ export default function OpportunitesPage() {
                                     opportunity={opp}
                                     onStatusChange={handleStatusChange}
                                     onOpenQuote={handleOpenQuote}
+                                    onOpenMiniSheet={handleOpenMiniSheet}
                                     isDragging={snapshot.isDragging}
                                   />
                                 </div>
@@ -376,6 +382,19 @@ export default function OpportunitesPage() {
           opportuniteId={quoteOpportunityId}
           isOpen={!!quoteOpportunityId}
           onClose={() => setQuoteOpportunityId(null)}
+        />
+      )}
+
+      {/* Mini Sheet for quick opportunity editing */}
+      {miniSheetOpportunityId && (
+        <OpportunityMiniSheet
+          opportuniteId={miniSheetOpportunityId}
+          isOpen={!!miniSheetOpportunityId}
+          onClose={() => setMiniSheetOpportunityId(null)}
+          onOpenQuoteEditor={() => {
+            setMiniSheetOpportunityId(null);
+            setQuoteOpportunityId(miniSheetOpportunityId);
+          }}
         />
       )}
     </div>

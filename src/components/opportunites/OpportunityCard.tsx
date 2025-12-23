@@ -36,6 +36,7 @@ interface OpportunityCardProps {
   opportunity: Opportunite;
   onStatusChange?: (id: string, status: OpportunityStatus) => void;
   onOpenQuote?: (id: string) => void;
+  onOpenMiniSheet?: (id: string) => void;
   isDragging?: boolean;
 }
 
@@ -101,6 +102,7 @@ export function OpportunityCard({
   opportunity,
   onStatusChange,
   onOpenQuote,
+  onOpenMiniSheet,
   isDragging = false,
 }: OpportunityCardProps) {
   const statusConfig = getStatusConfig(opportunity.statut);
@@ -119,8 +121,10 @@ export function OpportunityCard({
         "border-l-4",
         statusConfig.border,
         isDragging && "shadow-xl rotate-2 scale-105",
-        isUrgent && "ring-2 ring-red-200 ring-offset-1"
+        isUrgent && "ring-2 ring-red-200 ring-offset-1",
+        onOpenMiniSheet && "cursor-pointer"
       )}
+      onClick={() => onOpenMiniSheet?.(opportunity.id)}
     >
       <CardContent className="p-3">
         {/* Header avec nom et menu */}
@@ -136,6 +140,7 @@ export function OpportunityCard({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
