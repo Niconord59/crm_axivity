@@ -81,6 +81,10 @@ npm start       # Production server
   - KPIs de prospection (à appeler, rappels, taux qualification, retards)
   - **Intégration Calendar** : Planifier des RDV (Google Calendar ou Microsoft 365)
   - **Intégration Email** : Envoyer des emails de suivi (Gmail ou Outlook)
+  - **Création directe** : Mode pour leads historiques ou premiers contacts non téléphoniques
+    - Types de premier contact : Appel, Email, LinkedIn, Physique, Autre
+    - Statuts initiaux : À appeler, Rappeler, RDV planifié, RDV effectué, Qualifié
+    - Création d'interaction automatique selon le type de contact
 - **Nouveaux composants**:
   - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer, CompanySearch
   - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, CalendarAuthButton
@@ -414,6 +418,12 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Nouveaux hooks: `use-company-search.ts`, `use-debounce.ts`, `use-google-places.ts`
   - Nouveau composant: `CompanySearch.tsx`
   - API: `/api/places/search` (POST) - Google Places enrichment
+- **Création directe de leads** (23 déc. 2025) : Support leads historiques et contacts non téléphoniques
+  - Mode "Création directe" dans ProspectForm pour contourner le workflow appel
+  - Types de premier contact : Appel, Email, LinkedIn, Physique, Autre
+  - Statuts initiaux : À appeler, Rappeler, RDV planifié, RDV effectué, Qualifié
+  - Création automatique d'interaction selon le type de contact
+  - Nouveaux types dans schema: `FIRST_CONTACT_TYPES`, `INITIAL_STATUTS`
 
 ## Production Checklist
 
