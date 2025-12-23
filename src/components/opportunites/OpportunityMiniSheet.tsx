@@ -10,7 +10,6 @@ import {
   Euro,
   TrendingUp,
   FileText,
-  X,
   Plus,
   Minus,
   RotateCcw,
@@ -183,18 +182,8 @@ export function OpportunityMiniSheet({
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="sm:max-w-md overflow-y-auto">
-        <SheetHeader className="space-y-1">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-lg">Opportunité</SheetTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onClose}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+        <SheetHeader>
+          <SheetTitle>Opportunité</SheetTitle>
         </SheetHeader>
 
         {isLoading ? (
