@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-24
+Auto-generated from all feature plans. Last updated: 2026-01-05
 
 ## Active Technologies
 
@@ -515,50 +515,62 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
     - `React.memo` sur OpportunityCard, LeadCard, EventCard
     - Optimistic updates sur 5 mutations (useUpdateOpportunite, useUpdateTache, etc.)
     - `lib/pdf/browser-pool.ts` : Pool Puppeteer réutilisable pour PDF
+- **Configuration Email Production** (5 jan. 2026) : Emails transactionnels en production
+  - Domaine Resend vérifié (`axivity.cloud`) avec DNS (SPF, DKIM, DMARC)
+  - Templates email personnalisés en français (`public/templates/`)
+  - Workaround Coolify : URLs hardcodées avec `{{ .TokenHash }}`
+  - Auto-inscription désactivée, uniquement invitation admin
+  - Page login : lien "Créer un compte" masqué
 
 ## Production Checklist
 
 ### Domaine principal
 - **Domaine** : `axivity.cloud`
 - **Supabase** : `supabase.axivity.cloud`
+- **CRM** : `crm.axivity.cloud`
 
-### SMTP / Emails (Resend)
+### SMTP / Emails (Resend) ✅ CONFIGURÉ
 
-**Configuration actuelle (DEV)** :
+**Configuration PRODUCTION** (active) :
 ```env
-ENABLE_EMAIL_AUTOCONFIRM=true  # Pas de confirmation email
+ENABLE_EMAIL_AUTOCONFIRM=false
+DISABLE_SIGNUP=true  # Uniquement invitation admin
 SMTP_HOST=smtp.resend.com
 SMTP_PORT=465
 SMTP_USER=resend
 SMTP_PASS=re_xxxxxxxxxx  # API Key Resend
-SMTP_ADMIN_EMAIL=onboarding@resend.dev  # Sandbox
+SMTP_ADMIN_EMAIL=noreply@axivity.cloud
 SMTP_SENDER_NAME=CRM Axivity
+GOTRUE_SITE_URL=https://crm.axivity.cloud
 ```
 
-**Configuration PRODUCTION** (à faire avant déploiement) :
-1. **Vérifier le domaine dans Resend** :
-   - Aller sur https://resend.com/domains
-   - Ajouter `axivity.cloud`
-   - Configurer les DNS (MX, SPF, DKIM, DMARC)
+### Templates Email Personnalisés ✅
 
-2. **Modifier les variables Coolify** :
-   ```env
-   ENABLE_EMAIL_AUTOCONFIRM=false
-   SMTP_ADMIN_EMAIL=noreply@axivity.cloud
-   ADDITIONAL_REDIRECT_URLS=https://crm.axivity.cloud/**
-   GOTRUE_SITE_URL=https://crm.axivity.cloud
-   ```
+Les templates sont dans `public/templates/` :
 
-3. **Redéployer le service Auth dans Coolify**
+| Fichier | Type | Redirect |
+|---------|------|----------|
+| `invite.html` | Invitation admin | `/auth/callback` |
+| `confirmation.html` | Auto-inscription | `/auth/callback` |
+| `recovery.html` | Mot de passe oublié | `/reset-password` |
+
+**Variables Coolify pour les templates** :
+```env
+GOTRUE_MAILER_TEMPLATES_INVITE=https://crm.axivity.cloud/templates/invite.html
+GOTRUE_MAILER_TEMPLATES_CONFIRMATION=https://crm.axivity.cloud/templates/confirmation.html
+GOTRUE_MAILER_TEMPLATES_RECOVERY=https://crm.axivity.cloud/templates/recovery.html
+```
+
+**⚠️ Workaround Coolify** : Le template Supabase de Coolify génère une variable `SERVICE_URL_SUPABASEKONG` interne qui ne peut pas être surchargée. Les templates utilisent des URLs hardcodées avec `{{ .TokenHash }}` au lieu de `{{ .ConfirmationURL }}` pour contourner ce problème.
+
+### Authentification
+
+- **Auto-inscription** : Désactivée (`DISABLE_SIGNUP=true`)
+- **Invitation admin** : Via `/api/admin/users` (admin uniquement)
+- **Page login** : Lien "Créer un compte" masqué
 
 ### URLs de redirection
 
-**DEV** :
-```env
-ADDITIONAL_REDIRECT_URLS=http://localhost:3000/**,http://localhost:3000/auth/callback
-```
-
-**PRODUCTION** :
 ```env
 ADDITIONAL_REDIRECT_URLS=https://crm.axivity.cloud/**,https://crm.axivity.cloud/auth/callback
 GOTRUE_SITE_URL=https://crm.axivity.cloud
@@ -569,6 +581,7 @@ GOTRUE_SITE_URL=https://crm.axivity.cloud
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://supabase.axivity.cloud
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...  # Clé anon de production
+NEXT_PUBLIC_APP_URL=https://crm.axivity.cloud
 ```
 
 <!-- MANUAL ADDITIONS START -->

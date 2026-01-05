@@ -7,8 +7,8 @@ Migration du backend Supabase vers Supabase self-hosted pour améliorer les perf
 ## Statut
 
 - **Date de début** : 17 décembre 2025
-- **Date de mise à jour** : 19 décembre 2025
-- **Statut global** : ✅ Quasi-complet (95% - Phase 7 terminée)
+- **Date de mise à jour** : 5 janvier 2026
+- **Statut global** : ✅ COMPLET (100% - Phase 8 terminée)
 
 ## Objectifs
 
@@ -67,6 +67,17 @@ Migration du backend Supabase vers Supabase self-hosted pour améliorer les perf
 - 4 workflows adaptés pour Supabase
 - Syntaxe expressions corrigée (`={{ }}`)
 - Migrations 13 et 14 pour colonnes requises
+
+### Phase 8 : Configuration Email Production ✅ (5 jan. 2026)
+- Domaine Resend vérifié (`axivity.cloud`)
+- DNS configurés (SPF, DKIM, DMARC)
+- Templates email personnalisés en français (`public/templates/`)
+  - `invite.html` : Invitation admin
+  - `confirmation.html` : Confirmation inscription
+  - `recovery.html` : Réinitialisation mot de passe
+- Workaround Coolify : URLs hardcodées avec `{{ .TokenHash }}`
+- Auto-inscription désactivée (`DISABLE_SIGNUP=true`)
+- Page login : lien "Créer un compte" masqué
 
 ## Hooks migrés
 
