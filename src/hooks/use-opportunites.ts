@@ -2,38 +2,16 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
+import { mapToOpportunite, mapOpportuniteToInsert, mapOpportuniteToUpdate } from "@/lib/mappers";
 import type { Opportunite, OpportunityStatus } from "@/types";
-
-// Mapper Supabase -> Opportunite type
-function mapToOpportunite(record: Record<string, unknown>): Opportunite {
-  const valeurEstimee = record.valeur_estimee as number | undefined;
-  const probabilite = record.probabilite as number | undefined;
-
-  return {
-    id: record.id as string,
-    nom: (record.nom as string) || "",
-    statut: record.statut as OpportunityStatus,
-    valeurEstimee: valeurEstimee,
-    probabilite: probabilite,
-    dateClotureEstimee: record.date_cloture_prevue as string | undefined,
-    source: record.source as string | undefined,
-    notes: record.notes as string | undefined,
-    dateCreation: record.created_at as string | undefined,
-    valeurPonderee: valeurEstimee && probabilite
-      ? valeurEstimee * (probabilite / 100)
-      : undefined,
-    client: record.client_id ? [record.client_id as string] : undefined,
-    contact: record.contact_id ? [record.contact_id as string] : undefined,
-    projetCree: record.projet_id ? [record.projet_id as string] : undefined,
-  };
-}
 
 export function useOpportunites(options?: {
   statut?: OpportunityStatus;
   clientId?: string;
 }) {
   return useQuery({
-    queryKey: ["opportunites", options],
+    queryKey: queryKeys.opportunites.list(options),
     queryFn: async () => {
       let query = supabase
         .from("opportunites")
@@ -57,7 +35,7 @@ export function useOpportunites(options?: {
 
 export function useOpportunitesParStatut() {
   return useQuery({
-    queryKey: ["opportunites", "par-statut"],
+    queryKey: queryKeys.opportunites.byStatut(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("opportunites")
@@ -79,8 +57,9 @@ export function useOpportunitesParStatut() {
       };
 
       opportunites.forEach((opp) => {
-        if (opp.statut && grouped[opp.statut]) {
-          grouped[opp.statut].push(opp);
+        const statut = opp.statut as OpportunityStatus | undefined;
+        if (statut && statut in grouped) {
+          grouped[statut].push(opp);
         }
       });
 
@@ -91,7 +70,7 @@ export function useOpportunitesParStatut() {
 
 export function useOpportunite(id: string | undefined) {
   return useQuery({
-    queryKey: ["opportunite", id],
+    queryKey: queryKeys.opportunites.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Opportunite ID required");
 
@@ -113,17 +92,7 @@ export function useCreateOpportunite() {
 
   return useMutation({
     mutationFn: async (data: Partial<Opportunite>) => {
-      const insertData = {
-        nom: data.nom,
-        statut: data.statut || "Qualifié",
-        valeur_estimee: data.valeurEstimee,
-        probabilite: data.probabilite,
-        date_cloture_prevue: data.dateClotureEstimee,
-        source: data.source,
-        notes: data.notes,
-        client_id: data.client?.[0],
-        contact_id: data.contact?.[0],
-      };
+      const insertData = mapOpportuniteToInsert(data);
 
       const { data: record, error } = await supabase
         .from("opportunites")
@@ -134,8 +103,9 @@ export function useCreateOpportunite() {
       if (error) throw error;
       return mapToOpportunite(record);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["opportunites"] });
+    onSuccess: async () => {
+      // Force refetch immédiat pour que les nouvelles données s'affichent
+      await queryClient.refetchQueries({ queryKey: queryKeys.opportunites.all });
     },
   });
 }
@@ -151,15 +121,7 @@ export function useUpdateOpportunite() {
       id: string;
       data: Partial<Opportunite>;
     }) => {
-      const updateData: Record<string, unknown> = {};
-
-      if (data.nom !== undefined) updateData.nom = data.nom;
-      if (data.statut !== undefined) updateData.statut = data.statut;
-      if (data.valeurEstimee !== undefined) updateData.valeur_estimee = data.valeurEstimee;
-      if (data.probabilite !== undefined) updateData.probabilite = data.probabilite;
-      if (data.dateClotureEstimee !== undefined) updateData.date_cloture_prevue = data.dateClotureEstimee;
-      if (data.source !== undefined) updateData.source = data.source;
-      if (data.notes !== undefined) updateData.notes = data.notes;
+      const updateData = mapOpportuniteToUpdate(data);
 
       const { data: record, error } = await supabase
         .from("opportunites")
@@ -171,9 +133,39 @@ export function useUpdateOpportunite() {
       if (error) throw error;
       return mapToOpportunite(record);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["opportunites"] });
-      queryClient.invalidateQueries({ queryKey: ["opportunite", variables.id] });
+    // Optimistic update
+    onMutate: async ({ id, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.opportunites.all });
+
+      // Snapshot previous value
+      const previousOpportunites = queryClient.getQueryData<Record<OpportunityStatus, Opportunite[]>>(
+        queryKeys.opportunites.byStatut()
+      );
+
+      // Optimistically update the cache
+      if (previousOpportunites) {
+        const updated = { ...previousOpportunites };
+        for (const status of Object.keys(updated) as OpportunityStatus[]) {
+          updated[status] = updated[status].map((opp) =>
+            opp.id === id ? { ...opp, ...data } : opp
+          );
+        }
+        queryClient.setQueryData(queryKeys.opportunites.byStatut(), updated);
+      }
+
+      return { previousOpportunites };
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previousOpportunites) {
+        queryClient.setQueryData(queryKeys.opportunites.byStatut(), context.previousOpportunites);
+      }
+    },
+    onSettled: async (_, __, variables) => {
+      // Force refetch pour synchroniser avec la BDD
+      await queryClient.refetchQueries({ queryKey: queryKeys.opportunites.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.opportunites.detail(variables.id) });
     },
   });
 }
@@ -199,8 +191,50 @@ export function useUpdateOpportuniteStatut() {
       if (error) throw error;
       return mapToOpportunite(record);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["opportunites"] });
+    // Optimistic update for Kanban drag & drop
+    onMutate: async ({ id, statut }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.opportunites.all });
+
+      // Snapshot previous value
+      const previousOpportunites = queryClient.getQueryData<Record<OpportunityStatus, Opportunite[]>>(
+        queryKeys.opportunites.byStatut()
+      );
+
+      // Optimistically move the opportunity to the new status
+      if (previousOpportunites) {
+        const updated = { ...previousOpportunites };
+        let movedOpp: Opportunite | undefined;
+
+        // Find and remove from current status
+        for (const status of Object.keys(updated) as OpportunityStatus[]) {
+          const index = updated[status].findIndex((opp) => opp.id === id);
+          if (index !== -1) {
+            movedOpp = { ...updated[status][index], statut };
+            updated[status] = updated[status].filter((opp) => opp.id !== id);
+            break;
+          }
+        }
+
+        // Add to new status
+        if (movedOpp && statut in updated) {
+          updated[statut] = [...updated[statut], movedOpp];
+        }
+
+        queryClient.setQueryData(queryKeys.opportunites.byStatut(), updated);
+      }
+
+      return { previousOpportunites };
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previousOpportunites) {
+        queryClient.setQueryData(queryKeys.opportunites.byStatut(), context.previousOpportunites);
+      }
+    },
+    onSettled: async () => {
+      // Force refetch pour synchroniser avec la BDD après drag & drop
+      await queryClient.refetchQueries({ queryKey: queryKeys.opportunites.all });
     },
   });
 }

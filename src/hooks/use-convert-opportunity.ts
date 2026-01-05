@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ConvertToOpportunityParams {
   contactId: string;
@@ -78,13 +79,14 @@ export function useConvertToOpportunity() {
 
       return { contactId, clientId, opportunityId: opportunity.id };
     },
-    onSuccess: () => {
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["prospects"] });
-      queryClient.invalidateQueries({ queryKey: ["prospects-with-clients"] });
-      queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      queryClient.invalidateQueries({ queryKey: ["opportunites"] });
+    onSuccess: async () => {
+      // Force refetch pour afficher immédiatement les changements
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.prospects.all }),
+        queryClient.refetchQueries({ queryKey: queryKeys.clients.all }),
+        queryClient.refetchQueries({ queryKey: queryKeys.opportunites.all }),
+      ]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
     },
   });
 }

@@ -9,10 +9,12 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute
-            gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
+            staleTime: 0, // Données toujours considérées comme "stale" → refetch à chaque montage
+            gcTime: 5 * 60 * 1000, // 5 minutes de cache en mémoire
             retry: 1,
-            refetchOnWindowFocus: false,
+            refetchOnWindowFocus: true, // Rafraîchir quand on revient sur l'onglet
+            refetchOnMount: true, // Rafraîchir au montage du composant
+            refetchOnReconnect: true, // Rafraîchir après reconnexion réseau
           },
         },
       })
