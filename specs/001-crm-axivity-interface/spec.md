@@ -272,8 +272,8 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 
 ## Assumptions
 
-- Les utilisateurs sont déjà authentifiés via un système d'authentification existant (non inclus dans ce scope)
-- La base Supabase avec les 21 tables est déjà configurée et opérationnelle (Base ID: appEf6JtWFdfLwsU6)
+- L'authentification est gérée via Supabase Auth (implémentée dans 005-supabase-migration)
+- La base Supabase self-hosted avec les 21 tables est configurée et opérationnelle (https://supabase.axivity.cloud)
 - Les workflows N8N sont gérés séparément et ne font pas partie de cette interface
 - L'interface est destinée à des utilisateurs francophones (textes en français)
 - Les utilisateurs ont accès à une connexion internet stable pour les appels API Supabase

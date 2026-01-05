@@ -30,7 +30,7 @@
 **Overall Progress: 105/105 tasks (100%)**
 
 ### Key Achievements
-- ✅ Full Next.js 14 + Shadcn/UI application structure
+- ✅ Full Next.js 16 + Shadcn/UI application structure
 - ✅ Supabase integration with correct field mappings
 - ✅ All 9 main pages implemented (Dashboard, Projets, Opportunités, Tâches, Clients, Factures, Équipe, Rapports, Portail)
 - ✅ React Query hooks for all entities
