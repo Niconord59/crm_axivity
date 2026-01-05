@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateFactureHTML } from "@/lib/templates/facture-template";
+import { generatePDF } from "@/lib/pdf/browser-pool";
+import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
+import { generateFactureSchema } from "@/lib/schemas/api";
+import { NotFoundError, ConflictError, DatabaseError } from "@/lib/errors";
 import type { FactureData, FactureCompanyInfo, LigneDevis } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
@@ -35,14 +38,7 @@ function getDueDate(days: number = 30): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { devisId } = await request.json();
-
-    if (!devisId) {
-      return NextResponse.json(
-        { error: "devisId is required" },
-        { status: 400 }
-      );
-    }
+    const { devisId } = await validateRequestBody(request, generateFactureSchema);
 
     // Fetch devis with related data
     const { data: devis, error: devisError } = await supabase
@@ -86,18 +82,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (devisError || !devis) {
-      return NextResponse.json(
-        { error: "Devis not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("Devis non trouvé");
     }
 
     // Check if already converted
     if (devis.facture_id) {
-      return NextResponse.json(
-        { error: "Ce devis a déjà été converti en facture" },
-        { status: 400 }
-      );
+      throw new ConflictError("Ce devis a déjà été converti en facture");
     }
 
     // Fetch company settings
@@ -151,10 +141,7 @@ export async function POST(request: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (lignesError) {
-      return NextResponse.json(
-        { error: "Error fetching quote lines" },
-        { status: 500 }
-      );
+      throw new DatabaseError("Erreur lors de la récupération des lignes du devis", { error: lignesError.message });
     }
 
     // Map lines to LigneDevis type
@@ -225,30 +212,8 @@ export async function POST(request: NextRequest) {
     // Generate HTML
     const html = generateFactureHTML(factureData);
 
-    // Generate PDF with Puppeteer
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "20mm",
-        right: "15mm",
-        bottom: "20mm",
-        left: "15mm",
-      },
-    });
-
-    await browser.close();
-
-    // Convert Uint8Array to Buffer for NextResponse
-    const buffer = Buffer.from(pdfBuffer);
+    // Generate PDF using browser pool
+    const buffer = await generatePDF(html);
 
     // Create facture record
     const pdfFilename = `${numeroFacture}.pdf`;
@@ -274,11 +239,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (factureError) {
-      console.error("Error creating facture record:", factureError);
-      return NextResponse.json(
-        { error: "Error creating invoice record" },
-        { status: 500 }
-      );
+      throw new DatabaseError("Erreur lors de la création de la facture", { error: factureError.message });
     }
 
     // Upload PDF to storage
@@ -318,8 +279,8 @@ export async function POST(request: NextRequest) {
         .eq("id", devisId);
     }
 
-    // Return PDF
-    return new NextResponse(buffer, {
+    // Return PDF - cast to BodyInit for Response compatibility
+    return new Response(buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
@@ -329,10 +290,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error generating invoice PDF:", error);
-    return NextResponse.json(
-      { error: "Error generating invoice PDF", details: String(error) },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

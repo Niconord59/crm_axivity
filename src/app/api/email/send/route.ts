@@ -1,34 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/services/email-service";
-
-interface SendEmailRequest {
-  to: string;
-  subject: string;
-  body: string;
-  replyTo?: string;
-}
+import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
+import { sendEmailSchema } from "@/lib/schemas/api";
+import { UnauthorizedError, ForbiddenError, ExternalServiceError } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
 
     if (!session?.accessToken) {
-      return NextResponse.json(
-        { error: "Non authentifié. Veuillez vous connecter." },
-        { status: 401 }
-      );
+      throw new UnauthorizedError("Veuillez vous connecter pour envoyer des emails");
     }
 
-    const body: SendEmailRequest = await request.json();
-    const { to, subject, body: emailBody } = body;
-
-    if (!to || !subject || !emailBody) {
-      return NextResponse.json(
-        { error: "Destinataire, sujet et contenu requis" },
-        { status: 400 }
-      );
-    }
+    const { to, subject, body: emailBody } = await validateRequestBody(
+      request,
+      sendEmailSchema
+    );
 
     const provider = session.provider || "google";
     const result = await sendEmail(provider, session.accessToken, {
@@ -38,20 +26,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      console.error(`${provider} email send error:`, result.error);
-
       // Check for permission errors
       if (result.error?.includes("Permission")) {
-        return NextResponse.json(
-          { error: result.error },
-          { status: 403 }
-        );
+        throw new ForbiddenError(result.error);
       }
 
-      return NextResponse.json(
-        { error: result.error || "Erreur lors de l'envoi de l'email" },
-        { status: 500 }
-      );
+      throw new ExternalServiceError("Email", { error: result.error });
     }
 
     return NextResponse.json({
@@ -60,10 +40,6 @@ export async function POST(request: NextRequest) {
       threadId: result.threadId,
     });
   } catch (error) {
-    console.error("Error sending email:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de l'envoi" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

@@ -2,33 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
+import { mapToProjet, mapProjetToInsert, mapProjetToUpdate, type ProjetWithOwner } from "@/lib/mappers";
 import type { Projet, ProjectStatus } from "@/types";
-
-// Mapper Supabase -> Projet type
-function mapToProjet(record: Record<string, unknown>): Projet & { ownerId?: string } {
-  return {
-    id: record.id as string,
-    idProjet: record.id_projet as number | undefined,
-    briefProjet: record.brief as string | undefined,
-    nomProjet: record.nom as string | undefined,
-    statut: record.statut as ProjectStatus,
-    dateDebut: record.date_debut as string | undefined,
-    dateFinPrevue: record.date_fin_prevue as string | undefined,
-    dateFinReelle: record.date_fin_reelle as string | undefined,
-    budget: record.budget_initial as number | undefined,
-    notes: record.notes as string | undefined,
-    priorite: record.priorite as Projet["priorite"],
-    // Calculated fields will come from database views/functions later
-    totalHeuresEstimees: record.heures_estimees as number | undefined,
-    totalHeuresPassees: record.heures_passees as number | undefined,
-    client: record.client_id ? [record.client_id as string] : undefined,
-    ownerId: record.owner_id as string | undefined,
-  };
-}
 
 export function useProjets(options?: { statut?: ProjectStatus; clientId?: string }) {
   return useQuery({
-    queryKey: ["projets", options],
+    queryKey: queryKeys.projets.list(options),
     queryFn: async () => {
       let query = supabase
         .from("projets")
@@ -52,7 +32,7 @@ export function useProjets(options?: { statut?: ProjectStatus; clientId?: string
 
 export function useProjetsActifs(userId?: string) {
   return useQuery({
-    queryKey: ["projets", "actifs", userId],
+    queryKey: queryKeys.projets.actifs(userId),
     queryFn: async () => {
       let query = supabase
         .from("projets")
@@ -75,7 +55,7 @@ export function useProjetsActifs(userId?: string) {
 
 export function useProjet(id: string | undefined) {
   return useQuery({
-    queryKey: ["projet", id],
+    queryKey: queryKeys.projets.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Projet ID required");
 
@@ -97,21 +77,7 @@ export function useCreateProjet() {
 
   return useMutation({
     mutationFn: async (data: Partial<Projet> & { ownerId?: string }) => {
-      const insertData: Record<string, unknown> = {
-        brief: data.briefProjet,
-        nom: data.nomProjet || data.briefProjet,
-        statut: data.statut || "Cadrage",
-        date_debut: data.dateDebut,
-        date_fin_prevue: data.dateFinPrevue,
-        budget_initial: data.budget,
-        notes: data.notes,
-        client_id: data.client?.[0],
-      };
-
-      // Ajouter owner_id si fourni
-      if (data.ownerId) {
-        insertData.owner_id = data.ownerId;
-      }
+      const insertData = mapProjetToInsert(data as Partial<ProjetWithOwner>);
 
       const { data: record, error } = await supabase
         .from("projets")
@@ -123,7 +89,7 @@ export function useCreateProjet() {
       return mapToProjet(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projets"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.all });
     },
   });
 }
@@ -133,18 +99,7 @@ export function useUpdateProjet() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Projet> & { ownerId?: string } }) => {
-      const updateData: Record<string, unknown> = {};
-
-      if (data.briefProjet !== undefined) updateData.brief = data.briefProjet;
-      if (data.nomProjet !== undefined) updateData.nom = data.nomProjet;
-      if (data.statut !== undefined) updateData.statut = data.statut;
-      if (data.dateDebut !== undefined) updateData.date_debut = data.dateDebut;
-      if (data.dateFinPrevue !== undefined) updateData.date_fin_prevue = data.dateFinPrevue;
-      if (data.dateFinReelle !== undefined) updateData.date_fin_reelle = data.dateFinReelle;
-      if (data.budget !== undefined) updateData.budget_initial = data.budget;
-      if (data.notes !== undefined) updateData.notes = data.notes;
-      if (data.priorite !== undefined) updateData.priorite = data.priorite;
-      if (data.ownerId !== undefined) updateData.owner_id = data.ownerId || null;
+      const updateData = mapProjetToUpdate(data as Partial<ProjetWithOwner>);
 
       const { data: record, error } = await supabase
         .from("projets")
@@ -156,9 +111,47 @@ export function useUpdateProjet() {
       if (error) throw error;
       return mapToProjet(record);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["projets"] });
-      queryClient.invalidateQueries({ queryKey: ["projet", variables.id] });
+    // Optimistic update
+    onMutate: async ({ id, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.projets.all });
+
+      // Snapshot previous values
+      const previousProjets = queryClient.getQueryData<Projet[]>(queryKeys.projets.list());
+      const previousProjet = queryClient.getQueryData<Projet>(queryKeys.projets.detail(id));
+
+      // Optimistically update the list cache
+      if (previousProjets) {
+        queryClient.setQueryData<Projet[]>(
+          queryKeys.projets.list(),
+          previousProjets.map((projet) =>
+            projet.id === id ? { ...projet, ...data } : projet
+          )
+        );
+      }
+
+      // Optimistically update the detail cache
+      if (previousProjet) {
+        queryClient.setQueryData<Projet>(queryKeys.projets.detail(id), {
+          ...previousProjet,
+          ...data,
+        });
+      }
+
+      return { previousProjets, previousProjet };
+    },
+    onError: (_, variables, context) => {
+      // Rollback on error
+      if (context?.previousProjets) {
+        queryClient.setQueryData(queryKeys.projets.list(), context.previousProjets);
+      }
+      if (context?.previousProjet) {
+        queryClient.setQueryData(queryKeys.projets.detail(variables.id), context.previousProjet);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.detail(variables.id) });
     },
   });
 }

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 import type { Contact, ProspectStatus, ProspectSource, RdvType } from "@/types";
 
 // Extended prospect type with client name
@@ -59,7 +60,7 @@ function getEndOfWeek(): string {
  */
 export function useProspects(filters?: ProspectFilters) {
   return useQuery({
-    queryKey: ["prospects", filters],
+    queryKey: queryKeys.prospects.list(filters),
     queryFn: async () => {
       let query = supabase
         .from("contacts")
@@ -121,7 +122,7 @@ export function useProspects(filters?: ProspectFilters) {
  */
 export function useProspect(id: string | undefined) {
   return useQuery({
-    queryKey: ["prospect", id],
+    queryKey: queryKeys.prospects.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Prospect ID required");
 
@@ -145,7 +146,7 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
   const { data: prospects, isLoading: prospectsLoading } = useProspects(filters);
 
   return useQuery({
-    queryKey: ["prospects-with-clients", filters],
+    queryKey: queryKeys.prospects.withClients(filters),
     queryFn: async (): Promise<Prospect[]> => {
       // Return empty array if no prospects (important for filters!)
       if (!prospects || prospects.length === 0) return [];
@@ -246,10 +247,9 @@ export function useUpdateProspectStatus() {
       return mapToContact(data);
     },
     onSuccess: async (_, variables) => {
-      await queryClient.refetchQueries({ queryKey: ["prospects"] });
-      await queryClient.refetchQueries({ queryKey: ["prospects-with-clients"] });
-      queryClient.invalidateQueries({ queryKey: ["prospect", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
     },
   });
 }
@@ -377,10 +377,9 @@ export function useCreateProspect() {
     },
     onSuccess: async () => {
       // Force refetch in correct order (prospects first, then derived queries)
-      await queryClient.refetchQueries({ queryKey: ["prospects"] });
-      await queryClient.refetchQueries({ queryKey: ["prospects-with-clients"] });
-      await queryClient.refetchQueries({ queryKey: ["clients"] });
-      queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
+      await queryClient.refetchQueries({ queryKey: queryKeys.clients.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
     },
   });
 }
@@ -392,7 +391,7 @@ export function useProspectionKPIs() {
   const { data: prospects } = useProspects();
 
   return useQuery({
-    queryKey: ["prospection-kpis", prospects?.map(p => p.id)],
+    queryKey: queryKeys.prospects.kpis(prospects?.map(p => p.id)),
     queryFn: async () => {
       if (!prospects) return null;
 
@@ -439,7 +438,7 @@ export function useProspectionKPIs() {
  */
 export function useRappelsAujourdhui(userId?: string) {
   return useQuery({
-    queryKey: ["prospects-rappels-aujourdhui", userId],
+    queryKey: queryKeys.prospects.rappelsAujourdhui(userId),
     queryFn: async () => {
       const today = getToday();
 
@@ -494,7 +493,7 @@ export function useRappelsAujourdhui(userId?: string) {
  */
 export function useRdvAujourdhui(userId?: string) {
   return useQuery({
-    queryKey: ["prospects-rdv-aujourdhui", userId],
+    queryKey: queryKeys.prospects.rdvAujourdhui(userId),
     queryFn: async () => {
       const today = getToday();
 
@@ -549,7 +548,7 @@ export function useRdvAujourdhui(userId?: string) {
  */
 export function usePastRdvProspects() {
   return useQuery({
-    queryKey: ["prospects-past-rdv"],
+    queryKey: queryKeys.prospects.pastRdv(),
     queryFn: async () => {
       const today = getToday();
 

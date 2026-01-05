@@ -2,94 +2,94 @@
 // Based on Supabase schema
 
 // =============================================================================
-// ENUMS & CONSTANTS
+// ENUMS & CONSTANTS - Imported from centralized constants
 // =============================================================================
 
-export const CLIENT_TYPES = ["PME", "ETI", "Grand Compte", "Startup", "Association"] as const;
-export type ClientType = (typeof CLIENT_TYPES)[number];
+// Import for internal use
+import type {
+  ClientType as _ClientType,
+  ClientStatus as _ClientStatus,
+  OpportunityStatus as _OpportunityStatus,
+  ProjectStatus as _ProjectStatus,
+  TaskStatus as _TaskStatus,
+  TaskPriority as _TaskPriority,
+  InvoiceStatus as _InvoiceStatus,
+  InteractionType as _InteractionType,
+  ProspectStatus as _ProspectStatus,
+  ProspectSource as _ProspectSource,
+  FirstContactType as _FirstContactType,
+  InitialStatus as _InitialStatus,
+  RdvType as _RdvType,
+  DevisStatus as _DevisStatus,
+  TeamRole as _TeamRole,
+} from "./constants";
 
-export const CLIENT_STATUSES = ["Prospect", "Actif", "Inactif", "Churned"] as const;
-export type ClientStatus = (typeof CLIENT_STATUSES)[number];
+// Re-export everything for external consumers
+export {
+  // Client
+  CLIENT_TYPES,
+  CLIENT_STATUSES,
+  type ClientType,
+  type ClientStatus,
+  // Opportunites
+  OPPORTUNITY_STATUSES,
+  OPPORTUNITY_STATUS_COLORS,
+  type OpportunityStatus,
+  // Projets
+  PROJECT_STATUSES,
+  PROJECT_STATUS_COLORS,
+  type ProjectStatus,
+  // Taches
+  TASK_STATUSES,
+  TASK_PRIORITIES,
+  TASK_PRIORITY_COLORS,
+  type TaskStatus,
+  type TaskPriority,
+  // Factures
+  INVOICE_STATUSES,
+  INVOICE_STATUS_COLORS,
+  type InvoiceStatus,
+  // Interactions
+  INTERACTION_TYPES,
+  INTERACTION_TYPE_ICONS,
+  type InteractionType,
+  // Prospection
+  PROSPECT_STATUSES,
+  PROSPECT_STATUS_COLORS,
+  PROSPECT_SOURCES,
+  FIRST_CONTACT_TYPES,
+  INITIAL_STATUTS,
+  RDV_TYPES,
+  type ProspectStatus,
+  type ProspectSource,
+  type FirstContactType,
+  type InitialStatus,
+  type RdvType,
+  // Devis
+  DEVIS_STATUSES,
+  DEVIS_STATUS_LABELS,
+  DEVIS_STATUS_COLORS,
+  type DevisStatus,
+  // Equipe
+  TEAM_ROLES,
+  TEAM_ROLE_LABELS,
+  type TeamRole,
+  // Defaults
+  DEFAULTS,
+} from "./constants";
 
-// Note: "Lead" n'est plus un statut d'opportunité - les leads sont gérés dans /prospection
-export const OPPORTUNITY_STATUSES = [
-  "Qualifié",
-  "Proposition",
-  "Négociation",
-  "Gagné",
-  "Perdu",
-] as const;
-export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number];
-
-export const PROJECT_STATUSES = [
-  "Cadrage",
-  "En cours",
-  "En pause",
-  "Terminé",
-  "Annulé",
-] as const;
-export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
-
-export const TASK_STATUSES = ["À faire", "En cours", "En revue", "Terminé"] as const;
-export type TaskStatus = (typeof TASK_STATUSES)[number];
-
-export const TASK_PRIORITIES = ["Basse", "Moyenne", "Haute", "Critique"] as const;
-export type TaskPriority = (typeof TASK_PRIORITIES)[number];
-
-export const INVOICE_STATUSES = ["Brouillon", "Envoyé", "Payé", "Annulé"] as const;
-export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
-
-export const INTERACTION_TYPES = [
-  "Email",
-  "Appel",
-  "Réunion",
-  "Note",
-  "Autre",
-] as const;
-export type InteractionType = (typeof INTERACTION_TYPES)[number];
-
-// Prospection
-export const PROSPECT_STATUSES = [
-  "À appeler",
-  "Appelé - pas répondu",
-  "Rappeler",
-  "RDV planifié",
-  "RDV effectué",
-  "Qualifié",
-  "Non qualifié",
-  "Perdu",
-] as const;
-export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
-
-export const PROSPECT_SOURCES = [
-  "Appel entrant",
-  "LinkedIn",
-  "Site web",
-  "Salon",
-  "Recommandation",
-  "Achat liste",
-  "Autre",
-] as const;
-export type ProspectSource = (typeof PROSPECT_SOURCES)[number];
-
-// Rôles Supabase (valeurs stockées en DB)
-export const TEAM_ROLES = [
-  "admin",
-  "developpeur_nocode",
-  "developpeur_automatisme",
-  "commercial",
-  "client",
-] as const;
-export type TeamRole = (typeof TEAM_ROLES)[number];
-
-// Labels français pour l'affichage
-export const TEAM_ROLE_LABELS: Record<TeamRole, string> = {
-  admin: "Admin",
-  developpeur_nocode: "Développeur NoCode",
-  developpeur_automatisme: "Développeur Automatisme",
-  commercial: "Commercial",
-  client: "Client",
-};
+// Local type aliases for internal use in interfaces
+type ClientStatus = _ClientStatus;
+type OpportunityStatus = _OpportunityStatus;
+type ProjectStatus = _ProjectStatus;
+type TaskStatus = _TaskStatus;
+type TaskPriority = _TaskPriority;
+type InvoiceStatus = _InvoiceStatus;
+type InteractionType = _InteractionType;
+type ProspectStatus = _ProspectStatus;
+type ProspectSource = _ProspectSource;
+type RdvType = _RdvType;
+type TeamRole = _TeamRole;
 
 // =============================================================================
 // BASE ENTITY INTERFACE
@@ -131,10 +131,6 @@ export interface Client extends BaseEntity {
 // =============================================================================
 // T2 - CONTACTS
 // =============================================================================
-
-// Type de RDV
-export const RDV_TYPES = ["Visio", "Présentiel"] as const;
-export type RdvType = (typeof RDV_TYPES)[number];
 
 export interface Contact extends BaseEntity {
   nom: string;
@@ -453,21 +449,6 @@ export interface DevisData {
   totalTTC: number;
   conditionsPaiement: string;
 }
-
-// =============================================================================
-// DEVIS STORED (Historique)
-// =============================================================================
-
-export const DEVIS_STATUSES = ["brouillon", "envoye", "accepte", "refuse", "expire"] as const;
-export type DevisStatus = (typeof DEVIS_STATUSES)[number];
-
-export const DEVIS_STATUS_LABELS: Record<DevisStatus, string> = {
-  brouillon: "Brouillon",
-  envoye: "Envoyé",
-  accepte: "Accepté",
-  refuse: "Refusé",
-  expire: "Expiré",
-};
 
 // =============================================================================
 // FACTURE DATA - For PDF Generation

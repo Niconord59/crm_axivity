@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
+import { sendDevisSchema } from "@/lib/schemas/api";
+import { NotFoundError, ValidationError, ExternalServiceError } from "@/lib/errors";
 
 // Create a Supabase client with service role for server-side operations
 const supabase = createClient(
@@ -194,14 +197,7 @@ function generateQuoteEmailHTML(data: {
 
 export async function POST(request: NextRequest) {
   try {
-    const { devisId, recipientEmail, customMessage } = await request.json();
-
-    if (!devisId) {
-      return NextResponse.json(
-        { error: "devisId is required" },
-        { status: 400 }
-      );
-    }
+    const { devisId, recipientEmail, customMessage } = await validateRequestBody(request, sendDevisSchema);
 
     // Fetch devis with related data
     const { data: devis, error: devisError } = await supabase
@@ -216,10 +212,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (devisError || !devis) {
-      return NextResponse.json(
-        { error: "Devis not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("Devis non trouvé");
     }
 
     // Get recipient email
@@ -230,10 +223,7 @@ export async function POST(request: NextRequest) {
     const toEmail = recipientEmail || contact?.email;
 
     if (!toEmail) {
-      return NextResponse.json(
-        { error: "No recipient email provided and contact has no email" },
-        { status: 400 }
-      );
+      throw new ValidationError("Aucune adresse email fournie et le contact n'a pas d'email");
     }
 
     // Get company settings
@@ -265,10 +255,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Failed to send email" },
-        { status: 500 }
-      );
+      throw new ExternalServiceError("Email (Resend)", { error: result.error });
     }
 
     // Update devis status to "envoye" and set date_envoi
@@ -285,10 +272,6 @@ export async function POST(request: NextRequest) {
       message: `Email sent to ${toEmail}`,
     });
   } catch (error) {
-    console.error("Error sending devis email:", error);
-    return NextResponse.json(
-      { error: "Error sending email", details: String(error) },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

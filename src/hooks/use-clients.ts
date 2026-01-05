@@ -2,33 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
+import { mapToClient, mapClientToInsert, mapClientToUpdate } from "@/lib/mappers";
 import type { Client } from "@/types";
-
-// Mapper Supabase -> Client type
-function mapToClient(record: Record<string, unknown>): Client {
-  return {
-    id: record.id as string,
-    nom: (record.nom as string) || "",
-    secteurActivite: record.secteur as string | undefined,
-    statut: record.statut as Client["statut"],
-    siteWeb: record.site_web as string | undefined,
-    telephone: record.telephone as string | undefined,
-    notes: record.notes as string | undefined,
-    dateCreation: record.created_at as string | undefined,
-    // Billing / Address fields
-    siret: record.siret as string | undefined,
-    adresse: record.adresse as string | undefined,
-    codePostal: record.code_postal as string | undefined,
-    ville: record.ville as string | undefined,
-    pays: record.pays as string | undefined,
-    // Calculated fields
-    santeClient: record.sante_client as string | undefined,
-  };
-}
 
 export function useClients(options?: { statut?: string; secteur?: string }) {
   return useQuery({
-    queryKey: ["clients", options],
+    queryKey: queryKeys.clients.list(options),
     queryFn: async () => {
       let query = supabase
         .from("clients")
@@ -52,7 +32,7 @@ export function useClients(options?: { statut?: string; secteur?: string }) {
 
 export function useClient(id: string | undefined) {
   return useQuery({
-    queryKey: ["client", id],
+    queryKey: queryKeys.clients.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Client ID required");
 
@@ -74,19 +54,7 @@ export function useCreateClient() {
 
   return useMutation({
     mutationFn: async (data: Partial<Client>) => {
-      const insertData = {
-        nom: data.nom,
-        secteur: data.secteurActivite,
-        statut: data.statut || "Prospect",
-        site_web: data.siteWeb,
-        telephone: data.telephone,
-        notes: data.notes,
-        siret: data.siret,
-        adresse: data.adresse,
-        code_postal: data.codePostal,
-        ville: data.ville,
-        pays: data.pays || "France",
-      };
+      const insertData = mapClientToInsert(data);
 
       const { data: record, error } = await supabase
         .from("clients")
@@ -98,7 +66,7 @@ export function useCreateClient() {
       return mapToClient(record);
     },
     onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["clients"] });
+      await queryClient.refetchQueries({ queryKey: queryKeys.clients.all });
     },
   });
 }
@@ -108,19 +76,7 @@ export function useUpdateClient() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Client> }) => {
-      const updateData: Record<string, unknown> = {};
-
-      if (data.nom !== undefined) updateData.nom = data.nom;
-      if (data.secteurActivite !== undefined) updateData.secteur = data.secteurActivite;
-      if (data.statut !== undefined) updateData.statut = data.statut;
-      if (data.siteWeb !== undefined) updateData.site_web = data.siteWeb;
-      if (data.telephone !== undefined) updateData.telephone = data.telephone;
-      if (data.notes !== undefined) updateData.notes = data.notes;
-      if (data.siret !== undefined) updateData.siret = data.siret;
-      if (data.adresse !== undefined) updateData.adresse = data.adresse;
-      if (data.codePostal !== undefined) updateData.code_postal = data.codePostal;
-      if (data.ville !== undefined) updateData.ville = data.ville;
-      if (data.pays !== undefined) updateData.pays = data.pays;
+      const updateData = mapClientToUpdate(data);
 
       const { data: record, error } = await supabase
         .from("clients")
@@ -133,8 +89,8 @@ export function useUpdateClient() {
       return mapToClient(record);
     },
     onSuccess: async (_, variables) => {
-      await queryClient.refetchQueries({ queryKey: ["clients"] });
-      queryClient.invalidateQueries({ queryKey: ["client", variables.id] });
+      await queryClient.refetchQueries({ queryKey: queryKeys.clients.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(variables.id) });
     },
   });
 }
@@ -152,7 +108,7 @@ export function useDeleteClient() {
       if (error) throw error;
     },
     onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["clients"] });
+      await queryClient.refetchQueries({ queryKey: queryKeys.clients.all });
     },
   });
 }

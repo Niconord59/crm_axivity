@@ -105,6 +105,10 @@ const invoiceStatusConfig: Record<
     label: "Annulé",
     className: "bg-red-100 text-red-800 hover:bg-red-100",
   },
+  "En retard": {
+    label: "En retard",
+    className: "bg-amber-100 text-amber-800 hover:bg-amber-100",
+  },
 };
 
 // Task Priority

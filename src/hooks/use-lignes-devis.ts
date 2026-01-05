@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 import type { LigneDevis } from "@/types";
 
 // Mapper Supabase -> LigneDevis type
@@ -24,7 +25,7 @@ function mapToLigneDevis(record: Record<string, unknown>): LigneDevis {
 
 export function useLignesDevis(opportuniteId: string | undefined) {
   return useQuery({
-    queryKey: ["lignes-devis", opportuniteId],
+    queryKey: queryKeys.lignesDevis.list(opportuniteId || ""),
     queryFn: async () => {
       if (!opportuniteId) throw new Error("Opportunite ID required");
 
@@ -91,7 +92,7 @@ export function useCreateLigneDevis() {
     },
     onSuccess: async (_, variables) => {
       await queryClient.refetchQueries({
-        queryKey: ["lignes-devis", variables.opportuniteId]
+        queryKey: queryKeys.lignesDevis.list(variables.opportuniteId)
       });
     },
   });
@@ -132,7 +133,7 @@ export function useUpdateLigneDevis() {
     },
     onSuccess: async (_, variables) => {
       await queryClient.refetchQueries({
-        queryKey: ["lignes-devis", variables.opportuniteId]
+        queryKey: queryKeys.lignesDevis.list(variables.opportuniteId)
       });
     },
   });
@@ -153,7 +154,7 @@ export function useDeleteLigneDevis() {
     },
     onSuccess: async (_, variables) => {
       await queryClient.refetchQueries({
-        queryKey: ["lignes-devis", variables.opportuniteId]
+        queryKey: queryKeys.lignesDevis.list(variables.opportuniteId)
       });
     },
   });

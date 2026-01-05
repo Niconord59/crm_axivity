@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 import type { CatalogueService } from "@/types";
 
 // Mapper Supabase -> CatalogueService type
@@ -25,7 +26,7 @@ interface UseServicesOptions {
 
 export function useServices(options?: UseServicesOptions) {
   return useQuery({
-    queryKey: ["services", options],
+    queryKey: queryKeys.services.list(options),
     queryFn: async () => {
       let query = supabase
         .from("catalogue_services")
@@ -52,7 +53,7 @@ export function useServices(options?: UseServicesOptions) {
 
 export function useService(id: string | undefined) {
   return useQuery({
-    queryKey: ["service", id],
+    queryKey: queryKeys.services.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Service ID required");
 
@@ -72,7 +73,7 @@ export function useService(id: string | undefined) {
 // Get unique categories for filtering/grouping
 export function useServiceCategories() {
   return useQuery({
-    queryKey: ["service-categories"],
+    queryKey: queryKeys.services.categories(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("catalogue_services")
@@ -131,8 +132,8 @@ export function useCreateService() {
       return mapToService(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["services"] });
-      queryClient.invalidateQueries({ queryKey: ["service-categories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.categories() });
     },
   });
 }
@@ -172,9 +173,9 @@ export function useUpdateService() {
       return mapToService(record);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["services"] });
-      queryClient.invalidateQueries({ queryKey: ["service", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["service-categories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.categories() });
     },
   });
 }
@@ -193,8 +194,8 @@ export function useDeleteService() {
       return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["services"] });
-      queryClient.invalidateQueries({ queryKey: ["service-categories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.categories() });
     },
   });
 }
@@ -215,8 +216,8 @@ export function useToggleServiceActive() {
       return mapToService(record);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["services"] });
-      queryClient.invalidateQueries({ queryKey: ["service", variables.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.detail(variables.id) });
     },
   });
 }

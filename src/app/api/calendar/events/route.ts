@@ -1,71 +1,59 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getCalendarEvents, createCalendarEvent } from "@/lib/services/calendar-service";
+import { handleApiError } from "@/lib/api-error-handler";
+import { UnauthorizedError, ValidationError, ExternalServiceError } from "@/lib/errors";
 import type { CreateEventInput } from "@/lib/google-calendar";
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-
-  if (!session?.accessToken) {
-    return NextResponse.json(
-      { error: "Non authentifié" },
-      { status: 401 }
-    );
-  }
-
-  const searchParams = request.nextUrl.searchParams;
-  const timeMin = searchParams.get("timeMin");
-  const timeMax = searchParams.get("timeMax");
-
-  if (!timeMin || !timeMax) {
-    return NextResponse.json(
-      { error: "timeMin et timeMax sont requis" },
-      { status: 400 }
-    );
-  }
-
   try {
+    const session = await auth();
+
+    if (!session?.accessToken) {
+      throw new UnauthorizedError();
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const timeMin = searchParams.get("timeMin");
+    const timeMax = searchParams.get("timeMax");
+
+    if (!timeMin || !timeMax) {
+      throw new ValidationError("timeMin et timeMax sont requis", {
+        timeMin: timeMin ? undefined : "Requis",
+        timeMax: timeMax ? undefined : "Requis",
+      });
+    }
+
     const provider = session.provider || "google";
     const result = await getCalendarEvents(provider, session.accessToken, timeMin, timeMax);
 
     if (result.error) {
-      console.error(`${provider} Calendar API error:`, result.error);
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
-      );
+      throw new ExternalServiceError(`Calendar (${provider})`, { error: result.error });
     }
 
-    // Return in same format as before for backwards compatibility
     return NextResponse.json({ items: result.events });
   } catch (error) {
-    console.error("Calendar fetch error:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session?.accessToken) {
-    return NextResponse.json(
-      { error: "Non authentifié" },
-      { status: 401 }
-    );
-  }
-
   try {
+    const session = await auth();
+
+    if (!session?.accessToken) {
+      throw new UnauthorizedError();
+    }
+
     const body = await request.json();
 
     // Validate required fields
     if (!body.summary || !body.start || !body.end) {
-      return NextResponse.json(
-        { error: "summary, start et end sont requis" },
-        { status: 400 }
-      );
+      throw new ValidationError("summary, start et end sont requis", {
+        summary: body.summary ? undefined : "Requis",
+        start: body.start ? undefined : "Requis",
+        end: body.end ? undefined : "Requis",
+      });
     }
 
     const provider = session.provider || "google";
@@ -79,26 +67,17 @@ export async function POST(request: NextRequest) {
       timeZone: body.start.timeZone,
       attendeeEmails: body.attendees?.map((a: { email: string }) => a.email),
       location: body.location,
-      // Determine meeting type from the body
       meetingType: body.conferenceData ? "visio" : body.location ? "presentiel" : undefined,
     };
 
     const result = await createCalendarEvent(provider, session.accessToken, input);
 
     if (result.error) {
-      console.error(`${provider} Calendar API error:`, result.error);
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
-      );
+      throw new ExternalServiceError(`Calendar (${provider})`, { error: result.error });
     }
 
     return NextResponse.json(result.event);
   } catch (error) {
-    console.error("Calendar create error:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

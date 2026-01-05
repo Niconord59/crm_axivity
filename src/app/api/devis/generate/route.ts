@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateDevisHTML } from "@/lib/templates/devis-template";
+import { generatePDF } from "@/lib/pdf/browser-pool";
+import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
+import { generateDevisSchema } from "@/lib/schemas/api";
+import { NotFoundError, DatabaseError } from "@/lib/errors";
 import type { DevisData, DevisCompanyInfo, LigneDevis } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
@@ -35,14 +38,7 @@ function getValidityDate(days: number = 30): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { opportuniteId } = await request.json();
-
-    if (!opportuniteId) {
-      return NextResponse.json(
-        { error: "opportuniteId is required" },
-        { status: 400 }
-      );
-    }
+    const { opportuniteId } = await validateRequestBody(request, generateDevisSchema);
 
     // Fetch opportunity with client and contact
     const { data: opportunite, error: oppError } = await supabase
@@ -75,10 +71,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (oppError || !opportunite) {
-      return NextResponse.json(
-        { error: "Opportunity not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("Opportunité non trouvée");
     }
 
     // Fetch company settings
@@ -131,10 +124,7 @@ export async function POST(request: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (lignesError) {
-      return NextResponse.json(
-        { error: "Error fetching quote lines" },
-        { status: 500 }
-      );
+      throw new DatabaseError("Erreur lors de la récupération des lignes du devis", { error: lignesError.message });
     }
 
     // Map lines to LigneDevis type
@@ -208,30 +198,8 @@ export async function POST(request: NextRequest) {
     // Generate HTML
     const html = generateDevisHTML(devisData);
 
-    // Generate PDF with Puppeteer
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "20mm",
-        right: "15mm",
-        bottom: "20mm",
-        left: "15mm",
-      },
-    });
-
-    await browser.close();
-
-    // Convert Uint8Array to Buffer for NextResponse
-    const buffer = Buffer.from(pdfBuffer);
+    // Generate PDF using browser pool
+    const buffer = await generatePDF(html);
 
     // Save devis record to database
     const pdfFilename = `${numeroDevis}.pdf`;
@@ -284,8 +252,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Return PDF
-    return new NextResponse(buffer, {
+    // Return PDF - cast to BodyInit for Response compatibility
+    return new Response(buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
@@ -295,10 +263,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error generating PDF:", error);
-    return NextResponse.json(
-      { error: "Error generating PDF", details: String(error) },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

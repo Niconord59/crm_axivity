@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-23
+Auto-generated from all feature plans. Last updated: 2025-12-24
 
 ## Active Technologies
 
@@ -19,28 +19,46 @@ src/
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
 │   ├── opportunites/       # Pipeline commercial (OpportunityCard, OpportunityMiniSheet)
+│   │   ├── widgets/        # AmountSelector, ProbabilitySlider, ManualNoteForm
+│   │   └── tabs/           # OpportunityInfoTab, OpportunityHistoryTab
 │   ├── devis/              # Génération de devis (QuoteEditorSheet, ServiceSelector)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
 ├── hooks/                  # React Query hooks (16 hooks Supabase)
+│   └── __tests__/          # Tests des hooks
 ├── lib/
 │   ├── supabase.ts         # Supabase client
 │   ├── auth.ts             # NextAuth.js config (Google + Microsoft)
 │   ├── utils.ts            # Helpers (cn, formatters)
+│   ├── queryKeys.ts        # React Query key factory (centralisé)
+│   ├── errors.ts           # Types d'erreurs (AppError hierarchy)
+│   ├── api-error-handler.ts # Handler erreurs API centralisé
 │   ├── schemas/            # Zod validation schemas
+│   ├── mappers/            # Data mappers Supabase → TypeScript
+│   ├── pdf/                # Browser pool pour génération PDF
 │   ├── services/           # Calendar & Email services (multi-provider)
 │   ├── templates/          # PDF templates (devis-template.ts)
+│   ├── __tests__/          # Tests des utilitaires
 │   └── tour-steps.ts       # Configuration des étapes du tour
+├── test/                   # Configuration et utilitaires de test
+│   ├── setup.ts            # Setup global Vitest
+│   ├── utils.tsx           # Render wrapper React Query
+│   └── mocks/              # Mocks (Supabase, etc.)
 ├── providers/              # React Query + Onboarding providers
 └── types/                  # TypeScript definitions
+    └── constants.ts        # Enums centralisés (statuts, etc.)
 ```
 
 ## Commands
 
 ```bash
-npm run dev     # Development server
-npm run build   # Production build
-npm run lint    # ESLint
-npm start       # Production server
+npm run dev           # Development server
+npm run build         # Production build
+npm run lint          # ESLint
+npm start             # Production server
+npm test              # Run tests with Vitest
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+npm run test:ui       # Vitest UI
 ```
 
 ## Code Style
@@ -194,6 +212,35 @@ npm start       # Production server
 - **Migration SQL**:
   - `19_factures_numerotation.sql` : Compteur séquentiel FAC-YYYY-NNN
 
+### 007-refactorisation (Refactorisation & Scalabilité - COMPLETE)
+- **Status**: 100% - 57/57 tâches
+- **Specs**: `specs/007-refactorisation/`
+- **Content**:
+  - **Phase 1 - Tests** : 125 tests avec Vitest + Testing Library
+  - **Phase 2 - Centralisation** : Enums, Query Keys factory, Mappers centralisés
+  - **Phase 3 - Refactoring** : OpportunityMiniSheet décomposé (660 → 268 lignes, -60%)
+  - **Phase 4 - Erreurs** : Types d'erreurs standardisés, handler API (8 routes)
+  - **Phase 5 - Optimisations** : React.memo, optimistic updates, browser pool Puppeteer
+- **Nouveaux fichiers**:
+  - `vitest.config.ts` : Configuration Vitest
+  - `src/test/setup.ts` : Setup global Vitest (jsdom, mocks)
+  - `src/test/utils.tsx` : Render wrapper avec React Query
+  - `src/test/mocks/supabase.ts` : Mock Supabase client
+  - `src/types/constants.ts` : Enums centralisés (tous les statuts)
+  - `src/lib/queryKeys.ts` : Factory query keys pour tous les hooks
+  - `src/lib/errors.ts` : Hiérarchie AppError (8 types)
+  - `src/lib/api-error-handler.ts` : `handleApiError()` + `validateRequestBody()`
+  - `src/lib/schemas/api.ts` : Schemas Zod pour validation API
+  - `src/lib/mappers/*.ts` : 6 mappers centralisés
+  - `src/lib/pdf/browser-pool.ts` : Pool Puppeteer réutilisable
+  - `src/components/opportunites/widgets/` : 4 widgets extraits
+  - `src/components/opportunites/tabs/` : 2 onglets extraits
+- **Métriques atteintes**:
+  - 125 tests passent (Vitest)
+  - OpportunityMiniSheet: 268 lignes (-60%)
+  - Query keys: 100% centralisées
+  - API routes avec handler: 100% (8/8)
+
 ## Documentation
 
 | Fichier | Description |
@@ -202,6 +249,7 @@ npm start       # Production server
 | `Ameliorations_Phase2_Roadmap.md` | Roadmap des améliorations Phase 2 |
 | `Guide de Construction _ Base Airtable pour Agence IA.md` | Guide de construction de la base Airtable originale |
 | `Migration_Supabase_Plan.md` | Plan de migration Airtable → Supabase |
+| `Refactorisation_Scalabilite_Plan.md` | Plan de refactorisation et scalabilité |
 
 ## Specs (Spécifications par feature)
 
@@ -213,6 +261,7 @@ npm start       # Production server
 | `specs/004-onboarding-tour/` | Tour guidé onboarding | ✅ Complet |
 | `specs/005-supabase-migration/` | Migration Supabase | ✅ Complet |
 | `specs/006-devis/` | Module Devis & Factures | ✅ Complet |
+| `specs/007-refactorisation/` | Refactorisation & Scalabilité | ✅ Complet |
 
 ## Supabase (Backend)
 
@@ -457,6 +506,15 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Nouveau composant: `OpportunityMiniSheet.tsx`
   - Nouveau composant UI: `slider.tsx` (shadcn/ui)
 - **LeadCard cliquable** (23 déc. 2025) : Clic direct sur la carte pour ouvrir le formulaire
+- **007-refactorisation COMPLET** (24 déc. 2025) : Refactorisation et optimisations
+  - **Phase 1 - Tests** : 125 tests Vitest (utils, hooks, composants)
+  - **Phase 2 - Centralisation** : `queryKeys.ts`, `constants.ts`, `lib/mappers/`
+  - **Phase 3 - Refactoring** : OpportunityMiniSheet 660 → 268 lignes (-60%)
+  - **Phase 4 - Erreurs** : `errors.ts` + `api-error-handler.ts` (8 routes migrées)
+  - **Phase 5 - Optimisations** :
+    - `React.memo` sur OpportunityCard, LeadCard, EventCard
+    - Optimistic updates sur 5 mutations (useUpdateOpportunite, useUpdateTache, etc.)
+    - `lib/pdf/browser-pool.ts` : Pool Puppeteer réutilisable pour PDF
 
 ## Production Checklist
 

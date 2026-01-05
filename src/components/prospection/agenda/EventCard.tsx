@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { cn } from "@/lib/utils";
 import { CalendarEvent, formatTime } from "@/lib/google-calendar";
 import { ExternalLink } from "lucide-react";
@@ -10,7 +11,7 @@ interface EventCardProps {
   compact?: boolean;
 }
 
-export function EventCard({ event, className, compact = false }: EventCardProps) {
+export const EventCard = React.memo(function EventCard({ event, className, compact = false }: EventCardProps) {
   const startTime = new Date(event.start.dateTime);
   const endTime = new Date(event.end.dateTime);
 
@@ -79,4 +80,6 @@ export function EventCard({ event, className, compact = false }: EventCardProps)
       )}
     </div>
   );
-}
+});
+
+EventCard.displayName = "EventCard";

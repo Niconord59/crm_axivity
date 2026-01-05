@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 import type { MembreEquipe, TeamRole } from "@/types";
 
 interface TacheData {
@@ -45,7 +46,7 @@ function mapToMembreEquipe(
 
 export function useEquipe(options?: { role?: TeamRole }) {
   return useQuery({
-    queryKey: ["equipe", options],
+    queryKey: queryKeys.equipe.list(options),
     queryFn: async () => {
       // 1. Récupérer les membres de l'équipe avec leurs profiles
       let query = supabase
@@ -102,7 +103,7 @@ export function useEquipe(options?: { role?: TeamRole }) {
 
 export function useMembreEquipe(id: string | undefined) {
   return useQuery({
-    queryKey: ["membre-equipe", id],
+    queryKey: queryKeys.equipe.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Membre équipe ID required");
 
@@ -121,7 +122,7 @@ export function useMembreEquipe(id: string | undefined) {
 
 export function useChargeEquipe() {
   return useQuery({
-    queryKey: ["equipe", "charge"],
+    queryKey: queryKeys.equipe.charge(),
     queryFn: async () => {
       // 1. Récupérer les membres de l'équipe avec leurs profiles
       const { data: equipeData, error: equipeError } = await supabase
@@ -197,7 +198,7 @@ export function useCreateMembreEquipe() {
       return mapToMembreEquipe(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["equipe"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipe.all });
     },
   });
 }
@@ -231,8 +232,8 @@ export function useUpdateMembreEquipe() {
       return mapToMembreEquipe(record);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["equipe"] });
-      queryClient.invalidateQueries({ queryKey: ["membre-equipe", variables.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipe.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipe.detail(variables.id) });
     },
   });
 }

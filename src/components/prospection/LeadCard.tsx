@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Phone,
   PhoneCall,
@@ -156,7 +157,7 @@ function getActionButton(status: string | undefined): {
   }
 }
 
-export function LeadCard({
+export const LeadCard = React.memo(function LeadCard({
   prospect,
   onCall,
   onNotQualified,
@@ -413,4 +414,6 @@ export function LeadCard({
       </CardContent>
     </Card>
   );
-}
+});
+
+LeadCard.displayName = "LeadCard";

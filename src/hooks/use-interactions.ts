@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 import type { Interaction, InteractionType } from "@/types";
 
 // Mapper Supabase -> Interaction type
@@ -24,7 +25,7 @@ export function useInteractions(options?: {
   clientId?: string;
 }) {
   return useQuery({
-    queryKey: ["interactions", options],
+    queryKey: queryKeys.interactions.list(options),
     queryFn: async () => {
       let query = supabase
         .from("interactions")
@@ -48,7 +49,7 @@ export function useInteractions(options?: {
 
 export function useInteraction(id: string | undefined) {
   return useQuery({
-    queryKey: ["interaction", id],
+    queryKey: queryKeys.interactions.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Interaction ID required");
 
@@ -90,7 +91,7 @@ export function useCreateInteraction() {
       return mapToInteraction(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["interactions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.interactions.all });
     },
   });
 }
@@ -100,7 +101,7 @@ export function useLastInteractionDate(options?: {
   clientId?: string;
 }) {
   return useQuery({
-    queryKey: ["interactions", "last-date", options],
+    queryKey: queryKeys.interactions.lastDate(options),
     queryFn: async () => {
       if (!options?.contactId && !options?.clientId) return null;
 

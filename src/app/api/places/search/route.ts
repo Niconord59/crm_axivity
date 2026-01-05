@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { handleApiError } from "@/lib/api-error-handler";
+import { ValidationError, ExternalServiceError } from "@/lib/errors";
 
 // Google Places API response types
 interface PlaceResult {
@@ -8,7 +10,7 @@ interface PlaceResult {
   formatted_phone_number?: string;
   international_phone_number?: string;
   website?: string;
-  url?: string; // Google Maps URL
+  url?: string;
   types?: string[];
   business_status?: string;
 }
@@ -50,10 +52,7 @@ export async function POST(request: NextRequest) {
     const { query, city } = await request.json();
 
     if (!query) {
-      return NextResponse.json(
-        { error: "Query is required" },
-        { status: 400 }
-      );
+      throw new ValidationError("La requête de recherche est requise");
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -121,10 +120,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ result });
   } catch (error) {
-    console.error("Error searching Google Places:", error);
-    return NextResponse.json(
-      { error: "Failed to search Google Places", result: null },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Building2,
   Calendar,
@@ -98,7 +99,7 @@ function isOverdue(dateString: string | undefined): boolean {
   return dateString < today;
 }
 
-export function OpportunityCard({
+export const OpportunityCard = React.memo(function OpportunityCard({
   opportunity,
   onStatusChange,
   onOpenQuote,
@@ -261,4 +262,6 @@ export function OpportunityCard({
       </CardContent>
     </Card>
   );
-}
+});
+
+OpportunityCard.displayName = "OpportunityCard";

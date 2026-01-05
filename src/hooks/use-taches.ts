@@ -2,31 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Tache, TaskStatus, TaskPriority } from "@/types";
-
-// Mapper Supabase -> Tache type
-function mapToTache(record: Record<string, unknown>): Tache {
-  const dateEcheance = record.date_echeance as string | undefined;
-  const statut = record.statut as TaskStatus;
-  const today = new Date().toISOString().split("T")[0];
-
-  return {
-    id: record.id as string,
-    nom: (record.titre as string) || "",
-    description: record.description as string | undefined,
-    statut: statut,
-    priorite: record.priorite as TaskPriority,
-    dateEcheance: dateEcheance,
-    heuresEstimees: record.heures_estimees as number | undefined,
-    heuresReelles: record.heures_passees as number | undefined,
-    dateCreation: record.created_at as string | undefined,
-    dateTerminee: record.date_terminee as string | undefined,
-    ordre: record.ordre as number | undefined,
-    estEnRetard: dateEcheance && statut !== "Terminé" ? dateEcheance < today : false,
-    projet: record.projet_id ? [record.projet_id as string] : undefined,
-    membreEquipe: record.assignee_id ? [record.assignee_id as string] : undefined,
-  };
-}
+import { queryKeys } from "@/lib/queryKeys";
+import { mapToTache, mapTacheToInsert, mapTacheToUpdate } from "@/lib/mappers";
+import type { Tache, TaskStatus } from "@/types";
 
 export function useTaches(options?: {
   statut?: TaskStatus;
@@ -34,7 +12,7 @@ export function useTaches(options?: {
   membreEquipeId?: string;
 }) {
   return useQuery({
-    queryKey: ["taches", options],
+    queryKey: queryKeys.taches.list(options),
     queryFn: async () => {
       let query = supabase
         .from("taches")
@@ -62,7 +40,7 @@ export function useTaches(options?: {
 
 export function useTachesEnRetard(userId?: string) {
   return useQuery({
-    queryKey: ["taches", "en-retard", userId],
+    queryKey: queryKeys.taches.enRetard(userId),
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
 
@@ -88,7 +66,7 @@ export function useTachesEnRetard(userId?: string) {
 
 export function useMesTaches(membreEquipeId: string | undefined) {
   return useQuery({
-    queryKey: ["taches", "mes-taches", membreEquipeId],
+    queryKey: queryKeys.taches.mesTaches(membreEquipeId),
     queryFn: async () => {
       if (!membreEquipeId) return [];
 
@@ -109,7 +87,7 @@ export function useMesTaches(membreEquipeId: string | undefined) {
 
 export function useTache(id: string | undefined) {
   return useQuery({
-    queryKey: ["tache", id],
+    queryKey: queryKeys.taches.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Tache ID required");
 
@@ -131,16 +109,7 @@ export function useCreateTache() {
 
   return useMutation({
     mutationFn: async (data: Partial<Tache>) => {
-      const insertData = {
-        titre: data.nom,
-        description: data.description,
-        statut: data.statut || "À faire",
-        priorite: data.priorite || "Moyenne",
-        date_echeance: data.dateEcheance,
-        heures_estimees: data.heuresEstimees,
-        projet_id: data.projet?.[0],
-        assignee_id: data.membreEquipe?.[0],
-      };
+      const insertData = mapTacheToInsert(data);
 
       const { data: record, error } = await supabase
         .from("taches")
@@ -152,8 +121,8 @@ export function useCreateTache() {
       return mapToTache(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taches"] });
-      queryClient.invalidateQueries({ queryKey: ["projets"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taches.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.all });
     },
   });
 }
@@ -163,16 +132,7 @@ export function useUpdateTache() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Tache> }) => {
-      const updateData: Record<string, unknown> = {};
-
-      if (data.nom !== undefined) updateData.titre = data.nom;
-      if (data.description !== undefined) updateData.description = data.description;
-      if (data.statut !== undefined) updateData.statut = data.statut;
-      if (data.priorite !== undefined) updateData.priorite = data.priorite;
-      if (data.dateEcheance !== undefined) updateData.date_echeance = data.dateEcheance;
-      if (data.heuresEstimees !== undefined) updateData.heures_estimees = data.heuresEstimees;
-      if (data.heuresReelles !== undefined) updateData.heures_passees = data.heuresReelles;
-      if (data.membreEquipe !== undefined) updateData.assignee_id = data.membreEquipe?.[0];
+      const updateData = mapTacheToUpdate(data);
 
       const { data: record, error } = await supabase
         .from("taches")
@@ -184,10 +144,48 @@ export function useUpdateTache() {
       if (error) throw error;
       return mapToTache(record);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["taches"] });
-      queryClient.invalidateQueries({ queryKey: ["tache", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["projets"] });
+    // Optimistic update
+    onMutate: async ({ id, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.taches.all });
+
+      // Snapshot previous values
+      const previousTaches = queryClient.getQueryData<Tache[]>(queryKeys.taches.list());
+      const previousTache = queryClient.getQueryData<Tache>(queryKeys.taches.detail(id));
+
+      // Optimistically update the list cache
+      if (previousTaches) {
+        queryClient.setQueryData<Tache[]>(
+          queryKeys.taches.list(),
+          previousTaches.map((tache) =>
+            tache.id === id ? { ...tache, ...data } : tache
+          )
+        );
+      }
+
+      // Optimistically update the detail cache
+      if (previousTache) {
+        queryClient.setQueryData<Tache>(queryKeys.taches.detail(id), {
+          ...previousTache,
+          ...data,
+        });
+      }
+
+      return { previousTaches, previousTache };
+    },
+    onError: (_, variables, context) => {
+      // Rollback on error
+      if (context?.previousTaches) {
+        queryClient.setQueryData(queryKeys.taches.list(), context.previousTaches);
+      }
+      if (context?.previousTache) {
+        queryClient.setQueryData(queryKeys.taches.detail(variables.id), context.previousTache);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.taches.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taches.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.all });
     },
   });
 }
@@ -215,9 +213,55 @@ export function useUpdateTacheStatut() {
       if (error) throw error;
       return mapToTache(record);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taches"] });
-      queryClient.invalidateQueries({ queryKey: ["projets"] });
+    // Optimistic update for status change
+    onMutate: async ({ id, statut }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.taches.all });
+
+      // Snapshot previous values
+      const previousTaches = queryClient.getQueryData<Tache[]>(queryKeys.taches.list());
+      const previousTache = queryClient.getQueryData<Tache>(queryKeys.taches.detail(id));
+
+      // Optimistically update the list cache
+      if (previousTaches) {
+        queryClient.setQueryData<Tache[]>(
+          queryKeys.taches.list(),
+          previousTaches.map((tache) =>
+            tache.id === id
+              ? {
+                  ...tache,
+                  statut,
+                  dateTerminee: statut === "Terminé" ? new Date().toISOString().split("T")[0] : tache.dateTerminee,
+                }
+              : tache
+          )
+        );
+      }
+
+      // Optimistically update the detail cache
+      if (previousTache) {
+        queryClient.setQueryData<Tache>(queryKeys.taches.detail(id), {
+          ...previousTache,
+          statut,
+          dateTerminee: statut === "Terminé" ? new Date().toISOString().split("T")[0] : previousTache.dateTerminee,
+        });
+      }
+
+      return { previousTaches, previousTache };
+    },
+    onError: (_, variables, context) => {
+      // Rollback on error
+      if (context?.previousTaches) {
+        queryClient.setQueryData(queryKeys.taches.list(), context.previousTaches);
+      }
+      if (context?.previousTache) {
+        queryClient.setQueryData(queryKeys.taches.detail(variables.id), context.previousTache);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.taches.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taches.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.all });
     },
   });
 }
@@ -235,8 +279,8 @@ export function useDeleteTache() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taches"] });
-      queryClient.invalidateQueries({ queryKey: ["projets"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taches.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projets.all });
     },
   });
 }

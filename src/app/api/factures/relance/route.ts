@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { differenceInDays } from "date-fns";
+import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
+import { sendRelanceSchema } from "@/lib/schemas/api";
+import { NotFoundError, ValidationError, ExternalServiceError } from "@/lib/errors";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,10 +11,6 @@ const supabase = createClient(
 );
 
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "https://n8n.axivity.cloud";
-
-interface RelanceRequest {
-  factureId: string;
-}
 
 function getRelanceLevel(dateEcheance: string): number {
   const joursRetard = differenceInDays(new Date(), new Date(dateEcheance));
@@ -23,15 +22,7 @@ function getRelanceLevel(dateEcheance: string): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: RelanceRequest = await request.json();
-    const { factureId } = body;
-
-    if (!factureId) {
-      return NextResponse.json(
-        { error: "factureId is required" },
-        { status: 400 }
-      );
-    }
+    const { factureId } = await validateRequestBody(request, sendRelanceSchema);
 
     // 1. Récupérer la facture avec les relations
     const { data: facture, error: factureError } = await supabase
@@ -59,11 +50,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (factureError || !facture) {
-      console.error("Facture not found:", factureError);
-      return NextResponse.json(
-        { error: "Facture not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("Facture non trouvée");
     }
 
     // 2. Récupérer le contact principal du client
@@ -88,19 +75,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!contactEmail) {
-      return NextResponse.json(
-        { error: "Aucun email de contact trouvé pour cette facture" },
-        { status: 400 }
-      );
+      throw new ValidationError("Aucun email de contact trouvé pour cette facture");
     }
 
     // 3. Calculer le niveau de relance
     const niveauRelance = getRelanceLevel(facture.date_echeance);
     if (niveauRelance === 0) {
-      return NextResponse.json(
-        { error: "Cette facture n'est pas en retard" },
-        { status: 400 }
-      );
+      throw new ValidationError("Cette facture n'est pas en retard");
     }
 
     const joursRetard = differenceInDays(
@@ -137,11 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (!n8nResponse.ok) {
       const errorText = await n8nResponse.text();
-      console.error("N8N webhook error:", errorText);
-      return NextResponse.json(
-        { error: "Erreur lors de l'envoi de la relance", details: errorText },
-        { status: 500 }
-      );
+      throw new ExternalServiceError("N8N Webhook", { error: errorText });
     }
 
     const n8nResult = await n8nResponse.json();
@@ -186,10 +163,6 @@ export async function POST(request: NextRequest) {
       facture_id: factureId,
     });
   } catch (error) {
-    console.error("Error in relance API:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

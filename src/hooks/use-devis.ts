@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
 
 // Types
 export type StatutDevis = "brouillon" | "envoye" | "accepte" | "refuse" | "expire";
@@ -115,7 +116,7 @@ interface UseDevisListOptions {
 
 export function useDevisList(options?: UseDevisListOptions) {
   return useQuery({
-    queryKey: ["devis", "list", options],
+    queryKey: queryKeys.devis.list(options),
     queryFn: async () => {
       let query = supabase
         .from("devis")
@@ -149,7 +150,7 @@ export function useDevisList(options?: UseDevisListOptions) {
 
 export function useDevis(id: string | undefined) {
   return useQuery({
-    queryKey: ["devis", id],
+    queryKey: queryKeys.devis.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Devis ID required");
 
@@ -173,7 +174,7 @@ export function useDevis(id: string | undefined) {
 // Get devis for a specific opportunity
 export function useDevisForOpportunite(opportuniteId: string | undefined) {
   return useQuery({
-    queryKey: ["devis", "opportunite", opportuniteId],
+    queryKey: queryKeys.devis.forOpportunite(opportuniteId || ""),
     queryFn: async () => {
       if (!opportuniteId) throw new Error("Opportunite ID required");
 
@@ -252,9 +253,9 @@ export function useCreateDevis() {
       return mapToDevis(record);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["devis"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.all });
       queryClient.invalidateQueries({
-        queryKey: ["devis", "opportunite", variables.opportuniteId],
+        queryKey: queryKeys.devis.forOpportunite(variables.opportuniteId),
       });
     },
   });
@@ -295,8 +296,8 @@ export function useUpdateDevis() {
       return mapToDevis(record);
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["devis"] });
-      queryClient.invalidateQueries({ queryKey: ["devis", result.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.detail(result.id) });
     },
   });
 }
@@ -325,7 +326,7 @@ export function useDeleteDevis() {
       return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["devis"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.all });
     },
   });
 }
@@ -362,8 +363,8 @@ export function useUpdateDevisStatus() {
       return mapToDevis(record);
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["devis"] });
-      queryClient.invalidateQueries({ queryKey: ["devis", result.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.detail(result.id) });
     },
   });
 }
@@ -413,8 +414,8 @@ export function useUploadDevisPDF() {
       return mapToDevis(record);
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["devis"] });
-      queryClient.invalidateQueries({ queryKey: ["devis", result.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devis.detail(result.id) });
     },
   });
 }
@@ -463,7 +464,7 @@ export function useDuplicateDevisLines() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["lignes-devis", variables.targetOpportuniteId],
+        queryKey: queryKeys.lignesDevis.list(variables.targetOpportuniteId),
       });
     },
   });

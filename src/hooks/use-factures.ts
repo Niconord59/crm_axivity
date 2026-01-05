@@ -2,29 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { queryKeys } from "@/lib/queryKeys";
+import { mapToFacture, mapFactureToInsert, mapFactureToUpdate } from "@/lib/mappers";
 import type { Facture, InvoiceStatus } from "@/types";
-
-// Mapper Supabase -> Facture type
-function mapToFacture(record: Record<string, unknown>): Facture {
-  const montantHT = record.montant_ht as number | undefined;
-  const tauxTVA = (record.taux_tva as number) || 20;
-
-  return {
-    id: record.id as string,
-    numero: record.numero as string | undefined,
-    statut: record.statut as InvoiceStatus,
-    montantHT: montantHT,
-    montantTTC: montantHT ? montantHT * (1 + tauxTVA / 100) : undefined,
-    dateEmission: record.date_emission as string | undefined,
-    dateEcheance: record.date_echeance as string | undefined,
-    datePaiement: record.date_paiement as string | undefined,
-    notes: record.notes as string | undefined,
-    niveauRelance: record.niveau_relance as number | undefined,
-    niveauRelanceEnvoye: record.niveau_relance_envoye as number | undefined,
-    projet: record.projet_id ? [record.projet_id as string] : undefined,
-    client: record.client_id ? [record.client_id as string] : undefined,
-  };
-}
 
 export function useFactures(options?: {
   statut?: InvoiceStatus;
@@ -32,7 +12,7 @@ export function useFactures(options?: {
   projetId?: string;
 }) {
   return useQuery({
-    queryKey: ["factures", options],
+    queryKey: queryKeys.factures.list(options),
     queryFn: async () => {
       let query = supabase
         .from("factures")
@@ -59,7 +39,7 @@ export function useFactures(options?: {
 
 export function useFacturesImpayees() {
   return useQuery({
-    queryKey: ["factures", "impayees"],
+    queryKey: queryKeys.factures.impayees(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("factures")
@@ -75,7 +55,7 @@ export function useFacturesImpayees() {
 
 export function useFacturesARelancer() {
   return useQuery({
-    queryKey: ["factures", "a-relancer"],
+    queryKey: queryKeys.factures.aRelancer(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("factures")
@@ -92,7 +72,7 @@ export function useFacturesARelancer() {
 
 export function useFacture(id: string | undefined) {
   return useQuery({
-    queryKey: ["facture", id],
+    queryKey: queryKeys.factures.detail(id || ""),
     queryFn: async () => {
       if (!id) throw new Error("Facture ID required");
 
@@ -114,16 +94,7 @@ export function useCreateFacture() {
 
   return useMutation({
     mutationFn: async (data: Partial<Facture>) => {
-      const insertData = {
-        numero: data.numero,
-        statut: data.statut || "Brouillon",
-        montant_ht: data.montantHT,
-        date_emission: data.dateEmission,
-        date_echeance: data.dateEcheance,
-        notes: data.notes,
-        projet_id: data.projet?.[0],
-        client_id: data.client?.[0],
-      };
+      const insertData = mapFactureToInsert(data);
 
       const { data: record, error } = await supabase
         .from("factures")
@@ -135,7 +106,7 @@ export function useCreateFacture() {
       return mapToFacture(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["factures"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
     },
   });
 }
@@ -145,15 +116,7 @@ export function useUpdateFacture() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Facture> }) => {
-      const updateData: Record<string, unknown> = {};
-
-      if (data.numero !== undefined) updateData.numero = data.numero;
-      if (data.statut !== undefined) updateData.statut = data.statut;
-      if (data.montantHT !== undefined) updateData.montant_ht = data.montantHT;
-      if (data.dateEmission !== undefined) updateData.date_emission = data.dateEmission;
-      if (data.dateEcheance !== undefined) updateData.date_echeance = data.dateEcheance;
-      if (data.datePaiement !== undefined) updateData.date_paiement = data.datePaiement;
-      if (data.notes !== undefined) updateData.notes = data.notes;
+      const updateData = mapFactureToUpdate(data);
 
       const { data: record, error } = await supabase
         .from("factures")
@@ -166,8 +129,8 @@ export function useUpdateFacture() {
       return mapToFacture(record);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["factures"] });
-      queryClient.invalidateQueries({ queryKey: ["facture", variables.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.factures.detail(variables.id) });
     },
   });
 }
@@ -191,7 +154,7 @@ export function useMarquerFacturePayee() {
       return mapToFacture(record);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["factures"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
     },
   });
 }
@@ -226,7 +189,7 @@ export function useEnvoyerRelance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["factures"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
     },
   });
 }
