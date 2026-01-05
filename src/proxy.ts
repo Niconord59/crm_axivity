@@ -25,11 +25,12 @@ export async function proxy(request: NextRequest) {
  * - _next/image (image optimization)
  * - favicon.ico
  * - images folder (public assets)
- * - Static file extensions (svg, png, jpg, jpeg, gif, webp)
+ * - templates folder (email templates for GoTrue)
+ * - Static file extensions (svg, png, jpg, jpeg, gif, webp, html)
  * - API routes (handled separately with their own auth)
  */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|images|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|images|templates|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html)$).*)",
   ],
 };
