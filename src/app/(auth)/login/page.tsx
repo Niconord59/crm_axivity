@@ -140,12 +140,14 @@ function LoginForm() {
               )}
             </Button>
 
+            {/* Auto-inscription désactivée - uniquement invitation admin
             <p className="text-sm text-center text-muted-foreground">
               Pas encore de compte ?{" "}
               <Link href="/register" className="text-primary hover:underline">
                 Créer un compte
               </Link>
             </p>
+            */}
           </CardFooter>
         </form>
       </Card>
