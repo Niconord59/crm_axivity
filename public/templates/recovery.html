@@ -42,7 +42,7 @@
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="text-align: center; padding-bottom: 32px;">
-                    <a href="{{ .ConfirmationURL }}"
+                    <a href="https://supabase.axivity.cloud/auth/v1/verify?token={{ .TokenHash }}&type=recovery&redirect_to=https://crm.axivity.cloud/reset-password"
                        style="display: inline-block; background-color: #dc2626; color: #ffffff;
                               padding: 14px 32px; font-size: 16px; font-weight: 600;
                               text-decoration: none; border-radius: 8px;
@@ -74,7 +74,7 @@
                 Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :
               </p>
               <p style="margin: 8px 0 0 0; color: #0ea5e9; font-size: 12px; word-break: break-all;">
-                {{ .ConfirmationURL }}
+                https://supabase.axivity.cloud/auth/v1/verify?token={{ .TokenHash }}&type=recovery&redirect_to=https://crm.axivity.cloud/reset-password
               </p>
             </td>
           </tr>
