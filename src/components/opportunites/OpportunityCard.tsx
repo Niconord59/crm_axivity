@@ -147,28 +147,6 @@ export const OpportunityCard = React.memo(function OpportunityCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {onOpenQuote && (
-                  <>
-                    <DropdownMenuItem onClick={() => onOpenQuote(opportunity.id)}>
-                      <FileText className="h-4 w-4 mr-2 text-primary" />
-                      Éditer le devis
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem onClick={() => onStatusChange(opportunity.id, "Qualifié")}>
-                  <Target className="h-4 w-4 mr-2 text-blue-500" />
-                  Qualifié
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onStatusChange(opportunity.id, "Proposition")}>
-                  <ArrowRight className="h-4 w-4 mr-2 text-violet-500" />
-                  Proposition
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onStatusChange(opportunity.id, "Négociation")}>
-                  <TrendingUp className="h-4 w-4 mr-2 text-orange-500" />
-                  Négociation
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onStatusChange(opportunity.id, "Gagné")}
                   className="text-emerald-600"
