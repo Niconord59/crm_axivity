@@ -400,60 +400,116 @@ export default function OpportunitesPage() {
 
             {/* Won column */}
             <div className="flex flex-col min-w-0">
-              <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border p-4 h-full">
-                <div className="flex items-center gap-3 mb-3">
+              {/* Column Header */}
+              <div className="rounded-t-xl px-4 py-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-b-0">
+                <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <Trophy className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div className="flex-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <h3 className="font-semibold text-emerald-800 flex items-center gap-1.5 cursor-help">
-                          Gagnées
-                          <HelpCircle className="h-3.5 w-3.5 text-emerald-600/60" />
-                        </h3>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[280px]">
-                        <p>Pour marquer une opportunité comme gagnée : survolez la carte, cliquez sur les 3 points (⋮), puis "Marquer Gagné".</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <p className="text-xs text-emerald-600">
-                      {wonCount} opportunité{wonCount > 1 ? "s" : ""}
+                    <div className="flex items-center justify-between">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <h3 className="font-semibold text-emerald-800 flex items-center gap-1.5 cursor-help">
+                            Gagnées
+                            <HelpCircle className="h-3.5 w-3.5 text-emerald-600/60" />
+                          </h3>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[280px]">
+                          <p>Affaires conclues avec succès. Pour marquer une opportunité comme gagnée : survolez la carte, cliquez sur ⋮, puis "Marquer Gagné".</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <span className="text-sm font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                        {wonCount}
+                      </span>
+                    </div>
+                    <p className="text-sm text-emerald-600 mt-0.5">
+                      {formatCurrency(wonValue)}
                     </p>
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-emerald-700">
-                  {formatCurrency(wonValue)}
+              </div>
+
+              {/* Cards Area */}
+              <div className="flex-1 rounded-b-xl border border-t-0 bg-emerald-50/30 p-3 min-h-[450px]">
+                <div className="space-y-3">
+                  {(opportunitesGroupees?.["Gagné"] || []).map((opp) => (
+                    <OpportunityCard
+                      key={opp.id}
+                      opportunity={opp}
+                      onStatusChange={handleStatusChange}
+                      onOpenQuote={handleOpenQuote}
+                      onOpenMiniSheet={handleOpenMiniSheet}
+                    />
+                  ))}
+                  {wonCount === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center mb-3 opacity-50">
+                        <Trophy className="h-6 w-6 text-emerald-600 opacity-50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Aucune opportunité gagnée
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Lost column */}
             <div className="flex flex-col min-w-0 hidden xl:flex">
-              <div className="rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border p-4 h-full">
-                <div className="flex items-center gap-3 mb-3">
+              {/* Column Header */}
+              <div className="rounded-t-xl px-4 py-4 bg-gradient-to-br from-red-500/10 to-red-500/5 border border-b-0">
+                <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
                     <XCircle className="h-5 w-5 text-red-600" />
                   </div>
                   <div className="flex-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <h3 className="font-semibold text-red-800 flex items-center gap-1.5 cursor-help">
-                          Perdues
-                          <HelpCircle className="h-3.5 w-3.5 text-red-600/60" />
-                        </h3>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[280px]">
-                        <p>Pour marquer une opportunité comme perdue : survolez la carte, cliquez sur les 3 points (⋮), puis "Marquer Perdu".</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <p className="text-xs text-red-600">
-                      {lostCount} opportunité{lostCount > 1 ? "s" : ""}
+                    <div className="flex items-center justify-between">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <h3 className="font-semibold text-red-800 flex items-center gap-1.5 cursor-help">
+                            Perdues
+                            <HelpCircle className="h-3.5 w-3.5 text-red-600/60" />
+                          </h3>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[280px]">
+                          <p>Affaires non conclues. Pour marquer une opportunité comme perdue : survolez la carte, cliquez sur ⋮, puis "Marquer Perdu".</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <span className="text-sm font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                        {lostCount}
+                      </span>
+                    </div>
+                    <p className="text-sm text-red-600 mt-0.5">
+                      Clôturées sans succès
                     </p>
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Opportunités clôturées sans succès
+              </div>
+
+              {/* Cards Area */}
+              <div className="flex-1 rounded-b-xl border border-t-0 bg-red-50/30 p-3 min-h-[450px]">
+                <div className="space-y-3">
+                  {(opportunitesGroupees?.["Perdu"] || []).map((opp) => (
+                    <OpportunityCard
+                      key={opp.id}
+                      opportunity={opp}
+                      onStatusChange={handleStatusChange}
+                      onOpenQuote={handleOpenQuote}
+                      onOpenMiniSheet={handleOpenMiniSheet}
+                    />
+                  ))}
+                  {lostCount === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-3 opacity-50">
+                        <XCircle className="h-6 w-6 text-red-600 opacity-50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Aucune opportunité perdue
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
