@@ -406,7 +406,17 @@ export default function OpportunitesPage() {
                     <Trophy className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-emerald-800">Gagnées</h3>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <h3 className="font-semibold text-emerald-800 flex items-center gap-1.5 cursor-help">
+                          Gagnées
+                          <HelpCircle className="h-3.5 w-3.5 text-emerald-600/60" />
+                        </h3>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[280px]">
+                        <p>Pour marquer une opportunité comme gagnée : survolez la carte, cliquez sur les 3 points (⋮), puis "Marquer Gagné".</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <p className="text-xs text-emerald-600">
                       {wonCount} opportunité{wonCount > 1 ? "s" : ""}
                     </p>
@@ -426,7 +436,17 @@ export default function OpportunitesPage() {
                     <XCircle className="h-5 w-5 text-red-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-red-800">Perdues</h3>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <h3 className="font-semibold text-red-800 flex items-center gap-1.5 cursor-help">
+                          Perdues
+                          <HelpCircle className="h-3.5 w-3.5 text-red-600/60" />
+                        </h3>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[280px]">
+                        <p>Pour marquer une opportunité comme perdue : survolez la carte, cliquez sur les 3 points (⋮), puis "Marquer Perdu".</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <p className="text-xs text-red-600">
                       {lostCount} opportunité{lostCount > 1 ? "s" : ""}
                     </p>
