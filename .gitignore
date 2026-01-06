@@ -50,3 +50,9 @@ issue.txt
 Capture.PNG
 *.png
 *.jpg
+
+# Logs sensibles
+docs/logs_coolify.txt
+supabase/logs/
+Documentation/Refactorisation_Scalabilite_Plan.md
+docs/Miro_Parcours_Lead_to_Projet.md

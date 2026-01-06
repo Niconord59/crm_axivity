@@ -146,20 +146,41 @@ export const OpportunityCard = React.memo(function OpportunityCard({
                   <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56 p-2">
+                <div className="px-2 py-1.5 mb-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Clôturer cette opportunité
+                  </p>
+                </div>
                 <DropdownMenuItem
-                  onClick={() => onStatusChange(opportunity.id, "Gagné")}
-                  className="text-emerald-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusChange(opportunity.id, "Gagné");
+                  }}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 cursor-pointer mb-1.5 focus:bg-emerald-100 focus:text-emerald-700"
                 >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Marquer Gagné
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-200">
+                    <CheckCircle className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Marquer Gagné</p>
+                    <p className="text-xs text-emerald-600">Affaire conclue avec succès</p>
+                  </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onStatusChange(opportunity.id, "Perdu")}
-                  className="text-red-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusChange(opportunity.id, "Perdu");
+                  }}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 cursor-pointer focus:bg-red-100 focus:text-red-700"
                 >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Marquer Perdu
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-red-200">
+                    <XCircle className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Marquer Perdu</p>
+                    <p className="text-xs text-red-600">Opportunité non aboutie</p>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
