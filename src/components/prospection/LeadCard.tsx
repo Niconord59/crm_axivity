@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Phone,
   PhoneCall,
@@ -15,6 +16,7 @@ import {
   FileText,
   Video,
   MapPin,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,8 +36,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
 import type { Prospect } from "@/hooks/use-prospects";
+import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { formatDate, cn } from "@/lib/utils";
 
 interface LeadCardProps {
@@ -163,6 +171,11 @@ export const LeadCard = React.memo(function LeadCard({
   onNotQualified,
   onLost,
 }: LeadCardProps) {
+  const router = useRouter();
+  const [convertPopoverOpen, setConvertPopoverOpen] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  const convertToOpportunity = useConvertToOpportunity();
+
   const fullName = prospect.prenom
     ? `${prospect.prenom} ${prospect.nom}`
     : prospect.nom;
@@ -174,6 +187,9 @@ export const LeadCard = React.memo(function LeadCard({
   const statusConfig = getStatusConfig(prospect.statutProspection);
   const actionButton = getActionButton(prospect.statutProspection);
   const ActionIcon = actionButton.icon;
+
+  // Check if this is a qualified lead ready for direct conversion
+  const isQualified = prospect.statutProspection === "Qualifié";
 
   // Indicateur d'urgence (retard rappel ou RDV aujourd'hui)
   const isUrgent =
@@ -192,6 +208,41 @@ export const LeadCard = React.memo(function LeadCard({
     if (prospect.email) {
       navigator.clipboard.writeText(prospect.email);
       toast.success("Email copié dans le presse-papier");
+    }
+  };
+
+  const handleDirectConvert = async () => {
+    if (!prospect.client?.[0]) {
+      toast.error("Ce lead doit être lié à un client pour être converti");
+      setConvertPopoverOpen(false);
+      return;
+    }
+
+    setIsConverting(true);
+    try {
+      const result = await convertToOpportunity.mutateAsync({
+        contactId: prospect.id,
+        clientId: prospect.client[0],
+        contactNom: fullName,
+        clientNom: prospect.clientNom || "Client",
+        notes: prospect.notesProspection,
+      });
+
+      setConvertPopoverOpen(false);
+
+      toast.success("Opportunité créée !", {
+        description: `${prospect.clientNom || "Nouvelle opportunité"}`,
+        action: {
+          label: "Voir le pipeline",
+          onClick: () => router.push("/opportunites"),
+        },
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error("Error converting to opportunity:", error);
+      toast.error("Erreur lors de la conversion");
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -399,18 +450,78 @@ export const LeadCard = React.memo(function LeadCard({
         <div className="flex-1" />
 
         {/* Bouton d'action principal - toujours en bas */}
-        <Button
-          variant={actionButton.variant}
-          size="sm"
-          className="w-full h-8 text-xs font-medium mt-auto"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCall(prospect);
-          }}
-        >
-          <ActionIcon className="h-3.5 w-3.5 mr-1.5" />
-          {actionButton.label}
-        </Button>
+        {isQualified ? (
+          <Popover open={convertPopoverOpen} onOpenChange={setConvertPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full h-8 text-xs font-medium mt-auto bg-emerald-600 hover:bg-emerald-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
+                Convertir
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-72 p-4"
+              align="center"
+              side="top"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h4 className="font-semibold text-sm">Convertir en opportunité ?</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Ce lead sera ajouté au pipeline commercial avec le statut "Lead".
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setConvertPopoverOpen(false)}
+                    disabled={isConverting}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleDirectConvert}
+                    disabled={isConverting}
+                  >
+                    {isConverting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        Convertir
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <Button
+            variant={actionButton.variant}
+            size="sm"
+            className="w-full h-8 text-xs font-medium mt-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCall(prospect);
+            }}
+          >
+            <ActionIcon className="h-3.5 w-3.5 mr-1.5" />
+            {actionButton.label}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
