@@ -430,16 +430,13 @@ export default function OpportunitesPage() {
                 </div>
               </div>
 
-              {/* Cards Area */}
+              {/* Cards Area - Read-only, no click or menu */}
               <div className="flex-1 rounded-b-xl border border-t-0 bg-emerald-50/30 p-3 min-h-[450px]">
                 <div className="space-y-3">
                   {(opportunitesGroupees?.["Gagné"] || []).map((opp) => (
                     <OpportunityCard
                       key={opp.id}
                       opportunity={opp}
-                      onStatusChange={handleStatusChange}
-                      onOpenQuote={handleOpenQuote}
-                      onOpenMiniSheet={handleOpenMiniSheet}
                     />
                   ))}
                   {wonCount === 0 && (
@@ -488,16 +485,13 @@ export default function OpportunitesPage() {
                 </div>
               </div>
 
-              {/* Cards Area */}
+              {/* Cards Area - Read-only, no click or menu */}
               <div className="flex-1 rounded-b-xl border border-t-0 bg-red-50/30 p-3 min-h-[450px]">
                 <div className="space-y-3">
                   {(opportunitesGroupees?.["Perdu"] || []).map((opp) => (
                     <OpportunityCard
                       key={opp.id}
                       opportunity={opp}
-                      onStatusChange={handleStatusChange}
-                      onOpenQuote={handleOpenQuote}
-                      onOpenMiniSheet={handleOpenMiniSheet}
                     />
                   ))}
                   {lostCount === 0 && (
