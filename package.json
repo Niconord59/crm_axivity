@@ -70,6 +70,7 @@
     "@types/react-big-calendar": "^1.8.12",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
     "autoprefixer": "^10.4.23",
     "eslint": "^9",
     "eslint-config-next": "^16",

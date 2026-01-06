@@ -8,22 +8,35 @@ import { NotFoundError, ConflictError, DatabaseError } from "@/lib/errors";
 import type { FactureData, FactureCompanyInfo, LigneDevis } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// SECURITY: Service role key is required - never fall back to anon key
+function getSupabaseServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error(
+      "Configuration Supabase manquante: SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations serveur"
+    );
+  }
+
+  return createClient(url, serviceKey);
+}
 
 // Generate sequential invoice number using the database function
-async function generateInvoiceNumber(): Promise<string> {
+// SECURITY: Throws error on failure instead of fallback to prevent duplicates
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateInvoiceNumber(supabase: ReturnType<typeof createClient<any>>): Promise<string> {
   const { data, error } = await supabase.rpc("generer_numero_facture");
 
   if (error) {
     console.error("Error generating invoice number:", error);
-    // Fallback to random if function fails
-    const now = new Date();
-    const year = now.getFullYear();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `FAC-${year}-${random}`;
+    throw new DatabaseError("Impossible de générer le numéro de facture", {
+      supabaseError: error.message,
+    });
+  }
+
+  if (!data) {
+    throw new DatabaseError("Numéro de facture non retourné par la base de données");
   }
 
   return data as string;
@@ -38,6 +51,9 @@ function getDueDate(days: number = 30): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get Supabase client with service role (throws if not configured)
+    const supabase = getSupabaseServiceClient();
+
     const { devisId } = await validateRequestBody(request, generateFactureSchema);
 
     // Fetch devis with related data
@@ -172,7 +188,7 @@ export async function POST(request: NextRequest) {
     const opportunite = Array.isArray(opportuniteData) ? opportuniteData[0] : opportuniteData;
 
     // Generate sequential invoice number
-    const numeroFacture = await generateInvoiceNumber();
+    const numeroFacture = await generateInvoiceNumber(supabase);
     const dateEmission = new Date().toISOString().split("T")[0];
     const dateEcheance = getDueDate(30);
 

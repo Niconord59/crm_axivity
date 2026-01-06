@@ -8,22 +8,35 @@ import { NotFoundError, DatabaseError } from "@/lib/errors";
 import type { DevisData, DevisCompanyInfo, LigneDevis } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// SECURITY: Service role key is required - never fall back to anon key
+function getSupabaseServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error(
+      "Configuration Supabase manquante: SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations serveur"
+    );
+  }
+
+  return createClient(url, serviceKey);
+}
 
 // Generate sequential quote number using the database function
-async function generateQuoteNumber(): Promise<string> {
+// SECURITY: Throws error on failure instead of fallback to prevent duplicates
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateQuoteNumber(supabase: ReturnType<typeof createClient<any>>): Promise<string> {
   const { data, error } = await supabase.rpc("generer_numero_devis");
 
   if (error) {
     console.error("Error generating quote number:", error);
-    // Fallback to random if function fails
-    const now = new Date();
-    const year = now.getFullYear();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `DEV-${year}-${random}`;
+    throw new DatabaseError("Impossible de générer le numéro de devis", {
+      supabaseError: error.message,
+    });
+  }
+
+  if (!data) {
+    throw new DatabaseError("Numéro de devis non retourné par la base de données");
   }
 
   return data as string;
@@ -38,6 +51,9 @@ function getValidityDate(days: number = 30): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get Supabase client with service role (throws if not configured)
+    const supabase = getSupabaseServiceClient();
+
     const { opportuniteId } = await validateRequestBody(request, generateDevisSchema);
 
     // Fetch opportunity with client and contact
@@ -157,7 +173,7 @@ export async function POST(request: NextRequest) {
     const contact = Array.isArray(contactData) ? contactData[0] : contactData;
 
     // Generate sequential quote number
-    const numeroDevis = await generateQuoteNumber();
+    const numeroDevis = await generateQuoteNumber(supabase);
     const dateDevis = new Date().toISOString().split("T")[0];
     const dateValidite = getValidityDate(validiteJours);
 

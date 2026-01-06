@@ -8,10 +8,19 @@ import { NotFoundError, DatabaseError } from "@/lib/errors";
 import type { DevisData, DevisCompanyInfo, LigneDevis } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// SECURITY: Service role key is required - never fall back to anon key
+function getSupabaseServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error(
+      "Configuration Supabase manquante: SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations serveur"
+    );
+  }
+
+  return createClient(url, serviceKey);
+}
 
 // Generate preview quote number
 function generatePreviewQuoteNumber(): string {
@@ -29,6 +38,9 @@ function getValidityDate(days: number = 30): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get Supabase client with service role (throws if not configured)
+    const supabase = getSupabaseServiceClient();
+
     const { opportuniteId } = await validateRequestBody(request, previewDevisSchema);
 
     // Fetch opportunity with client and contact

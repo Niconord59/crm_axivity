@@ -88,11 +88,13 @@ export function handleApiError(error: unknown): NextResponse<ErrorResponse> {
   }
 
   // Handle unknown errors
+  // SECURITY: Never expose raw error details in production
+  const isDev = process.env.NODE_ENV === "development";
   return NextResponse.json(
     {
       error: "Erreur inattendue",
       code: "UNKNOWN_ERROR",
-      details: { raw: String(error) },
+      ...(isDev && { details: { raw: String(error) } }),
     },
     { status: 500 }
   );

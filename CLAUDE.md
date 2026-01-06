@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-05
+Auto-generated from all feature plans. Last updated: 2026-01-06
 
 ## Active Technologies
 
@@ -241,6 +241,26 @@ npm run test:ui       # Vitest UI
   - Query keys: 100% centralisées
   - API routes avec handler: 100% (8/8)
 
+### 008-test-coverage (Couverture de Tests Progressive - PLANNED)
+- **Status**: 0% - 0/89 tâches
+- **Specs**: `specs/008-test-coverage/`
+- **Priority**: HIGH (identifié lors du code review du 6 janvier 2026)
+- **Content**:
+  - **Phase 1** : Hooks critiques (opportunites, factures, devis, prospects) + Mappers
+  - **Phase 2** : API routes (devis, factures) + Hooks restants (projets, taches)
+  - **Phase 3** : Composants métier (OpportunityCard, LeadCard, QuoteLinesTable)
+  - **Phase 4** : Tests d'intégration + CI/CD
+- **Objectifs de couverture**:
+  - Phase 1 : 20% (fonctions critiques)
+  - Phase 2 : 40% (APIs + hooks)
+  - Phase 3 : 60% (composants)
+  - Phase 4 : 80% (intégration)
+- **État actuel** (baseline du 6 jan 2026):
+  - Hooks testés : 1/16 (6.25%)
+  - API routes testées : 0/8 (0%)
+  - Composants testés : 3/100+ (~3%)
+  - Tests existants : 125
+
 ## Documentation
 
 | Fichier | Description |
@@ -262,6 +282,7 @@ npm run test:ui       # Vitest UI
 | `specs/005-supabase-migration/` | Migration Supabase | ✅ Complet |
 | `specs/006-devis/` | Module Devis & Factures | ✅ Complet |
 | `specs/007-refactorisation/` | Refactorisation & Scalabilité | ✅ Complet |
+| `specs/008-test-coverage/` | Couverture de Tests Progressive | 📋 Planifié |
 
 ## Supabase (Backend)
 

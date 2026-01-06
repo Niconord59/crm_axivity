@@ -5,10 +5,19 @@ import { sendDevisSchema } from "@/lib/schemas/api";
 import { NotFoundError, ValidationError, ExternalServiceError } from "@/lib/errors";
 
 // Create a Supabase client with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// SECURITY: Service role key is required - never fall back to anon key
+function getSupabaseServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error(
+      "Configuration Supabase manquante: SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations serveur"
+    );
+  }
+
+  return createClient(url, serviceKey);
+}
 
 // Send email using Resend
 async function sendEmailWithResend(
@@ -46,6 +55,7 @@ async function sendEmailWithResend(
   }
 
   // Fetch company settings for sender info
+  const supabase = getSupabaseServiceClient();
   const { data: companySettings } = await supabase
     .from("parametres_entreprise")
     .select("email, nom")
@@ -197,6 +207,9 @@ function generateQuoteEmailHTML(data: {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get Supabase client with service role (throws if not configured)
+    const supabase = getSupabaseServiceClient();
+
     const { devisId, recipientEmail, customMessage } = await validateRequestBody(request, sendDevisSchema);
 
     // Fetch devis with related data
