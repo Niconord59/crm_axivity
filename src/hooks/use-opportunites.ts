@@ -40,7 +40,6 @@ export function useOpportunitesParStatut() {
       const { data, error } = await supabase
         .from("opportunites")
         .select("*")
-        .not("statut", "in", '("Gagné","Perdu")')
         .order("date_cloture_prevue", { ascending: true, nullsFirst: false });
 
       if (error) throw error;

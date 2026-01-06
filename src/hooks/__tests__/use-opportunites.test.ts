@@ -307,11 +307,8 @@ describe("use-opportunites hooks", () => {
   // ===========================================================================
   describe("useOpportunitesParStatut", () => {
     it("should fetch and group opportunities by status", async () => {
-      // This query excludes Gagné and Perdu
-      const activeRecords = sampleOpportuniteRecords.filter(
-        (r) => !["Gagné", "Perdu"].includes(r.statut)
-      );
-      setupSuccessfulQuery(activeRecords);
+      // This query fetches ALL opportunities including Gagné and Perdu
+      setupSuccessfulQuery(sampleOpportuniteRecords);
 
       const { result } = renderHook(() => useOpportunitesParStatut(), {
         wrapper: createWrapper(),
@@ -321,15 +318,13 @@ describe("use-opportunites hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockNot).toHaveBeenCalledWith("statut", "in", '("Gagné","Perdu")');
-
       const grouped = result.current.data;
       expect(grouped).toBeDefined();
       expect(grouped?.["Qualifié"]).toHaveLength(1);
       expect(grouped?.["Proposition"]).toHaveLength(1);
       expect(grouped?.["Négociation"]).toHaveLength(1);
-      expect(grouped?.["Gagné"]).toHaveLength(0);
-      expect(grouped?.["Perdu"]).toHaveLength(0);
+      expect(grouped?.["Gagné"]).toHaveLength(0); // No Gagné in sample data
+      expect(grouped?.["Perdu"]).toHaveLength(0); // No Perdu in sample data
     });
 
     it("should initialize all status groups even when empty", async () => {
