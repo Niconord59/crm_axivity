@@ -107,6 +107,28 @@ function getStatusConfig(status: string | undefined) {
   }
 }
 
+// Description des statuts pour les tooltips
+function getStatusTooltip(status: string | undefined): string {
+  switch (status) {
+    case "À appeler":
+      return "Lead en attente d'un premier appel. Cliquez pour lancer l'appel.";
+    case "Appelé - pas répondu":
+      return "Appel effectué mais pas de réponse. Réessayez plus tard.";
+    case "Rappeler":
+      return "Le lead a demandé à être rappelé à une date précise.";
+    case "RDV planifié":
+      return "Un rendez-vous est prévu avec ce lead (visio ou présentiel).";
+    case "Qualifié":
+      return "Lead qualifié ! Prêt à être converti en opportunité commerciale.";
+    case "Non qualifié":
+      return "Lead non qualifié : pas le bon profil ou pas de besoin identifié.";
+    case "Perdu":
+      return "Lead perdu : refus, concurrent choisi ou projet abandonné.";
+    default:
+      return "Statut du lead dans le processus de prospection.";
+  }
+}
+
 // Couleur du badge source
 function getSourceColor(source: string | undefined): string {
   switch (source) {
@@ -327,12 +349,21 @@ export const LeadCard = React.memo(function LeadCard({
 
             {/* Badge statut */}
             <div className="mt-2">
-              <Badge
-                variant="outline"
-                className={cn("text-[10px] font-medium px-2 py-0", statusConfig.badge)}
-              >
-                {prospect.statutProspection || "N/A"}
-              </Badge>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px] font-medium px-2 py-0 cursor-help", statusConfig.badge)}
+                    >
+                      {prospect.statutProspection || "N/A"}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[220px]">
+                    <p>{getStatusTooltip(prospect.statutProspection)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -387,56 +418,89 @@ export const LeadCard = React.memo(function LeadCard({
 
         {/* Tags - Source, Rappel, RDV */}
         {(prospect.sourceLead || prospect.dateRappel || prospect.dateRdvPrevu) && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {prospect.sourceLead && (
-              <Badge
-                variant="outline"
-                className={cn("text-[10px] px-1.5 py-0", getSourceColor(prospect.sourceLead))}
-              >
-                {prospect.sourceLead}
-              </Badge>
-            )}
-            {prospect.dateRappel && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] px-1.5 py-0",
-                  isOverdue(prospect.dateRappel)
-                    ? "bg-red-50 text-red-700 border-red-300 animate-pulse"
-                    : isToday(prospect.dateRappel)
-                    ? "bg-orange-50 text-orange-700 border-orange-300"
-                    : "bg-gray-50 text-gray-700 border-gray-200"
-                )}
-              >
-                <Calendar className="h-2.5 w-2.5 mr-1" />
-                {isToday(prospect.dateRappel)
-                  ? "Aujourd'hui"
-                  : isOverdue(prospect.dateRappel)
-                  ? "Retard"
-                  : formatDate(prospect.dateRappel)}
-              </Badge>
-            )}
-            {prospect.dateRdvPrevu && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] px-1.5 py-0",
-                  isToday(prospect.dateRdvPrevu)
-                    ? "bg-violet-50 text-violet-700 border-violet-300"
-                    : "bg-gray-50 text-gray-700 border-gray-200"
-                )}
-              >
-                {prospect.typeRdv === "Visio" ? (
-                  <Video className="h-2.5 w-2.5 mr-1" />
-                ) : (
-                  <MapPin className="h-2.5 w-2.5 mr-1" />
-                )}
-                {isToday(prospect.dateRdvPrevu)
-                  ? "Aujourd'hui"
-                  : formatDate(prospect.dateRdvPrevu)}
-              </Badge>
-            )}
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {prospect.sourceLead && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px] px-1.5 py-0 cursor-help", getSourceColor(prospect.sourceLead))}
+                    >
+                      {prospect.sourceLead}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Source d'acquisition de ce lead</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {prospect.dateRappel && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] px-1.5 py-0 cursor-help",
+                        isOverdue(prospect.dateRappel)
+                          ? "bg-red-50 text-red-700 border-red-300 animate-pulse"
+                          : isToday(prospect.dateRappel)
+                          ? "bg-orange-50 text-orange-700 border-orange-300"
+                          : "bg-gray-50 text-gray-700 border-gray-200"
+                      )}
+                    >
+                      <Calendar className="h-2.5 w-2.5 mr-1" />
+                      {isToday(prospect.dateRappel)
+                        ? "Aujourd'hui"
+                        : isOverdue(prospect.dateRappel)
+                        ? "Retard"
+                        : formatDate(prospect.dateRappel)}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isOverdue(prospect.dateRappel) ? (
+                      <p className="text-red-600">⚠️ Rappel en retard ! À traiter en priorité.</p>
+                    ) : isToday(prospect.dateRappel) ? (
+                      <p className="text-orange-600">📞 Rappel prévu aujourd'hui</p>
+                    ) : (
+                      <p>📅 Date de rappel planifiée</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {prospect.dateRdvPrevu && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] px-1.5 py-0 cursor-help",
+                        isToday(prospect.dateRdvPrevu)
+                          ? "bg-violet-50 text-violet-700 border-violet-300"
+                          : "bg-gray-50 text-gray-700 border-gray-200"
+                      )}
+                    >
+                      {prospect.typeRdv === "Visio" ? (
+                        <Video className="h-2.5 w-2.5 mr-1" />
+                      ) : (
+                        <MapPin className="h-2.5 w-2.5 mr-1" />
+                      )}
+                      {isToday(prospect.dateRdvPrevu)
+                        ? "Aujourd'hui"
+                        : formatDate(prospect.dateRdvPrevu)}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isToday(prospect.dateRdvPrevu) ? (
+                      <p className="text-violet-600">🗓️ RDV {prospect.typeRdv || "prévu"} aujourd'hui !</p>
+                    ) : (
+                      <p>🗓️ RDV {prospect.typeRdv || "prévu"} le {formatDate(prospect.dateRdvPrevu)}</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </TooltipProvider>
         )}
 
         {/* Notes */}

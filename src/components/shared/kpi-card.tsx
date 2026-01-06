@@ -1,8 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { LucideIcon, TrendingDown, TrendingUp } from "lucide-react";
+import { LucideIcon, TrendingDown, TrendingUp, HelpCircle } from "lucide-react";
 
 interface KPICardProps {
   title: string;
@@ -15,6 +21,7 @@ interface KPICardProps {
   };
   className?: string;
   variant?: "default" | "destructive";
+  tooltip?: string;
 }
 
 export function KPICard({
@@ -25,6 +32,7 @@ export function KPICard({
   trend,
   className,
   variant = "default",
+  tooltip,
 }: KPICardProps) {
   const isPositiveTrend = trend && trend.value >= 0;
   const isDestructive = variant === "destructive";
@@ -32,12 +40,31 @@ export function KPICard({
   return (
     <Card className={cn(isDestructive && "border-destructive", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className={cn(
-          "text-sm font-medium",
-          isDestructive ? "text-destructive" : "text-muted-foreground"
-        )}>
-          {title}
-        </CardTitle>
+        {tooltip ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CardTitle className={cn(
+                  "text-sm font-medium cursor-help flex items-center gap-1",
+                  isDestructive ? "text-destructive" : "text-muted-foreground"
+                )}>
+                  {title}
+                  <HelpCircle className="h-3 w-3" />
+                </CardTitle>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[220px]">
+                <p>{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <CardTitle className={cn(
+            "text-sm font-medium",
+            isDestructive ? "text-destructive" : "text-muted-foreground"
+          )}>
+            {title}
+          </CardTitle>
+        )}
         {Icon && (
           <Icon className={cn(
             "h-4 w-4",

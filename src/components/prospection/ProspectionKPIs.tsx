@@ -25,6 +25,7 @@ export function ProspectionKPIs() {
         value={kpis?.aAppeler || 0}
         description={`sur ${kpis?.total || 0} total`}
         icon={Phone}
+        tooltip="Leads en attente d'un premier appel. Cliquez sur une carte pour lancer l'appel."
       />
       <KPICard
         title="Rappels en attente"
@@ -32,12 +33,14 @@ export function ProspectionKPIs() {
         description={kpis?.rappelsEnRetard ? `${kpis.rappelsEnRetard} en retard` : "Tous à jour"}
         icon={Clock}
         variant={kpis?.rappelsEnRetard && kpis.rappelsEnRetard > 0 ? "destructive" : "default"}
+        tooltip="Leads à rappeler à une date planifiée. Vérifiez régulièrement pour ne pas manquer de relances."
       />
       <KPICard
         title="Taux qualification"
         value={`${kpis?.tauxQualification || 0}%`}
         description={`${kpis?.qualifies || 0} qualifiés`}
         icon={CheckCircle2}
+        tooltip="Pourcentage de leads qualifiés (prêts à devenir des opportunités commerciales) sur le total traité."
       />
       <KPICard
         title="Rappels en retard"
@@ -45,6 +48,7 @@ export function ProspectionKPIs() {
         description="À traiter en priorité"
         icon={AlertTriangle}
         variant={kpis?.rappelsEnRetard && kpis.rappelsEnRetard > 0 ? "destructive" : "default"}
+        tooltip="Rappels dont la date est passée. À traiter en priorité pour maintenir la relation client !"
       />
     </div>
   );
