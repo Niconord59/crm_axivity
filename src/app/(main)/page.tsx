@@ -5,6 +5,7 @@ import {
   Target,
   FileText,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -14,18 +15,22 @@ import { useProjetsActifs } from "@/hooks/use-projets";
 import { useOpportunites } from "@/hooks/use-opportunites";
 import { useFacturesImpayees } from "@/hooks/use-factures";
 import { useTachesEnRetard } from "@/hooks/use-taches";
+import { useProjetsNonAssignes } from "@/hooks/use-projet-membres";
+import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const { isAdmin } = useAuth();
   const { data: projetsActifs, isLoading: loadingProjets } = useProjetsActifs();
   const { data: opportunites, isLoading: loadingOpp } = useOpportunites();
   const { data: facturesImpayees, isLoading: loadingFactures } =
     useFacturesImpayees();
   const { data: tachesEnRetard, isLoading: loadingTaches } = useTachesEnRetard();
+  const { data: projetsNonAssignes, isLoading: loadingNonAssignes } = useProjetsNonAssignes();
 
   const isLoading =
-    loadingProjets || loadingOpp || loadingFactures || loadingTaches;
+    loadingProjets || loadingOpp || loadingFactures || loadingTaches || loadingNonAssignes;
 
   if (isLoading) {
     return <PageLoading />;
@@ -96,6 +101,21 @@ export default function DashboardPage() {
           icon={AlertTriangle}
         />
       </div>
+
+      {/* Admin KPI: Unassigned Projects */}
+      {isAdmin() && projetsNonAssignes && projetsNonAssignes.count > 0 && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Link href="/projets">
+            <KPICard
+              title="Projets à Assigner"
+              value={projetsNonAssignes.count}
+              description="Nécessitent une équipe"
+              icon={Users}
+              className="border-amber-200 bg-amber-50/50 hover:bg-amber-50"
+            />
+          </Link>
+        </div>
+      )}
 
       {/* CA Mensuel Chart */}
       <CAMensuelChart />

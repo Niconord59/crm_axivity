@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Bell, Check, AlertTriangle, FileText, FolderKanban, Clock, X, Phone, Video } from "lucide-react";
+import { Bell, Check, AlertTriangle, FileText, FolderKanban, Clock, X, Phone, Video, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -15,18 +15,21 @@ import { useTachesEnRetard } from "@/hooks/use-taches";
 import { useFacturesImpayees } from "@/hooks/use-factures";
 import { useProjetsActifs } from "@/hooks/use-projets";
 import { useRappelsAujourdhui, useRdvAujourdhui } from "@/hooks/use-prospects";
+import { useNotifications, useMarkNotificationAsRead } from "@/hooks/use-notifications";
 import { useAuth } from "@/hooks/use-auth";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-interface Notification {
+interface NotificationItem {
   id: string;
-  type: "task" | "invoice" | "project" | "callback" | "rdv";
+  type: "task" | "invoice" | "project" | "callback" | "rdv" | "project_assigned";
   title: string;
   description: string;
   href: string;
   isUrgent: boolean;
   date?: string;
+  /** True if this is a database notification that needs to be marked as read */
+  isDbNotification?: boolean;
 }
 
 const DISMISSED_KEY = "crm-notifications-dismissed";
@@ -45,6 +48,10 @@ export function NotificationPanel() {
   const { data: projetsActifs } = useProjetsActifs(userId);
   const { data: rappelsAujourdhui } = useRappelsAujourdhui(userId);
   const { data: rdvAujourdhui } = useRdvAujourdhui(userId);
+
+  // Database notifications (e.g., project assignments)
+  const { data: dbNotifications } = useNotifications({ unreadOnly: true });
+  const markAsRead = useMarkNotificationAsRead();
 
   // Load dismissed notifications from localStorage
   useEffect(() => {
@@ -77,7 +84,21 @@ export function NotificationPanel() {
   }, []);
 
   // Build notifications from real data
-  const notifications: Notification[] = [];
+  const notifications: NotificationItem[] = [];
+
+  // Add database notifications first (project assignments, etc.)
+  dbNotifications?.slice(0, 5).forEach((notif) => {
+    notifications.push({
+      id: `db-${notif.id}`,
+      type: notif.type === "project_assigned" ? "project_assigned" : "project",
+      title: notif.title,
+      description: notif.message || "",
+      href: notif.link || "/projets",
+      isUrgent: false,
+      date: notif.createdAt,
+      isDbNotification: true,
+    });
+  });
 
   // Add overdue tasks
   tachesEnRetard?.slice(0, 3).forEach((tache) => {
@@ -162,7 +183,7 @@ export function NotificationPanel() {
   const hasNotifications = notificationCount > 0;
   const hasDismissed = dismissedIds.size > 0;
 
-  const getIcon = (type: Notification["type"]) => {
+  const getIcon = (type: NotificationItem["type"]) => {
     switch (type) {
       case "task":
         return <Clock className="h-4 w-4" />;
@@ -170,10 +191,35 @@ export function NotificationPanel() {
         return <FileText className="h-4 w-4" />;
       case "project":
         return <FolderKanban className="h-4 w-4" />;
+      case "project_assigned":
+        return <Users className="h-4 w-4" />;
       case "callback":
         return <Phone className="h-4 w-4" />;
       case "rdv":
         return <Video className="h-4 w-4" />;
+    }
+  };
+
+  // Handle notification click - mark DB notifications as read
+  const handleNotificationClick = (notification: NotificationItem) => {
+    if (notification.isDbNotification) {
+      // Extract the actual ID from "db-xxx"
+      const dbId = notification.id.replace("db-", "");
+      markAsRead.mutate(dbId);
+    } else {
+      dismissNotification(notification.id);
+    }
+    setOpen(false);
+  };
+
+  // Handle dismiss button click
+  const handleDismiss = (notification: NotificationItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (notification.isDbNotification) {
+      const dbId = notification.id.replace("db-", "");
+      markAsRead.mutate(dbId);
+    } else {
+      dismissNotification(notification.id);
     }
   };
 
@@ -228,15 +274,13 @@ export function NotificationPanel() {
                   key={notification.id}
                   className={cn(
                     "flex gap-3 p-4 hover:bg-muted/50 transition-colors relative group",
-                    notification.isUrgent && "bg-destructive/5"
+                    notification.isUrgent && "bg-destructive/5",
+                    notification.type === "project_assigned" && "bg-blue-50"
                   )}
                 >
                   <Link
                     href={notification.href}
-                    onClick={() => {
-                      dismissNotification(notification.id);
-                      setOpen(false);
-                    }}
+                    onClick={() => handleNotificationClick(notification)}
                     className="flex gap-3 flex-1 min-w-0"
                   >
                     <div
@@ -244,6 +288,8 @@ export function NotificationPanel() {
                         "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
                         notification.isUrgent
                           ? "bg-destructive/10 text-destructive"
+                          : notification.type === "project_assigned"
+                          ? "bg-blue-100 text-blue-600"
                           : "bg-muted text-muted-foreground"
                       )}
                     >
@@ -262,7 +308,8 @@ export function NotificationPanel() {
                       </p>
                       {notification.date && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Échéance: {formatDate(notification.date)}
+                          {notification.isDbNotification ? "" : "Échéance: "}
+                          {formatDate(notification.date)}
                         </p>
                       )}
                     </div>
@@ -271,10 +318,7 @@ export function NotificationPanel() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dismissNotification(notification.id);
-                    }}
+                    onClick={(e) => handleDismiss(notification, e)}
                   >
                     <X className="h-3 w-3" />
                     <span className="sr-only">Masquer</span>

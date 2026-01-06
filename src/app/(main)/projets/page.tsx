@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,19 +23,38 @@ import {
 } from "@/components/shared";
 import { projetExportColumns } from "@/lib/export";
 import { ProjetForm } from "@/components/forms";
+import { TeamAvatarStack } from "@/components/projets/TeamAvatarStack";
+import { AssignTeamModal } from "@/components/projets/AssignTeamModal";
 import { useProjets } from "@/hooks/use-projets";
+import { useProjetsMembres } from "@/hooks/use-projet-membres";
+import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
-import { PROJECT_STATUSES, type ProjectStatus } from "@/types";
+import { PROJECT_STATUSES, type ProjectStatus, type Projet } from "@/types";
 
 type ViewMode = "grid" | "list";
 
 export default function ProjetsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedProjet, setSelectedProjet] = useState<Projet | null>(null);
+
+  const { isAdmin } = useAuth();
 
   const { data: projets, isLoading } = useProjets(
     statusFilter !== "all" ? { statut: statusFilter as ProjectStatus } : undefined
   );
+
+  // Fetch members for all projects
+  const projetIds = (projets || []).map((p) => p.id);
+  const { data: projetsMembres } = useProjetsMembres(projetIds);
+
+  const openAssignModal = (projet: Projet, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedProjet(projet);
+    setAssignModalOpen(true);
+  };
 
   if (isLoading) {
     return <PageLoading />;
@@ -167,6 +187,34 @@ export default function ProjetsPage() {
                           : "Non définie"}
                       </span>
                     </div>
+
+                    {/* Team Members */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        {projetsMembres?.[projet.id]?.length ? (
+                          <TeamAvatarStack
+                            membres={projetsMembres[projet.id]}
+                            maxVisible={3}
+                            size="sm"
+                          />
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                            Non assigné
+                          </Badge>
+                        )}
+                      </div>
+                      {isAdmin() && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={(e) => openAssignModal(projet, e)}
+                        >
+                          <Users className="h-3.5 w-3.5 mr-1" />
+                          Assigner
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </Link>
@@ -234,12 +282,47 @@ export default function ProjetsPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">Échéance</p>
                     </div>
+
+                    {/* Team Members */}
+                    <div className="flex items-center gap-2">
+                      {projetsMembres?.[projet.id]?.length ? (
+                        <TeamAvatarStack
+                          membres={projetsMembres[projet.id]}
+                          maxVisible={2}
+                          size="sm"
+                        />
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                          Non assigné
+                        </Badge>
+                      )}
+                      {isAdmin() && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => openAssignModal(projet, e)}
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </Link>
                 );
               })}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Assign Team Modal */}
+      {selectedProjet && (
+        <AssignTeamModal
+          open={assignModalOpen}
+          onOpenChange={setAssignModalOpen}
+          projetId={selectedProjet.id}
+          projetNom={selectedProjet.nomProjet || selectedProjet.briefProjet || "Sans nom"}
+        />
       )}
     </div>
   );
