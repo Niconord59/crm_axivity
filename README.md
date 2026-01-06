@@ -1,7 +1,7 @@
 # CRM Axivity
 
 [![Tests](https://github.com/Niconord59/crm_axivity/actions/workflows/test.yml/badge.svg)](https://github.com/Niconord59/crm_axivity/actions/workflows/test.yml)
-[![Coverage](https://img.shields.io/badge/coverage-72.55%25-yellowgreen)](https://github.com/Niconord59/crm_axivity/actions)
+[![codecov](https://codecov.io/gh/Niconord59/crm_axivity/graph/badge.svg)](https://codecov.io/gh/Niconord59/crm_axivity)
 
 Cockpit opérationnel pour agence IA - Interface Next.js
 
