@@ -189,7 +189,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -247,7 +247,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -272,7 +272,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -303,7 +303,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -338,7 +338,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -364,7 +364,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -394,7 +394,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("opportunites")
@@ -427,7 +427,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         select: selectMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase
         .from("interactions")
@@ -455,7 +455,7 @@ describe("Pipeline Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         insert: insertMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("interactions")

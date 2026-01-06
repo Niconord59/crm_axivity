@@ -162,7 +162,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         insert: insertMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase.from("lignes_devis").insert(newLigne);
 
@@ -198,7 +198,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase.from("lignes_devis").update(updateData).eq("id", "ligne-1");
 
@@ -212,7 +212,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         delete: deleteMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase.from("lignes_devis").delete().eq("id", "ligne-1");
 
@@ -235,7 +235,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         select: selectMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase
         .from("opportunites")
@@ -258,7 +258,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         select: selectMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase
         .from("lignes_devis")
@@ -290,7 +290,7 @@ describe("Devis Flow Integration", () => {
   describe("Step 3: Generate Final Quote", () => {
     it("should generate sequential quote number", async () => {
       const rpcMock = vi.mocked(supabase.rpc);
-      rpcMock.mockResolvedValue({ data: "DEV-2026-002", error: null });
+      rpcMock.mockResolvedValue({ data: "DEV-2026-002", error: null } as any);
 
       const result = await supabase.rpc("generer_numero_devis");
 
@@ -326,7 +326,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         insert: insertMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase
         .from("devis")
@@ -346,7 +346,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("devis")
@@ -367,7 +367,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("devis")
@@ -419,7 +419,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         insert: insertMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("interactions")
@@ -447,7 +447,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         select: selectMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase
         .from("devis")
@@ -479,7 +479,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         insert: insertMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       const result = await supabase
         .from("factures")
@@ -496,7 +496,7 @@ describe("Devis Flow Integration", () => {
 
       mockFrom.mockReturnValue({
         update: updateMock,
-      } as ReturnType<typeof mockFrom>);
+      } as any);
 
       await supabase
         .from("devis")
@@ -530,7 +530,7 @@ describe("Devis Flow Integration", () => {
       rpcMock.mockResolvedValue({
         data: null,
         error: { message: "Database error", code: "PGRST000" },
-      } as { data: null; error: { message: string; code: string } });
+      } as any);
 
       const result = await supabase.rpc("generer_numero_devis");
 
