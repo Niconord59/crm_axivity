@@ -5,7 +5,7 @@ name: Tests
 
 on:
   push:
-    branches: [main, develop, 001-crm-axivity-interface]
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 
