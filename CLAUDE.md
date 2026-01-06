@@ -521,6 +521,9 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Workaround Coolify : URLs hardcodées avec `{{ .TokenHash }}`
   - Auto-inscription désactivée, uniquement invitation admin
   - Page login : lien "Créer un compte" masqué
+- **Fix Router Cache RSC** (6 jan. 2026) : Correction du loader infini
+  - Ajout `staleTimes: { dynamic: 0, static: 0 }` dans `next.config.mjs`
+  - Désactive le cache RSC qui causait des données stales après navigation
 
 ## Production Checklist
 
@@ -585,4 +588,31 @@ NEXT_PUBLIC_APP_URL=https://crm.axivity.cloud
 ```
 
 <!-- MANUAL ADDITIONS START -->
+
+## Troubleshooting
+
+### Loader infini / Données ne se chargent pas (Ctrl+Shift+R requis)
+
+**Symptômes** :
+- Loader qui tourne indéfiniment sur les pages
+- Les données ne s'affichent qu'après Ctrl+Shift+R (hard reload)
+- Erreur dans Network tab : `?_rsc=xxxxx` avec "No data found for resource"
+
+**Cause** : Le Router Cache RSC de Next.js est désynchronisé.
+
+**Solution** :
+1. Vérifier que `next.config.mjs` contient :
+```javascript
+experimental: {
+  staleTimes: {
+    dynamic: 0,
+    static: 0,
+  },
+},
+```
+2. Supprimer le cache : `rm -rf .next`
+3. Redémarrer : `npm run dev`
+
+**Documentation** : https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
+
 <!-- MANUAL ADDITIONS END -->
