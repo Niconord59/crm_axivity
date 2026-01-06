@@ -134,7 +134,7 @@ export const OpportunityCard = React.memo(function OpportunityCard({
             {opportunity.nom}
           </h4>
 
-          {onStatusChange && (
+          {onStatusChange && opportunity.statut !== "Qualifié" && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
