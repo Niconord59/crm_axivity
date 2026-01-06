@@ -39,6 +39,8 @@ interface OpportunityCardProps {
   onOpenQuote?: (id: string) => void;
   onOpenMiniSheet?: (id: string) => void;
   isDragging?: boolean;
+  /** Simplified mode for Won/Lost columns - shows only name and value */
+  simplified?: boolean;
 }
 
 // Configuration des couleurs par statut
@@ -105,14 +107,39 @@ export const OpportunityCard = React.memo(function OpportunityCard({
   onOpenQuote,
   onOpenMiniSheet,
   isDragging = false,
+  simplified = false,
 }: OpportunityCardProps) {
   const statusConfig = getStatusConfig(opportunity.statut);
   const probabilityPercent = opportunity.probabilite
     ? Math.round(opportunity.probabilite)
     : 0;
 
-  const isUrgent = isOverdue(opportunity.dateClotureEstimee);
-  const closingSoon = isClosingSoon(opportunity.dateClotureEstimee);
+  const isUrgent = !simplified && isOverdue(opportunity.dateClotureEstimee);
+  const closingSoon = !simplified && isClosingSoon(opportunity.dateClotureEstimee);
+
+  // Simplified card for Won/Lost columns
+  if (simplified) {
+    return (
+      <Card
+        className={cn(
+          "overflow-hidden border-l-4",
+          statusConfig.border
+        )}
+      >
+        <CardContent className="p-3">
+          <h4 className="font-semibold text-sm leading-tight line-clamp-2 mb-2">
+            {opportunity.nom}
+          </h4>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Valeur</span>
+            <span className="font-bold text-sm">
+              {formatCurrency(opportunity.valeurEstimee || 0)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card
