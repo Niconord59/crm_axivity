@@ -187,6 +187,28 @@ export const queryKeys = {
       [...queryKeys.calendar.all, "events", range] as const,
     status: () => [...queryKeys.calendar.all, "status"] as const,
   },
+
+  // =========================================================================
+  // PROJET MEMBRES
+  // =========================================================================
+  projetMembres: {
+    all: ["projet-membres"] as const,
+    lists: () => [...queryKeys.projetMembres.all, "list"] as const,
+    list: (projetId: string) =>
+      [...queryKeys.projetMembres.lists(), projetId] as const,
+    nonAssignes: () => [...queryKeys.projetMembres.all, "non-assignes"] as const,
+  },
+
+  // =========================================================================
+  // NOTIFICATIONS
+  // =========================================================================
+  notifications: {
+    all: ["notifications"] as const,
+    lists: () => [...queryKeys.notifications.all, "list"] as const,
+    list: (filters?: { unreadOnly?: boolean }) =>
+      [...queryKeys.notifications.lists(), filters] as const,
+    unreadCount: () => [...queryKeys.notifications.all, "unread-count"] as const,
+  },
 } as const;
 
 // Type helpers for query key inference

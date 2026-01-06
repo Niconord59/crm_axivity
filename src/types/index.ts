@@ -595,3 +595,33 @@ export interface ApiError {
   code?: string;
   details?: unknown;
 }
+
+// =============================================================================
+// PROJET MEMBRES (Team assignment)
+// =============================================================================
+
+export interface ProjetMembre extends BaseEntity {
+  projetId: string;
+  profileId: string;
+  assignedBy?: string;
+  assignedAt?: string;
+  // Denormalized for display
+  profileNom?: string;
+  profileEmail?: string;
+}
+
+// =============================================================================
+// NOTIFICATIONS
+// =============================================================================
+
+export type NotificationType = "project_assigned" | "task_assigned" | "mention" | "reminder";
+
+export interface Notification extends BaseEntity {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message?: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: string;
+}
