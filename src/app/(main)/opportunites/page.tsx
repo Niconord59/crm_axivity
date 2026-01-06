@@ -21,6 +21,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
+import {
   PageHeader,
   PageLoading,
   ExportButton,
@@ -40,6 +47,7 @@ import { type OpportunityStatus } from "@/types";
 const KANBAN_COLUMNS: {
   status: OpportunityStatus;
   title: string;
+  description: string;
   icon: React.ElementType;
   gradient: string;
   iconBg: string;
@@ -48,6 +56,7 @@ const KANBAN_COLUMNS: {
   {
     status: "Qualifié",
     title: "Qualifiés",
+    description: "Le besoin client est confirmé et le budget est identifié. Prêt pour une proposition commerciale.",
     icon: Target,
     gradient: "from-blue-500/10 to-blue-500/5",
     iconBg: "bg-blue-100",
@@ -56,6 +65,7 @@ const KANBAN_COLUMNS: {
   {
     status: "Proposition",
     title: "Proposition",
+    description: "Un devis ou une offre commerciale a été envoyé au client. En attente de retour.",
     icon: FileText,
     gradient: "from-violet-500/10 to-violet-500/5",
     iconBg: "bg-violet-100",
@@ -64,6 +74,7 @@ const KANBAN_COLUMNS: {
   {
     status: "Négociation",
     title: "Négociation",
+    description: "Discussion en cours sur les termes, le prix ou le périmètre. Phase finale avant signature.",
     icon: TrendingUp,
     gradient: "from-orange-500/10 to-orange-500/5",
     iconBg: "bg-orange-100",
@@ -148,63 +159,105 @@ export default function OpportunitesPage() {
       </PageHeader>
 
       {/* KPIs Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Briefcase className="h-5 w-5 text-primary" />
+      <TooltipProvider delayDuration={300}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Briefcase className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground font-medium cursor-help flex items-center gap-1">
+                        Pipeline actif
+                        <HelpCircle className="h-3 w-3" />
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[220px]">
+                      <p>Nombre d'opportunités en cours (hors Gagnées et Perdues)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <p className="text-xl font-bold">{totalCount}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Pipeline actif</p>
-                <p className="text-xl font-bold">{totalCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground font-medium cursor-help flex items-center gap-1">
+                        Valeur pondérée
+                        <HelpCircle className="h-3 w-3" />
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[250px]">
+                      <p>Somme des (Valeur × Probabilité) de toutes les opportunités actives. C'est la prévision réaliste de chiffre d'affaires.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <p className="text-xl font-bold">{formatCurrency(totalPipeline)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Valeur pondérée</p>
-                <p className="text-xl font-bold">{formatCurrency(totalPipeline)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <Trophy className="h-5 w-5 text-emerald-600" />
+          <Card className="border-l-4 border-l-emerald-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Trophy className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground font-medium cursor-help flex items-center gap-1">
+                        Gagnées
+                        <HelpCircle className="h-3 w-3" />
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[200px]">
+                      <p>Affaires conclues avec succès. Le client a signé !</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <p className="text-xl font-bold">{wonCount} <span className="text-sm font-normal text-muted-foreground">({formatCurrency(wonValue)})</span></p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Gagnées</p>
-                <p className="text-xl font-bold">{wonCount} <span className="text-sm font-normal text-muted-foreground">({formatCurrency(wonValue)})</span></p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
-                <XCircle className="h-5 w-5 text-red-600" />
+          <Card className="border-l-4 border-l-red-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground font-medium cursor-help flex items-center gap-1">
+                        Perdues
+                        <HelpCircle className="h-3 w-3" />
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[220px]">
+                      <p>Affaires non conclues : concurrent choisi, budget annulé, projet reporté...</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <p className="text-xl font-bold">{lostCount}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Perdues</p>
-                <p className="text-xl font-bold">{lostCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      </TooltipProvider>
 
       {/* Toggle Chart Button */}
       <div className="flex justify-end">
@@ -236,6 +289,7 @@ export default function OpportunitesPage() {
       )}
 
       {/* Kanban Board */}
+      <TooltipProvider delayDuration={300}>
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {KANBAN_COLUMNS.map((column) => {
@@ -264,7 +318,17 @@ export default function OpportunitesPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{column.title}</h3>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <h3 className="font-semibold flex items-center gap-1.5 cursor-help">
+                                {column.title}
+                                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60" />
+                              </h3>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[250px]">
+                              <p>{column.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <span className="text-sm font-medium bg-background/80 px-2 py-0.5 rounded-full">
                             {opportunities.length}
                           </span>
@@ -375,6 +439,7 @@ export default function OpportunitesPage() {
             </div>
           </div>
       </DragDropContext>
+      </TooltipProvider>
 
       {/* Quote Editor Sheet */}
       {quoteOpportunityId && (

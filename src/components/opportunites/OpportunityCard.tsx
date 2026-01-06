@@ -189,25 +189,43 @@ export const OpportunityCard = React.memo(function OpportunityCard({
         </div>
 
         {/* Valeur et probabilité */}
-        <div className="space-y-2">
-          {/* Valeur estimée */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Valeur</span>
-            <span className="font-bold text-sm">
-              {formatCurrency(opportunity.valeurEstimee || 0)}
-            </span>
-          </div>
-
-          {/* Probabilité avec barre de progression */}
-          <div className="space-y-1">
+        <TooltipProvider delayDuration={300}>
+          <div className="space-y-2">
+            {/* Valeur estimée */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Probabilité</span>
-              <span className="text-xs font-medium">{probabilityPercent}%</span>
-            </div>
-            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="relative">
+                  <span className="text-xs text-muted-foreground cursor-help border-b border-dotted border-muted-foreground/50">
+                    Valeur
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[200px]">
+                  <p>Montant estimé du contrat si l'affaire est gagnée</p>
+                </TooltipContent>
+              </Tooltip>
+              <span className="font-bold text-sm">
+                {formatCurrency(opportunity.valeurEstimee || 0)}
+              </span>
+            </div>
+
+            {/* Probabilité avec barre de progression */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground cursor-help border-b border-dotted border-muted-foreground/50">
+                      Probabilité
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[220px]">
+                    <p>Estimation des chances de remporter cette affaire (0-100%)</p>
+                  </TooltipContent>
+                </Tooltip>
+                <span className="text-xs font-medium">{probabilityPercent}%</span>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative cursor-help">
                     <Progress
                       value={probabilityPercent}
                       className="h-1.5"
@@ -215,50 +233,77 @@ export const OpportunityCard = React.memo(function OpportunityCard({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Valeur pondérée: {formatCurrency(opportunity.valeurPonderee || 0)}</p>
+                  <p>Valeur pondérée : {formatCurrency(opportunity.valeurPonderee || 0)}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          </div>
-
-          {/* Date de clôture */}
-          {opportunity.dateClotureEstimee && (
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Clôture
-              </span>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] px-1.5 py-0",
-                  isOverdue(opportunity.dateClotureEstimee)
-                    ? "bg-red-50 text-red-700 border-red-300"
-                    : closingSoon
-                    ? "bg-amber-50 text-amber-700 border-amber-300"
-                    : "bg-gray-50 text-gray-600 border-gray-200"
-                )}
-              >
-                {isOverdue(opportunity.dateClotureEstimee) && (
-                  <Clock className="h-2.5 w-2.5 mr-1" />
-                )}
-                {formatDate(opportunity.dateClotureEstimee)}
-              </Badge>
             </div>
-          )}
-        </div>
 
-        {/* Valeur pondérée en bas */}
-        <div className="mt-3 pt-2 border-t border-dashed">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-              Pondérée
-            </span>
-            <span className="text-sm font-bold text-primary">
-              {formatCurrency(opportunity.valeurPonderee || 0)}
-            </span>
+            {/* Date de clôture */}
+            {opportunity.dateClotureEstimee && (
+              <div className="flex items-center justify-between pt-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 cursor-help border-b border-dotted border-muted-foreground/50">
+                      <Calendar className="h-3 w-3" />
+                      Clôture
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[200px]">
+                    <p>Date prévue de signature ou décision du client</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] px-1.5 py-0 cursor-help",
+                        isOverdue(opportunity.dateClotureEstimee)
+                          ? "bg-red-50 text-red-700 border-red-300"
+                          : closingSoon
+                          ? "bg-amber-50 text-amber-700 border-amber-300"
+                          : "bg-gray-50 text-gray-600 border-gray-200"
+                      )}
+                    >
+                      {isOverdue(opportunity.dateClotureEstimee) && (
+                        <Clock className="h-2.5 w-2.5 mr-1" />
+                      )}
+                      {formatDate(opportunity.dateClotureEstimee)}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isOverdue(opportunity.dateClotureEstimee) ? (
+                      <p className="text-red-600">⚠️ Date dépassée - relancer le client</p>
+                    ) : closingSoon ? (
+                      <p className="text-amber-600">⏰ Échéance proche (&lt; 7 jours)</p>
+                    ) : (
+                      <p>Échéance dans plus de 7 jours</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
           </div>
-        </div>
+
+          {/* Valeur pondérée en bas */}
+          <div className="mt-3 pt-2 border-t border-dashed">
+            <div className="flex items-center justify-between">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide cursor-help border-b border-dotted border-muted-foreground/50">
+                    Pondérée
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[220px]">
+                  <p>Valeur × Probabilité = prévision réaliste de revenus</p>
+                </TooltipContent>
+              </Tooltip>
+              <span className="text-sm font-bold text-primary">
+                {formatCurrency(opportunity.valeurPonderee || 0)}
+              </span>
+            </div>
+          </div>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
