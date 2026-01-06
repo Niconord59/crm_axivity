@@ -227,7 +227,7 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 **Clients**
 - **FR-020**: La page Clients DOIT afficher une liste searchable de tous les clients
 - **FR-021**: La fiche client DOIT avoir 4 onglets : Informations, Projets, Factures, Interactions
-- **FR-022**: La fiche client DOIT afficher un indicateur "Santé du Client" basé sur la dernière interaction
+- **FR-022**: La fiche client DOIT afficher un indicateur "Santé du Client" basé sur la dernière interaction (badge rouge "À relancer" si aucune interaction depuis plus de 90 jours)
 
 **Factures**
 - **FR-023**: La page Factures DOIT permettre de filtrer par statut (Brouillon, Envoyée, Payée, Annulée)
@@ -236,7 +236,7 @@ En tant que commercial, je veux importer des leads depuis un fichier CSV ou Exce
 
 **Équipe**
 - **FR-026**: La page Équipe DOIT lister tous les membres avec leur rôle et email
-- **FR-027**: La vue Charge de travail DOIT afficher le % de capacité atteinte par membre
+- **FR-027**: La vue Charge de travail DOIT afficher le % de capacité atteinte par membre (calculé comme le ratio heures assignées / heures disponibles par semaine)
 
 **Rapports CEO**
 - **FR-028**: Le dashboard CEO DOIT afficher des KPIs stratégiques : CA total, Taux conversion, Marge moyenne

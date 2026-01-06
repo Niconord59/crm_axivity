@@ -5,7 +5,7 @@
 
 ## Summary
 
-Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une agence IA. L'interface permet de gérer le cycle de vie client complet : prospection (opportunités), vente (pipeline), exécution (projets/tâches), facturation et fidélisation. L'application est construite avec React 19 + Next.js 16 + Shadcn/UI + Tailwind CSS, communiquant avec Supabase (migration depuis Supabase en cours). Design 100% responsive mobile-first.
+Application web SAAS complète pour le cockpit opérationnel CRM Axivity d'une agence IA. L'interface permet de gérer le cycle de vie client complet : prospection (opportunités), vente (pipeline), exécution (projets/tâches), facturation et fidélisation. L'application est construite avec React 19 + Next.js 16 + Shadcn/UI + Tailwind CSS, communiquant avec Supabase self-hosted (migration depuis Airtable terminée). Design 100% responsive mobile-first.
 
 ## Technical Context
 
