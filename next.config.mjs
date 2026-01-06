@@ -11,12 +11,12 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  // Désactiver le Router Cache RSC pour éviter les données stales
+  // Minimiser le Router Cache RSC pour éviter les données stales
   // https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
   experimental: {
     staleTimes: {
-      dynamic: 0,  // Pas de cache pour les pages dynamiques
-      static: 0,   // Pas de cache pour les pages statiques
+      dynamic: 0,   // Pas de cache pour les pages dynamiques
+      static: 30,   // Minimum 30s requis par Next.js pour les pages statiques
     },
   },
   // Configuration images pour Supabase Storage
