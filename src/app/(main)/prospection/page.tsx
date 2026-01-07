@@ -77,30 +77,6 @@ function ProspectionContent() {
     setCallDialogOpen(true);
   };
 
-  const handleNotQualified = async (prospect: Prospect) => {
-    try {
-      await updateStatus.mutateAsync({
-        id: prospect.id,
-        statut: "Non qualifié",
-      });
-      toast.success("Lead marqué comme non qualifié");
-    } catch {
-      toast.error("Erreur lors de la mise à jour");
-    }
-  };
-
-  const handleLost = async (prospect: Prospect) => {
-    try {
-      await updateStatus.mutateAsync({
-        id: prospect.id,
-        statut: "Perdu",
-      });
-      toast.success("Lead marqué comme perdu");
-    } catch {
-      toast.error("Erreur lors de la mise à jour");
-    }
-  };
-
   // Afficher le loading uniquement au chargement initial (pas lors des refetch)
   if (isLoading && !prospects) {
     return <PageLoading />;
@@ -149,8 +125,6 @@ function ProspectionContent() {
               key={prospect.id}
               prospect={prospect}
               onCall={handleCall}
-              onNotQualified={handleNotQualified}
-              onLost={handleLost}
             />
           ))}
         </div>
