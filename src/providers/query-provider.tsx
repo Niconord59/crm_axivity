@@ -18,9 +18,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             retry: 1,
             // Délai exponentiel entre les retries
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // Rafraîchir quand on revient sur l'onglet (mais respecte staleTime)
-            refetchOnWindowFocus: "always",
-            // Ne pas refetch automatiquement au montage si les données sont fraîches
+            // Rafraîchir quand on revient sur l'onglet (respecte staleTime: refetch seulement si données stale)
+            refetchOnWindowFocus: true,
+            // Refetch au montage seulement si données stale (respecte staleTime)
             refetchOnMount: true,
             // Rafraîchir après reconnexion réseau
             refetchOnReconnect: true,

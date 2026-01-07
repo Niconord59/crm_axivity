@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { createClient, AUTH_STORAGE_KEY } from "@/lib/supabase/client";
+import type { Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 /**
  * Hook de synchronisation d'authentification cross-tab
@@ -11,39 +11,45 @@ import { useRouter } from "next/navigation";
  * Ce hook:
  * 1. Écoute les changements d'état d'auth Supabase
  * 2. Invalide le cache React Query lors des changements de session
- * 3. Redirige vers /login en cas de déconnexion
- * 4. Gère les conflits de session entre onglets
+ * 3. Gère les conflits de session entre onglets via localStorage events
+ *
+ * NOTE: La redirection vers /login est gérée par use-auth.ts pour éviter la duplication
  */
 export function useAuthSync() {
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const supabase = createClient();
+
+  // Debounce ref pour éviter les rafales d'événements storage
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const DEBOUNCE_MS = 100;
 
   const handleAuthChange = useCallback(
-    (event: string, session: unknown) => {
+    (event: AuthChangeEvent, session: Session | null) => {
       if (process.env.NODE_ENV === "development") {
         console.log("[AuthSync] Event:", event);
       }
 
       switch (event) {
         case "SIGNED_IN":
-        case "TOKEN_REFRESHED":
-          // Session valide, pas besoin d'invalider le cache
-          // sauf si c'est un nouvel utilisateur
-          if (event === "SIGNED_IN") {
-            queryClient.clear();
-          }
+          // Nouvel utilisateur connecté, vider le cache de l'ancien
+          queryClient.clear();
           break;
 
         case "SIGNED_OUT":
-          // Nettoyer le cache et rediriger
+          // Nettoyer le cache (la redirection est gérée par use-auth.ts)
           queryClient.clear();
-          router.push("/login");
+          break;
+
+        case "TOKEN_REFRESHED":
+          // Token rafraîchi, les données restent valides
+          // Pas besoin d'invalider le cache
           break;
 
         case "USER_UPDATED":
           // Invalider uniquement les données utilisateur
           queryClient.invalidateQueries({ queryKey: ["user"] });
           queryClient.invalidateQueries({ queryKey: ["profile"] });
+          queryClient.invalidateQueries({ queryKey: ["profiles"] });
           break;
 
         case "INITIAL_SESSION":
@@ -51,49 +57,63 @@ export function useAuthSync() {
           break;
 
         default:
-          // Pour les événements inconnus, invalider tout par sécurité
+          // Pour les événements inconnus, log en dev uniquement
           if (process.env.NODE_ENV === "development") {
             console.warn("[AuthSync] Unknown event:", event);
           }
           break;
       }
     },
-    [queryClient, router]
+    [queryClient]
   );
 
+  // Écouter les changements d'état d'auth Supabase
   useEffect(() => {
-    // S'abonner aux changements d'état d'auth
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(handleAuthChange);
 
-    // Cleanup
     return () => {
       subscription.unsubscribe();
     };
-  }, [handleAuthChange]);
+  }, [supabase, handleAuthChange]);
 
   // Écouter les événements de storage pour la synchronisation cross-tab
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       // Vérifier si c'est notre clé de session
-      if (event.key === "crm-axivity-auth") {
+      if (event.key !== AUTH_STORAGE_KEY) {
+        return;
+      }
+
+      // Debounce pour éviter les rafales d'événements
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
         if (event.newValue === null) {
           // Session supprimée dans un autre onglet
+          // La redirection est gérée par use-auth.ts via onAuthStateChange
           queryClient.clear();
-          router.push("/login");
         } else if (event.oldValue !== event.newValue) {
           // Session changée dans un autre onglet
-          // Invalider les queries pour forcer un refetch avec la nouvelle session
-          queryClient.invalidateQueries();
+          // Invalider seulement les queries user/profile, pas tout le cache
+          queryClient.invalidateQueries({ queryKey: ["user"] });
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          queryClient.invalidateQueries({ queryKey: ["profiles"] });
         }
-      }
+      }, DEBOUNCE_MS);
     };
 
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      // Cleanup du timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
-  }, [queryClient, router]);
+  }, [queryClient]);
 }

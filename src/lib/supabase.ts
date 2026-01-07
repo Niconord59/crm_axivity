@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Storage key for auth session - MUST match @/lib/supabase/client.ts
+export const AUTH_STORAGE_KEY = 'crm-axivity-auth'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -15,9 +18,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     // Utilise PKCE pour une meilleure sécurité
     flowType: 'pkce',
-    // Synchronise automatiquement la session entre onglets
-    // via les événements de storage localStorage
-    storageKey: 'crm-axivity-auth',
+    // Clé de stockage unifiée avec @/lib/supabase/client.ts
+    storageKey: AUTH_STORAGE_KEY,
     // Rafraîchit automatiquement le token avant expiration
     autoRefreshToken: true,
   },
