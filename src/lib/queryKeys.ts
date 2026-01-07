@@ -132,6 +132,8 @@ export const queryKeys = {
       [...queryKeys.prospects.all, "with-clients", filters] as const,
     detail: (id: string) =>
       [...queryKeys.prospects.all, "detail", id] as const,
+    byClient: (clientId: string) =>
+      [...queryKeys.prospects.all, "by-client", clientId] as const,
     kpis: (prospectIds?: string[]) =>
       [...queryKeys.prospects.all, "kpis", prospectIds] as const,
     rappelsAujourdhui: (userId?: string) =>

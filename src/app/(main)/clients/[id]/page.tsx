@@ -16,6 +16,9 @@ import {
   Mail,
   Calendar,
   User,
+  Users,
+  Star,
+  Linkedin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +29,9 @@ import { Separator } from "@/components/ui/separator";
 import { StatusBadge, PageLoading, HealthBadge } from "@/components/shared";
 import { AppBreadcrumb } from "@/components/layout";
 import { ClientForm } from "@/components/forms/ClientForm";
+import { ContactForm } from "@/components/forms/ContactForm";
 import { useClient } from "@/hooks/use-clients";
+import { useContactsByClient } from "@/hooks/use-prospects";
 import { useProjets } from "@/hooks/use-projets";
 import { useFactures } from "@/hooks/use-factures";
 import { useInteractions, useLastInteractionDate } from "@/hooks/use-interactions";
@@ -34,7 +39,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 
-type Tab = "infos" | "projets" | "factures" | "interactions";
+type Tab = "infos" | "contacts" | "projets" | "factures" | "interactions";
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -42,6 +47,7 @@ export default function ClientDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>("infos");
 
   const { data: client, isLoading: loadingClient } = useClient(id);
+  const { data: contacts, isLoading: loadingContacts } = useContactsByClient(id);
   const { data: projets, isLoading: loadingProjets } = useProjets({
     clientId: id,
   });
@@ -55,7 +61,7 @@ export default function ClientDetailPage() {
     clientId: id,
   });
 
-  const isLoading = loadingClient || loadingProjets || loadingFactures || loadingInteractions;
+  const isLoading = loadingClient || loadingContacts || loadingProjets || loadingFactures || loadingInteractions;
 
   if (isLoading) {
     return <PageLoading />;
@@ -84,6 +90,7 @@ export default function ClientDetailPage() {
 
   const tabs: { key: Tab; label: string; icon: React.ElementType; count?: number }[] = [
     { key: "infos", label: "Informations", icon: Info },
+    { key: "contacts", label: "Contacts", icon: Users, count: contacts?.length },
     { key: "projets", label: "Projets", icon: FolderKanban, count: projets?.length },
     { key: "factures", label: "Factures", icon: FileText, count: factures?.length },
     { key: "interactions", label: "Interactions", icon: MessageSquare, count: interactions?.length },
@@ -299,6 +306,112 @@ export default function ClientDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Tab Content - Contacts */}
+      {activeTab === "contacts" && (
+        <div className="space-y-4">
+          {contacts && contacts.length > 0 ? (
+            contacts.map((contact) => (
+              <Card key={contact.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>
+                          {contact.prenom
+                            ? `${contact.prenom[0]}${contact.nom[0]}`
+                            : contact.nom.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium">
+                            {contact.prenom
+                              ? `${contact.prenom} ${contact.nom}`
+                              : contact.nom}
+                          </h3>
+                          {contact.estPrincipal && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Star className="h-3 w-3 mr-1 fill-amber-500 text-amber-500" />
+                              Principal
+                            </Badge>
+                          )}
+                          {contact.statutProspection && (
+                            <Badge variant="outline" className="text-xs">
+                              {contact.statutProspection}
+                            </Badge>
+                          )}
+                        </div>
+                        {contact.poste && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {contact.poste}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-4 mt-2 flex-wrap">
+                          {contact.email && (
+                            <a
+                              href={`mailto:${contact.email}`}
+                              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              {contact.email}
+                            </a>
+                          )}
+                          {contact.telephone && (
+                            <a
+                              href={`tel:${contact.telephone}`}
+                              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              {contact.telephone}
+                            </a>
+                          )}
+                          {contact.linkedin && (
+                            <a
+                              href={contact.linkedin}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Linkedin className="h-3.5 w-3.5" />
+                              LinkedIn
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <ContactForm
+                      contact={contact}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Modifier le contact</span>
+                        </Button>
+                      }
+                    />
+                  </div>
+                  {contact.notesProspection && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-sm text-muted-foreground italic">
+                        {contact.notesProspection}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                <p className="text-muted-foreground mt-2">
+                  Aucun contact pour ce client
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

@@ -255,6 +255,90 @@ export function useUpdateProspectStatus() {
 }
 
 /**
+ * Hook to update a contact (full update, not just status)
+ * Used by ContactForm for admin editing
+ */
+export function useUpdateContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      nom,
+      prenom,
+      email,
+      telephone,
+      poste,
+      linkedin,
+      estPrincipal,
+      clientId,
+      statutProspection,
+      dateRappel,
+      dateRdvPrevu,
+      typeRdv,
+      lienVisio,
+      sourceLead,
+      notesProspection,
+    }: {
+      id: string;
+      nom: string;
+      prenom?: string;
+      email?: string;
+      telephone?: string;
+      poste?: string;
+      linkedin?: string;
+      estPrincipal?: boolean;
+      clientId?: string;
+      statutProspection?: ProspectStatus;
+      dateRappel?: string;
+      dateRdvPrevu?: string;
+      typeRdv?: RdvType;
+      lienVisio?: string;
+      sourceLead?: ProspectSource;
+      notesProspection?: string;
+    }) => {
+      // Map camelCase form data to snake_case Supabase columns
+      const updateData: Record<string, unknown> = {
+        nom,
+        prenom: prenom || null,
+        email: email || null,
+        telephone: telephone || null,
+        poste: poste || null,
+        linkedin: linkedin || null,
+        est_principal: estPrincipal || false,
+        client_id: clientId || null,
+        statut_prospection: statutProspection || null,
+        date_rappel: dateRappel || null,
+        date_rdv_prevu: dateRdvPrevu || null,
+        type_rdv: typeRdv || null,
+        lien_visio: lienVisio || null,
+        source_lead: sourceLead || null,
+        notes_prospection: notesProspection || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from("contacts")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToContact(data);
+    },
+    onSuccess: async (_, variables) => {
+      // Invalidate and refetch all related queries
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
+      // Also invalidate clients if client association changed
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+    },
+  });
+}
+
+/**
  * Hook to create a new prospect (creates client if needed, then contact)
  */
 export function useCreateProspect() {
@@ -596,5 +680,30 @@ export function usePastRdvProspects() {
       return mappedProspects as Prospect[];
     },
     refetchInterval: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook to fetch all contacts for a specific client
+ * Used in Client 360 page to display and edit contacts
+ */
+export function useContactsByClient(clientId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.prospects.byClient(clientId || ""),
+    queryFn: async () => {
+      if (!clientId) throw new Error("Client ID required");
+
+      const { data: contacts, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("est_principal", { ascending: false })
+        .order("nom", { ascending: true });
+
+      if (error) throw error;
+
+      return (contacts || []).map(mapToContact);
+    },
+    enabled: !!clientId,
   });
 }

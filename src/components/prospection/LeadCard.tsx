@@ -17,6 +17,7 @@ import {
   Video,
   MapPin,
   Loader2,
+  Edit2,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,6 +46,7 @@ import { toast } from "sonner";
 import type { Prospect } from "@/hooks/use-prospects";
 import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { formatDate, cn } from "@/lib/utils";
+import { ContactForm } from "@/components/forms/ContactForm";
 
 interface LeadCardProps {
   prospect: Prospect;
@@ -196,6 +198,7 @@ export const LeadCard = React.memo(function LeadCard({
   const router = useRouter();
   const [convertPopoverOpen, setConvertPopoverOpen] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const convertToOpportunity = useConvertToOpportunity();
 
   const fullName = prospect.prenom
@@ -330,6 +333,16 @@ export const LeadCard = React.memo(function LeadCard({
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Copier l&apos;email
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditDialogOpen(true);
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Modifier le contact
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onNotQualified(prospect)}>
@@ -586,6 +599,14 @@ export const LeadCard = React.memo(function LeadCard({
             {actionButton.label}
           </Button>
         )}
+
+        {/* Contact Edit Dialog */}
+        <ContactForm
+          contact={prospect}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          trigger={<span className="hidden" />}
+        />
       </CardContent>
     </Card>
   );
