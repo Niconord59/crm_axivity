@@ -14,6 +14,7 @@ interface OnboardingTourProps {
   currentStep: number;
   onNext: () => void;
   onPrev: () => void;
+  onGoToStep: (step: number) => void;
   onSkip: () => void;
   onComplete: () => void;
   onClose: () => void;
@@ -24,6 +25,7 @@ export function OnboardingTour({
   currentStep,
   onNext,
   onPrev,
+  onGoToStep,
   onSkip,
   onComplete,
   onClose,
@@ -214,15 +216,8 @@ export function OnboardingTour({
                   : "w-2 bg-muted-foreground/30"
               )}
               onClick={() => {
-                // Allow clicking on dots to navigate
-                if (index < currentStep) {
-                  for (let i = currentStep; i > index; i--) {
-                    onPrev();
-                  }
-                } else if (index > currentStep) {
-                  for (let i = currentStep; i < index; i++) {
-                    onNext();
-                  }
+                if (index !== currentStep) {
+                  onGoToStep(index);
                 }
               }}
               aria-label={`Aller à l'étape ${index + 1}`}
