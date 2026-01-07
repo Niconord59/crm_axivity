@@ -9,8 +9,6 @@ import {
   Building2,
   Calendar,
   MoreVertical,
-  XCircle,
-  Clock,
   Copy,
   ArrowRight,
   FileText,
@@ -51,8 +49,6 @@ import { ContactForm } from "@/components/forms/ContactForm";
 interface LeadCardProps {
   prospect: Prospect;
   onCall: (prospect: Prospect) => void;
-  onNotQualified: (prospect: Prospect) => void;
-  onLost: (prospect: Prospect) => void;
 }
 
 // Configuration des couleurs par statut
@@ -192,8 +188,6 @@ function getActionButton(status: string | undefined): {
 export const LeadCard = React.memo(function LeadCard({
   prospect,
   onCall,
-  onNotQualified,
-  onLost,
 }: LeadCardProps) {
   const router = useRouter();
   const [convertPopoverOpen, setConvertPopoverOpen] = useState(false);
@@ -343,18 +337,6 @@ export const LeadCard = React.memo(function LeadCard({
                   >
                     <Edit2 className="h-4 w-4 mr-2" />
                     Modifier le contact
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onNotQualified(prospect)}>
-                    <Clock className="h-4 w-4 mr-2" />
-                    Non qualifié
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onLost(prospect)}
-                    className="text-red-600"
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Perdu
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

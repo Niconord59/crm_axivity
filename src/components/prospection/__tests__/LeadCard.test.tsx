@@ -1,9 +1,16 @@
 // CRM Axivity - LeadCard Component Tests
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@/test/utils";
 import userEvent from "@testing-library/user-event";
 import { LeadCard } from "../LeadCard";
 import type { Prospect } from "@/hooks/use-prospects";
+
+// Mock Supabase
+vi.mock("@/lib/supabase", () => ({
+  supabase: {
+    from: vi.fn(),
+  },
+}));
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -60,8 +67,6 @@ const futureDateString = formatDateString(futureDate);
 
 describe("LeadCard", () => {
   const mockOnCall = vi.fn();
-  const mockOnNotQualified = vi.fn();
-  const mockOnLost = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,8 +83,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -92,8 +95,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -106,8 +107,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -120,8 +119,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -134,8 +131,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -148,8 +143,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -162,8 +155,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -176,8 +167,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -206,8 +195,6 @@ describe("LeadCard", () => {
           <LeadCard
             prospect={prospect}
             onCall={mockOnCall}
-            onNotQualified={mockOnNotQualified}
-            onLost={mockOnLost}
           />
         );
 
@@ -222,8 +209,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -241,8 +226,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -257,8 +240,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -271,8 +252,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -285,8 +264,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -304,8 +281,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -324,8 +299,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -338,8 +311,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -352,8 +323,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -366,8 +335,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -381,8 +348,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -404,8 +369,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -429,8 +392,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -439,64 +400,6 @@ describe("LeadCard", () => {
       expect(menuTriggers.length).toBeGreaterThan(0);
     });
 
-    it("should call onNotQualified from menu", async () => {
-      const user = userEvent.setup();
-      const prospect = createProspect();
-      render(
-        <LeadCard
-          prospect={prospect}
-          onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
-        />
-      );
-
-      // Open dropdown
-      const menuTrigger = screen.getAllByRole("button").find(btn =>
-        btn.classList.contains("opacity-0") || btn.querySelector("svg")
-      );
-
-      if (menuTrigger) {
-        await user.click(menuTrigger);
-        // Wait for menu to open
-        await waitFor(() => {
-          const menuItem = screen.getByText("Non qualifié");
-          return menuItem;
-        });
-
-        const nonQualifiedItem = screen.getByText("Non qualifié");
-        await user.click(nonQualifiedItem);
-
-        expect(mockOnNotQualified).toHaveBeenCalledWith(prospect);
-      }
-    });
-
-    it("should call onLost from menu", async () => {
-      const user = userEvent.setup();
-      const prospect = createProspect();
-      render(
-        <LeadCard
-          prospect={prospect}
-          onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
-        />
-      );
-
-      // Find and click dropdown trigger (the MoreVertical icon button)
-      const buttons = screen.getAllByRole("button");
-      const menuTrigger = buttons.find(btn => btn.querySelector("svg"));
-
-      if (menuTrigger) {
-        await user.click(menuTrigger);
-        await waitFor(() => screen.getByText("Perdu"));
-
-        const lostItem = screen.getByText("Perdu");
-        await user.click(lostItem);
-
-        expect(mockOnLost).toHaveBeenCalledWith(prospect);
-      }
-    });
   });
 
   // ===========================================================================
@@ -510,8 +413,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -533,8 +434,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -561,8 +460,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -584,8 +481,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -620,8 +515,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -662,8 +555,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -681,8 +572,6 @@ describe("LeadCard", () => {
           <LeadCard
             prospect={prospect}
             onCall={mockOnCall}
-            onNotQualified={mockOnNotQualified}
-            onLost={mockOnLost}
           />
         )
       ).not.toThrow();
@@ -694,8 +583,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
@@ -711,8 +598,6 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
-          onNotQualified={mockOnNotQualified}
-          onLost={mockOnLost}
         />
       );
 
