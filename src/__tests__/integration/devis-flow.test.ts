@@ -465,7 +465,7 @@ describe("Devis Flow Integration", () => {
         client_id: "client-1",
         montant_ht: 10750,
         montant_ttc: 12900,
-        statut: "En attente",
+        statut: "Brouillon",
         date_emission: new Date().toISOString().split("T")[0],
         date_echeance: "2026-02-05",
       };

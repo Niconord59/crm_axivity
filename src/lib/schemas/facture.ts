@@ -6,6 +6,7 @@ export const FACTURE_STATUTS = [
   "Envoyé",
   "Payé",
   "Annulé",
+  "En retard",
 ] as const;
 
 export type FactureStatut = (typeof FACTURE_STATUTS)[number];

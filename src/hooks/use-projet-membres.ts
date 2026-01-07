@@ -145,11 +145,11 @@ export function useProjetsNonAssignes() {
   return useQuery({
     queryKey: queryKeys.projetMembres.nonAssignes(),
     queryFn: async () => {
-      // Get all active projects
+      // Get all active projects (Cadrage and En cours need team assignment)
       const { data: projets, error: projetsError } = await supabase
         .from("projets")
         .select("id")
-        .in("statut", ["En cours", "En attente"]);
+        .in("statut", ["En cours", "Cadrage"]);
 
       if (projetsError) throw projetsError;
 
