@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import { useAuth, type AuthUser } from "@/hooks/use-auth";
+import { useAuthSync } from "@/hooks/use-auth-sync";
 import type { Session } from "@supabase/supabase-js";
 import type { UserRole } from "@/lib/supabase";
 
@@ -20,6 +21,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
+
+  // Synchronisation cross-tab des sessions auth
+  useAuthSync();
 
   return (
     <AuthContext.Provider value={auth}>
