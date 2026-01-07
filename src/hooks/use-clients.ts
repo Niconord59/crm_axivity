@@ -36,14 +36,30 @@ export function useClient(id: string | undefined) {
     queryFn: async () => {
       if (!id) throw new Error("Client ID required");
 
+      // Fetch client with related record counts
       const { data, error } = await supabase
         .from("clients")
-        .select("*")
+        .select(`
+          *,
+          contacts:contacts(id),
+          projets:projets(id),
+          opportunites:opportunites(id),
+          factures:factures(id)
+        `)
         .eq("id", id)
         .single();
 
       if (error) throw error;
-      return mapToClient(data);
+
+      // Map client and add relationship arrays
+      const client = mapToClient(data);
+      return {
+        ...client,
+        contacts: data.contacts?.map((c: { id: string }) => c.id) || [],
+        projets: data.projets?.map((p: { id: string }) => p.id) || [],
+        opportunites: data.opportunites?.map((o: { id: string }) => o.id) || [],
+        factures: data.factures?.map((f: { id: string }) => f.id) || [],
+      };
     },
     enabled: !!id,
   });
