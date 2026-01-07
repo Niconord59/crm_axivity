@@ -7,7 +7,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Persiste la session dans localStorage
+    persistSession: true,
+    // Détecte les tokens dans l'URL (callbacks OAuth)
+    detectSessionInUrl: true,
+    // Utilise PKCE pour une meilleure sécurité
+    flowType: 'pkce',
+    // Synchronise automatiquement la session entre onglets
+    // via les événements de storage localStorage
+    storageKey: 'crm-axivity-auth',
+    // Rafraîchit automatiquement le token avant expiration
+    autoRefreshToken: true,
+  },
+})
 
 // Types pour les tables Supabase
 export type UserRole = 'admin' | 'developpeur_nocode' | 'developpeur_automatisme' | 'commercial' | 'client'
