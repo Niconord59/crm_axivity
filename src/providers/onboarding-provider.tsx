@@ -36,6 +36,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     startTour,
     nextStep,
     prevStep,
+    goToStep,
     skipTour,
     completeTour,
     setIsOpen,
@@ -61,6 +62,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         currentStep={currentStep}
         onNext={handleNext}
         onPrev={prevStep}
+        onGoToStep={goToStep}
         onSkip={skipTour}
         onComplete={completeTour}
         onClose={handleClose}
