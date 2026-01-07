@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { createClient, AUTH_STORAGE_KEY } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import type { Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 /**
@@ -11,20 +11,17 @@ import type { Session, AuthChangeEvent } from "@supabase/supabase-js";
  * Ce hook:
  * 1. Écoute les changements d'état d'auth Supabase
  * 2. Invalide le cache React Query lors des changements de session
- * 3. Gère les conflits de session entre onglets via localStorage events
  *
- * NOTE: La redirection vers /login est gérée par use-auth.ts pour éviter la duplication
+ * NOTE: Avec @supabase/ssr, la session est stockée dans les cookies.
+ * La synchronisation cross-tab est gérée automatiquement par le cookie.
+ * La redirection vers /login est gérée par use-auth.ts pour éviter la duplication.
  */
 export function useAuthSync() {
   const queryClient = useQueryClient();
   const supabase = createClient();
 
-  // Debounce ref pour éviter les rafales d'événements storage
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const DEBOUNCE_MS = 100;
-
   const handleAuthChange = useCallback(
-    (event: AuthChangeEvent, session: Session | null) => {
+    (event: AuthChangeEvent, _session: Session | null) => {
       if (process.env.NODE_ENV === "development") {
         console.log("[AuthSync] Event:", event);
       }
@@ -77,43 +74,4 @@ export function useAuthSync() {
       subscription.unsubscribe();
     };
   }, [supabase, handleAuthChange]);
-
-  // Écouter les événements de storage pour la synchronisation cross-tab
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      // Vérifier si c'est notre clé de session
-      if (event.key !== AUTH_STORAGE_KEY) {
-        return;
-      }
-
-      // Debounce pour éviter les rafales d'événements
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
-      debounceTimerRef.current = setTimeout(() => {
-        if (event.newValue === null) {
-          // Session supprimée dans un autre onglet
-          // La redirection est gérée par use-auth.ts via onAuthStateChange
-          queryClient.clear();
-        } else if (event.oldValue !== event.newValue) {
-          // Session changée dans un autre onglet
-          // Invalider seulement les queries user/profile, pas tout le cache
-          queryClient.invalidateQueries({ queryKey: ["user"] });
-          queryClient.invalidateQueries({ queryKey: ["profile"] });
-          queryClient.invalidateQueries({ queryKey: ["profiles"] });
-        }
-      }, DEBOUNCE_MS);
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      // Cleanup du timer
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [queryClient]);
 }
