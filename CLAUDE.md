@@ -559,6 +559,13 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Ajout debounce 100ms sur le handler storage pour éviter les rafales
   - Fix `refetchOnWindowFocus: "always"` → `true` (respecte maintenant staleTime)
   - 12 tests unitaires ajoutés pour `use-auth-sync.ts` (973 tests total)
+- **Fix Auth Cookie Storage** (7 jan. 2026) : Correction du login qui échouait malgré un token valide
+  - Suppression des options `auth` de `createBrowserClient` dans `src/lib/supabase/client.ts`
+  - `@supabase/ssr` utilise maintenant le stockage cookie par défaut (au lieu de localStorage)
+  - Correction de la désynchronisation client (localStorage) / serveur proxy (cookies)
+  - Simplification de `use-auth-sync.ts` : suppression de l'écoute des storage events (obsolète avec cookies)
+  - Tests mis à jour : 7 tests auth events (suppression des 6 tests storage events obsolètes)
+  - 968 tests passent
 
 ## Production Checklist
 
@@ -660,20 +667,19 @@ experimental: {
 **Causes** :
 1. React Query `staleTime: 0` causait des refetch en cascade entre onglets
 2. Race condition sur le refresh du token Supabase entre onglets
-3. Pas de synchronisation de session cross-tab
 
-**Solution** (PR #5 + code review - 7 jan. 2026) :
+**Solution** (7 jan. 2026) :
 
-1. **Clients Supabase unifiés** avec `AUTH_STORAGE_KEY` partagé :
+1. **Client Supabase avec stockage cookie par défaut** :
 ```typescript
-// src/lib/supabase.ts ET src/lib/supabase/client.ts
-export const AUTH_STORAGE_KEY = 'crm-axivity-auth';
-
-auth: {
-  persistSession: true,
-  storageKey: AUTH_STORAGE_KEY,
-  autoRefreshToken: true,
-  flowType: 'pkce',
+// src/lib/supabase/client.ts
+// IMPORTANT: Ne PAS ajouter d'options auth - laisser @supabase/ssr
+// utiliser le stockage cookie par défaut pour la compatibilité SSR
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 }
 ```
 
@@ -684,17 +690,47 @@ staleTime: 30 * 1000,        // Données fraîches 30s
 refetchOnWindowFocus: true,  // Respecte staleTime (pas "always")
 ```
 
-3. **Hook `use-auth-sync.ts`** avec debounce 100ms :
+3. **Hook `use-auth-sync.ts`** :
    - Écoute `onAuthStateChange` pour invalider le cache React Query
-   - Écoute `storage` events pour sync cross-tab
-   - Debounce pour éviter les rafales d'événements
+   - La synchronisation cross-tab est gérée automatiquement par les cookies HTTP
    - **Note** : La redirection `/login` est gérée par `use-auth.ts` uniquement
 
 **Si le problème persiste** :
-1. Vider le localStorage : `localStorage.clear()` dans la console
-2. Supprimer les cookies Supabase
+1. Supprimer les cookies Supabase du domaine
+2. Vider l'ancien localStorage (migration) : `localStorage.removeItem('crm-axivity-auth')`
 3. Se reconnecter
 
-**Tests** : 12 tests unitaires dans `src/hooks/__tests__/use-auth-sync.test.ts`
+**Tests** : 7 tests unitaires dans `src/hooks/__tests__/use-auth-sync.test.ts`
+
+### Login échoue malgré un token valide retourné
+
+**Symptômes** :
+- L'API Supabase retourne un token d'authentification valide
+- Mais la page ne redirige pas vers le dashboard
+- Les requêtes API échouent avec 401 Unauthorized
+
+**Cause** : Le client browser (`createBrowserClient`) était configuré avec `storageKey` qui forçait le stockage en localStorage, mais le proxy serveur (`createServerClient`) lit la session depuis les cookies. Désynchronisation client/serveur.
+
+**Solution** (commit `62b49cd1` - 7 jan. 2026) :
+- Supprimer les options `auth` de `createBrowserClient` dans `src/lib/supabase/client.ts`
+- Laisser `@supabase/ssr` utiliser le stockage cookie par défaut
+
+```typescript
+// AVANT (cassé)
+client = createBrowserClient(url, key, {
+  auth: {
+    storageKey: 'crm-axivity-auth',  // Force localStorage
+    persistSession: true,
+  }
+});
+
+// APRÈS (fonctionnel)
+client = createBrowserClient(url, key);  // Utilise cookies par défaut
+```
+
+**Si le problème persiste** :
+1. Vider l'ancien localStorage : `localStorage.removeItem('crm-axivity-auth')`
+2. Supprimer les cookies du domaine
+3. Redémarrer le navigateur
 
 <!-- MANUAL ADDITIONS END -->
