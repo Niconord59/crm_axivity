@@ -551,6 +551,14 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - React Query `staleTime: 30s` (était 0) pour éviter les refetch en cascade
   - Nouveau hook `use-auth-sync.ts` pour synchronisation cross-tab via localStorage events
   - Écoute des événements Supabase auth (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
+- **Code Review Multi-Tab Fix** (7 jan. 2026) : Corrections post-review du fix multi-onglets
+  - Unification des clients Supabase : `AUTH_STORAGE_KEY` partagé entre `supabase.ts` et `supabase/client.ts`
+  - Options auth ajoutées au client SSR (`@/lib/supabase/client.ts`)
+  - Suppression de la double écoute `onAuthStateChange` (redirection dans `use-auth.ts` uniquement)
+  - Correction typage `session: unknown` → `Session | null`
+  - Ajout debounce 100ms sur le handler storage pour éviter les rafales
+  - Fix `refetchOnWindowFocus: "always"` → `true` (respecte maintenant staleTime)
+  - 12 tests unitaires ajoutés pour `use-auth-sync.ts` (973 tests total)
 
 ## Production Checklist
 
@@ -654,22 +662,39 @@ experimental: {
 2. Race condition sur le refresh du token Supabase entre onglets
 3. Pas de synchronisation de session cross-tab
 
-**Solution** (PR #5 - 7 jan. 2026) :
-1. `src/lib/supabase.ts` : Options auth multi-tab
+**Solution** (PR #5 + code review - 7 jan. 2026) :
+
+1. **Clients Supabase unifiés** avec `AUTH_STORAGE_KEY` partagé :
 ```typescript
+// src/lib/supabase.ts ET src/lib/supabase/client.ts
+export const AUTH_STORAGE_KEY = 'crm-axivity-auth';
+
 auth: {
   persistSession: true,
-  storageKey: 'crm-axivity-auth',
+  storageKey: AUTH_STORAGE_KEY,
   autoRefreshToken: true,
   flowType: 'pkce',
 }
 ```
-2. `src/providers/query-provider.tsx` : `staleTime: 30 * 1000` (30 secondes)
-3. `src/hooks/use-auth-sync.ts` : Hook de synchronisation via localStorage events
+
+2. **React Query** avec `staleTime: 30s` et `refetchOnWindowFocus: true` :
+```typescript
+// src/providers/query-provider.tsx
+staleTime: 30 * 1000,        // Données fraîches 30s
+refetchOnWindowFocus: true,  // Respecte staleTime (pas "always")
+```
+
+3. **Hook `use-auth-sync.ts`** avec debounce 100ms :
+   - Écoute `onAuthStateChange` pour invalider le cache React Query
+   - Écoute `storage` events pour sync cross-tab
+   - Debounce pour éviter les rafales d'événements
+   - **Note** : La redirection `/login` est gérée par `use-auth.ts` uniquement
 
 **Si le problème persiste** :
 1. Vider le localStorage : `localStorage.clear()` dans la console
 2. Supprimer les cookies Supabase
 3. Se reconnecter
+
+**Tests** : 12 tests unitaires dans `src/hooks/__tests__/use-auth-sync.test.ts`
 
 <!-- MANUAL ADDITIONS END -->
