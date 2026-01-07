@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-06
+Auto-generated from all feature plans. Last updated: 2026-01-07
 
 ## Active Technologies
 
@@ -23,7 +23,8 @@ src/
 │   │   └── tabs/           # OpportunityInfoTab, OpportunityHistoryTab
 │   ├── devis/              # Génération de devis (QuoteEditorSheet, ServiceSelector)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (16 hooks Supabase)
+├── hooks/                  # React Query hooks (17 hooks Supabase)
+│   ├── use-auth-sync.ts    # Synchronisation cross-tab des sessions
 │   └── __tests__/          # Tests des hooks
 ├── lib/
 │   ├── supabase.ts         # Supabase client
@@ -545,6 +546,11 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
 - **Fix Router Cache RSC** (6 jan. 2026) : Correction du loader infini
   - Ajout `staleTimes: { dynamic: 0, static: 0 }` dans `next.config.mjs`
   - Désactive le cache RSC qui causait des données stales après navigation
+- **Fix Multi-Tab Session Sync** (7 jan. 2026) : Correction du chargement infini multi-onglets
+  - Configuration Supabase client avec options multi-tab (persistSession, storageKey, autoRefreshToken, flowType: pkce)
+  - React Query `staleTime: 30s` (était 0) pour éviter les refetch en cascade
+  - Nouveau hook `use-auth-sync.ts` pour synchronisation cross-tab via localStorage events
+  - Écoute des événements Supabase auth (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
 
 ## Production Checklist
 
@@ -635,5 +641,35 @@ experimental: {
 3. Redémarrer : `npm run dev`
 
 **Documentation** : https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
+
+### Chargement infini sur plusieurs onglets/navigateurs
+
+**Symptômes** :
+- Loader qui tourne en boucle quand le même utilisateur est connecté sur plusieurs onglets
+- Les onglets se "battent" pour rafraîchir les données
+- Déconnexion aléatoire sur certains onglets
+
+**Causes** :
+1. React Query `staleTime: 0` causait des refetch en cascade entre onglets
+2. Race condition sur le refresh du token Supabase entre onglets
+3. Pas de synchronisation de session cross-tab
+
+**Solution** (PR #5 - 7 jan. 2026) :
+1. `src/lib/supabase.ts` : Options auth multi-tab
+```typescript
+auth: {
+  persistSession: true,
+  storageKey: 'crm-axivity-auth',
+  autoRefreshToken: true,
+  flowType: 'pkce',
+}
+```
+2. `src/providers/query-provider.tsx` : `staleTime: 30 * 1000` (30 secondes)
+3. `src/hooks/use-auth-sync.ts` : Hook de synchronisation via localStorage events
+
+**Si le problème persiste** :
+1. Vider le localStorage : `localStorage.clear()` dans la console
+2. Supprimer les cookies Supabase
+3. Se reconnecter
 
 <!-- MANUAL ADDITIONS END -->
