@@ -27,6 +27,7 @@ function mapToContact(record: Record<string, unknown>): Contact {
     email: record.email as string | undefined,
     telephone: record.telephone as string | undefined,
     poste: record.poste as string | undefined,
+    linkedin: record.linkedin as string | undefined,
     estPrincipal: record.est_principal as boolean | undefined,
     statutProspection: record.statut_prospection as ProspectStatus,
     dateRappel: record.date_rappel as string | undefined,
