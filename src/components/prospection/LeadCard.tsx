@@ -266,6 +266,7 @@ export const LeadCard = React.memo(function LeadCard({
   };
 
   return (
+    <>
     <Card
       className={cn(
         "group relative overflow-hidden transition-all duration-200 h-full flex flex-col cursor-pointer",
@@ -363,8 +364,12 @@ export const LeadCard = React.memo(function LeadCard({
           </div>
         </div>
 
-        {/* Informations de contact */}
-        <div className="space-y-1 mb-3">
+        {/* Informations de contact - stopPropagation sur le conteneur pour éviter que le clic ne remonte à la Card */}
+        <div
+          className="space-y-1 mb-3"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {prospect.telephone && (
             <TooltipProvider>
               <Tooltip>
@@ -372,6 +377,7 @@ export const LeadCard = React.memo(function LeadCard({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
                       handleCopyPhone();
                     }}
                     className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full group/btn"
@@ -394,6 +400,7 @@ export const LeadCard = React.memo(function LeadCard({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
                       handleCopyEmail();
                     }}
                     className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full group/btn"
@@ -582,15 +589,17 @@ export const LeadCard = React.memo(function LeadCard({
           </Button>
         )}
 
-        {/* Contact Edit Dialog */}
-        <ContactForm
-          contact={prospect}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          trigger={<span className="hidden" />}
-        />
       </CardContent>
     </Card>
+
+    {/* Contact Edit Dialog - OUTSIDE the Card to avoid event conflicts */}
+    <ContactForm
+      contact={prospect}
+      open={editDialogOpen}
+      onOpenChange={setEditDialogOpen}
+      trigger={<span className="hidden" />}
+    />
+    </>
   );
 });
 

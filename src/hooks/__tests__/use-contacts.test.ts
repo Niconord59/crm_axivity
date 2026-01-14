@@ -292,7 +292,7 @@ describe('useUpdateContact', () => {
     );
   });
 
-  it('should handle null values for optional fields', async () => {
+  it('should only update provided fields (partial update)', async () => {
     const mockSingle = vi.fn().mockResolvedValue({ data: mockContactsFromDb[0], error: null });
     const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
     const mockEq = vi.fn().mockReturnValue({ select: mockSelect });
@@ -309,31 +309,22 @@ describe('useUpdateContact', () => {
     result.current.mutate({
       id: 'contact-1',
       nom: 'Minimal Update',
-      // All optional fields omitted
+      // All optional fields omitted - they should NOT be included in update
     });
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(mockUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        nom: 'Minimal Update',
-        prenom: null,
-        email: null,
-        telephone: null,
-        poste: null,
-        linkedin: null,
-        est_principal: false,
-        client_id: null,
-        statut_prospection: null,
-        date_rappel: null,
-        type_rdv: null,
-        lien_visio: null,
-        source_lead: null,
-        notes_prospection: null,
-      })
-    );
+    // Only nom and updated_at should be in the update (not other fields set to null)
+    const updateArg = mockUpdate.mock.calls[0][0];
+    expect(updateArg.nom).toBe('Minimal Update');
+    expect(updateArg.updated_at).toBeDefined();
+    // Optional fields should NOT be in the update object
+    expect(updateArg).not.toHaveProperty('prenom');
+    expect(updateArg).not.toHaveProperty('email');
+    expect(updateArg).not.toHaveProperty('telephone');
+    expect(updateArg).not.toHaveProperty('statut_prospection');
   });
 
   it('should handle update errors', async () => {

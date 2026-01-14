@@ -59,10 +59,10 @@ export const contactSchema = z.object({
 
   // === Champs de prospection ===
 
-  // Statut de prospection
+  // Statut de prospection (peut être null depuis la base de données)
   statutProspection: z.enum(PROSPECT_STATUSES, {
     errorMap: () => ({ message: "Veuillez sélectionner un statut valide" }),
-  }).optional(),
+  }).optional().nullable(),
 
   // Date de rappel
   dateRappel: z
@@ -78,10 +78,10 @@ export const contactSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  // Type de RDV
+  // Type de RDV (peut être null depuis la base de données)
   typeRdv: z.enum(RDV_TYPES, {
     errorMap: () => ({ message: "Veuillez sélectionner un type de RDV valide" }),
-  }).optional(),
+  }).optional().nullable(),
 
   // Lien visio
   lienVisio: z
@@ -90,10 +90,10 @@ export const contactSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  // Source du lead
+  // Source du lead (peut être null depuis la base de données)
   sourceLead: z.enum(PROSPECT_SOURCES, {
     errorMap: () => ({ message: "Veuillez sélectionner une source valide" }),
-  }).optional(),
+  }).optional().nullable(),
 
   // Notes prospection
   notesProspection: z

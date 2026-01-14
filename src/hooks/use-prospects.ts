@@ -298,24 +298,28 @@ export function useUpdateContact() {
       notesProspection?: string;
     }) => {
       // Map camelCase form data to snake_case Supabase columns
+      // Only include fields that are explicitly provided (not undefined)
+      // This allows partial updates without overwriting existing data
       const updateData: Record<string, unknown> = {
         nom,
-        prenom: prenom || null,
-        email: email || null,
-        telephone: telephone || null,
-        poste: poste || null,
-        linkedin: linkedin || null,
-        est_principal: estPrincipal || false,
-        client_id: clientId || null,
-        statut_prospection: statutProspection || null,
-        date_rappel: dateRappel || null,
-        date_rdv_prevu: dateRdvPrevu || null,
-        type_rdv: typeRdv || null,
-        lien_visio: lienVisio || null,
-        source_lead: sourceLead || null,
-        notes_prospection: notesProspection || null,
         updated_at: new Date().toISOString(),
       };
+
+      // Only add fields if they were explicitly passed (including null/empty string)
+      if (prenom !== undefined) updateData.prenom = prenom || null;
+      if (email !== undefined) updateData.email = email || null;
+      if (telephone !== undefined) updateData.telephone = telephone || null;
+      if (poste !== undefined) updateData.poste = poste || null;
+      if (linkedin !== undefined) updateData.linkedin = linkedin || null;
+      if (estPrincipal !== undefined) updateData.est_principal = estPrincipal || false;
+      if (clientId !== undefined) updateData.client_id = clientId || null;
+      if (statutProspection !== undefined) updateData.statut_prospection = statutProspection || null;
+      if (dateRappel !== undefined) updateData.date_rappel = dateRappel || null;
+      if (dateRdvPrevu !== undefined) updateData.date_rdv_prevu = dateRdvPrevu || null;
+      if (typeRdv !== undefined) updateData.type_rdv = typeRdv || null;
+      if (lienVisio !== undefined) updateData.lien_visio = lienVisio || null;
+      if (sourceLead !== undefined) updateData.source_lead = sourceLead || null;
+      if (notesProspection !== undefined) updateData.notes_prospection = notesProspection || null;
 
       const { data, error } = await supabase
         .from("contacts")
