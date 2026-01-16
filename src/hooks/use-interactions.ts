@@ -96,6 +96,59 @@ export function useCreateInteraction() {
   });
 }
 
+export function useUpdateInteraction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Interaction>;
+    }) => {
+      const updateData: Record<string, unknown> = {};
+
+      if (data.objet !== undefined) updateData.objet = data.objet;
+      if (data.type !== undefined) updateData.type = data.type;
+      if (data.date !== undefined) updateData.date = data.date;
+      if (data.resume !== undefined) updateData.resume = data.resume;
+
+      const { data: record, error } = await supabase
+        .from("interactions")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapToInteraction(record);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.interactions.all });
+    },
+  });
+}
+
+export function useDeleteInteraction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("interactions")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.interactions.all });
+    },
+  });
+}
+
 export function useLastInteractionDate(options?: {
   contactId?: string;
   clientId?: string;

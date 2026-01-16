@@ -118,6 +118,8 @@ export interface Client extends BaseEntity {
   codePostal?: string;
   ville?: string;
   pays?: string;
+  // Social / Web presence
+  linkedinPage?: string;
   // Calculated fields
   santeClient?: string;
   caTotal?: number;

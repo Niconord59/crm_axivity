@@ -48,6 +48,13 @@ export const clientSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  // Page LinkedIn entreprise (optionnel)
+  linkedinPage: z
+    .string()
+    .url("Veuillez entrer une URL LinkedIn valide")
+    .optional()
+    .or(z.literal("")),
+
   // Notes (optionnel)
   notes: z
     .string()
@@ -64,5 +71,6 @@ export const clientDefaultValues: Partial<ClientFormData> = {
   secteurActivite: "",
   statut: "Prospect",
   siteWeb: "",
+  linkedinPage: "",
   notes: "",
 };

@@ -74,6 +74,12 @@ export const prospectSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  linkedinPage: z
+    .string()
+    .url("Veuillez entrer une URL LinkedIn valide")
+    .optional()
+    .or(z.literal("")),
+
   telephoneEntreprise: z
     .string()
     .max(30, "Le téléphone ne peut pas dépasser 30 caractères")
@@ -185,6 +191,7 @@ export const prospectDefaultValues: Partial<ProspectFormData> = {
   clientId: undefined,
   secteurActivite: "",
   siteWeb: "",
+  linkedinPage: "",
   telephoneEntreprise: "",
   // Facturation
   siret: "",

@@ -57,6 +57,7 @@ export function ClientForm({
         secteurActivite: client.secteurActivite || "",
         statut: (client.statut as ClientFormData["statut"]) || "Prospect",
         siteWeb: client.siteWeb || "",
+        linkedinPage: client.linkedinPage || "",
         notes: client.notes || "",
       }
     : (clientDefaultValues as ClientFormData);
@@ -70,6 +71,7 @@ export function ClientForm({
           secteurActivite: data.secteurActivite || undefined,
           statut: data.statut,
           siteWeb: data.siteWeb || undefined,
+          linkedinPage: data.linkedinPage || undefined,
           notes: data.notes || undefined,
         },
       });
@@ -79,6 +81,7 @@ export function ClientForm({
         secteurActivite: data.secteurActivite || undefined,
         statut: data.statut,
         siteWeb: data.siteWeb || undefined,
+        linkedinPage: data.linkedinPage || undefined,
         notes: data.notes || undefined,
       });
     }
@@ -189,6 +192,21 @@ function ClientFormFields({
             <FormLabel>Site web</FormLabel>
             <FormControl>
               <Input placeholder="https://www.example.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Page LinkedIn */}
+      <FormField
+        control={form.control}
+        name="linkedinPage"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Page LinkedIn</FormLabel>
+            <FormControl>
+              <Input placeholder="https://www.linkedin.com/company/..." {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

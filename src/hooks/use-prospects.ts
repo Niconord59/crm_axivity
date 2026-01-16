@@ -356,6 +356,7 @@ export function useCreateProspect() {
       clientId: existingClientId,
       secteurActivite,
       siteWeb,
+      linkedinPage,
       telephoneEntreprise,
       siret,
       adresse,
@@ -379,6 +380,7 @@ export function useCreateProspect() {
       clientId?: string;
       secteurActivite?: string;
       siteWeb?: string;
+      linkedinPage?: string;
       telephoneEntreprise?: string;
       siret?: string;
       adresse?: string;
@@ -421,6 +423,7 @@ export function useCreateProspect() {
 
           if (secteurActivite) clientData.secteur = secteurActivite;
           if (siteWeb) clientData.site_web = siteWeb;
+          if (linkedinPage) clientData.linkedin_page = linkedinPage;
           if (telephoneEntreprise) clientData.telephone = telephoneEntreprise;
           if (siret) clientData.siret = siret;
           if (adresse) clientData.adresse = adresse;

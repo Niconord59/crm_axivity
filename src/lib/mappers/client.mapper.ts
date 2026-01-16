@@ -29,6 +29,8 @@ export function mapToClient(record: SupabaseRecord): Client {
     codePostal: parseOptionalString(record.code_postal),
     ville: parseOptionalString(record.ville),
     pays: parseOptionalString(record.pays),
+    // Social / Web presence
+    linkedinPage: parseOptionalString(record.linkedin_page),
     // Calculated fields
     santeClient: parseOptionalString(record.sante_client),
   };
@@ -50,6 +52,7 @@ export function mapClientToInsert(data: Partial<Client>): SupabaseRecord {
     code_postal: data.codePostal,
     ville: data.ville,
     pays: data.pays || "France",
+    linkedin_page: data.linkedinPage,
   };
 }
 
@@ -71,6 +74,7 @@ export function mapClientToUpdate(data: Partial<Client>): SupabaseRecord {
   if (data.codePostal !== undefined) updateData.code_postal = data.codePostal;
   if (data.ville !== undefined) updateData.ville = data.ville;
   if (data.pays !== undefined) updateData.pays = data.pays;
+  if (data.linkedinPage !== undefined) updateData.linkedin_page = data.linkedinPage;
 
   return updateData;
 }
