@@ -28,6 +28,7 @@ import { AssignTeamModal } from "@/components/projets/AssignTeamModal";
 import { useProjets } from "@/hooks/use-projets";
 import { useProjetsMembres } from "@/hooks/use-projet-membres";
 import { useAuth } from "@/hooks/use-auth";
+import { useProjetsRealtime } from "@/hooks/use-realtime";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
 import { PROJECT_STATUSES, type ProjectStatus, type Projet } from "@/types";
 
@@ -44,6 +45,9 @@ export default function ProjetsPage() {
   const { data: projets, isLoading } = useProjets(
     statusFilter !== "all" ? { statut: statusFilter as ProjectStatus } : undefined
   );
+
+  // S'abonner aux changements Realtime pour rafraîchir automatiquement
+  useProjetsRealtime();
 
   // Fetch members for all projects
   const projetIds = (projets || []).map((p) => p.id);

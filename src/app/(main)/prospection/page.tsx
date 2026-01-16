@@ -21,6 +21,7 @@ import {
   type ProspectFilters,
   type Prospect,
 } from "@/hooks/use-prospects";
+import { useProspectionRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -46,6 +47,9 @@ function ProspectionContent() {
   const queryClient = useQueryClient();
   const { data: prospects, isLoading } = useProspectsWithClients(filters);
   const { data: prospectFromUrl } = useProspect(leadIdFromUrl || undefined);
+
+  // S'abonner aux changements Realtime pour rafraîchir automatiquement
+  useProspectionRealtime();
 
   // Auto-open dialog if leadId is in URL
   useEffect(() => {
