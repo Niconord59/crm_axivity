@@ -24,6 +24,7 @@ import {
 import { factureExportColumns } from "@/lib/export";
 import { FactureForm } from "@/components/forms";
 import { useFactures, useMarquerFacturePayee } from "@/hooks/use-factures";
+import { useFacturesRealtime } from "@/hooks/use-realtime";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
 import { INVOICE_STATUSES, type InvoiceStatus } from "@/types";
 
@@ -34,6 +35,9 @@ export default function FacturesPage() {
     statusFilter !== "all" ? { statut: statusFilter as InvoiceStatus } : undefined
   );
   const marquerPayee = useMarquerFacturePayee();
+
+  // S'abonner aux changements Realtime pour rafraîchir automatiquement
+  useFacturesRealtime();
 
   if (isLoading) {
     return <PageLoading />;

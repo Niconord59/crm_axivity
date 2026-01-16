@@ -17,6 +17,7 @@ import { useFacturesImpayees } from "@/hooks/use-factures";
 import { useTachesEnRetard } from "@/hooks/use-taches";
 import { useProjetsNonAssignes } from "@/hooks/use-projet-membres";
 import { useAuth } from "@/hooks/use-auth";
+import { useDashboardRealtime } from "@/hooks/use-realtime";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
 import Link from "next/link";
 
@@ -28,6 +29,9 @@ export default function DashboardPage() {
     useFacturesImpayees();
   const { data: tachesEnRetard, isLoading: loadingTaches } = useTachesEnRetard();
   const { data: projetsNonAssignes, isLoading: loadingNonAssignes } = useProjetsNonAssignes();
+
+  // S'abonner aux changements Realtime pour rafraîchir automatiquement
+  useDashboardRealtime();
 
   const isLoading =
     loadingProjets || loadingOpp || loadingFactures || loadingTaches || loadingNonAssignes;

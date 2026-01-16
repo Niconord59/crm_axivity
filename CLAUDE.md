@@ -566,6 +566,11 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Simplification de `use-auth-sync.ts` : suppression de l'écoute des storage events (obsolète avec cookies)
   - Tests mis à jour : 7 tests auth events (suppression des 6 tests storage events obsolètes)
   - 968 tests passent
+- **Supabase Realtime** (16 jan. 2026) : Rafraîchissement automatique des données en temps réel
+  - Migration `23_enable_realtime.sql` : Active les publications Realtime sur 10 tables
+  - Nouveau hook `src/hooks/use-realtime.ts` avec 5 hooks spécialisés par page
+  - Intégration dans : Prospection, Pipeline, Projets, Factures, Dashboard
+  - Les données se mettent à jour instantanément sans Ctrl+Shift+R
 
 ## Production Checklist
 
@@ -732,5 +737,50 @@ client = createBrowserClient(url, key);  // Utilise cookies par défaut
 1. Vider l'ancien localStorage : `localStorage.removeItem('crm-axivity-auth')`
 2. Supprimer les cookies du domaine
 3. Redémarrer le navigateur
+
+### Données non rafraîchies après création/modification (Ctrl+Shift+R requis)
+
+**Symptômes** :
+- Un nouveau contact créé n'apparaît pas dans la liste
+- Une modification n'est pas visible immédiatement
+- Les données ne se mettent à jour qu'après Ctrl+Shift+R
+
+**Cause** : React Query cache les données et ne les rafraîchit pas automatiquement quand la base de données change.
+
+**Solution** (16 jan. 2026) : Supabase Realtime
+
+1. **Migration SQL** : `supabase/migrations/23_enable_realtime.sql`
+   - Active les publications Realtime pour toutes les tables principales
+
+2. **Hook Realtime** : `src/hooks/use-realtime.ts`
+   - `useProspectionRealtime()` : contacts, clients
+   - `usePipelineRealtime()` : opportunités, clients, contacts, interactions
+   - `useProjetsRealtime()` : projets, tâches
+   - `useFacturesRealtime()` : factures, devis, lignes_devis
+   - `useDashboardRealtime()` : toutes les tables
+
+3. **Intégration** : Ajouter le hook dans chaque page :
+```typescript
+// Exemple dans src/app/(main)/prospection/page.tsx
+import { useProspectionRealtime } from "@/hooks/use-realtime";
+
+function ProspectionContent() {
+  // ... autres hooks
+  useProspectionRealtime(); // Écoute les changements en temps réel
+}
+```
+
+**Vérification** :
+1. Exécuter la migration `23_enable_realtime.sql` sur Supabase
+2. Vérifier dans la console : `[Realtime] Prospection channel connected`
+3. Créer un contact → doit apparaître instantanément
+
+**Si Realtime ne fonctionne pas** :
+1. Vérifier que les tables sont dans la publication :
+   ```sql
+   SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
+   ```
+2. Vérifier les logs Supabase Kong pour les erreurs WebSocket
+3. Vérifier que le client Supabase est correctement initialisé
 
 <!-- MANUAL ADDITIONS END -->

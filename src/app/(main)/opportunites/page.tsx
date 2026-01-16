@@ -40,6 +40,7 @@ import {
   useOpportunitesParStatut,
   useUpdateOpportuniteStatut,
 } from "@/hooks/use-opportunites";
+import { usePipelineRealtime } from "@/hooks/use-realtime";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { type OpportunityStatus } from "@/types";
@@ -88,6 +89,9 @@ export default function OpportunitesPage() {
   const [miniSheetOpportunityId, setMiniSheetOpportunityId] = useState<string | null>(null);
   const { data: opportunitesGroupees, isLoading } = useOpportunitesParStatut();
   const updateStatut = useUpdateOpportuniteStatut();
+
+  // S'abonner aux changements Realtime pour rafraîchir automatiquement
+  usePipelineRealtime();
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
