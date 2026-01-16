@@ -7,6 +7,8 @@ import {
   useInteractions,
   useInteraction,
   useCreateInteraction,
+  useUpdateInteraction,
+  useDeleteInteraction,
   useLastInteractionDate,
 } from "../use-interactions";
 import { queryKeys } from "@/lib/queryKeys";
@@ -18,10 +20,14 @@ const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockSingle = vi.fn();
 const mockInsert = vi.fn();
+const mockUpdate = vi.fn();
+const mockDelete = vi.fn();
 
 const mockFrom = vi.fn(() => ({
   select: mockSelect,
   insert: mockInsert,
+  update: mockUpdate,
+  delete: mockDelete,
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -541,6 +547,204 @@ describe("use-interactions hooks", () => {
       expect(insertCall.objet).toBe("Minimal");
       expect(insertCall.type).toBe("Note");
       expect(insertCall.contact_id).toBeUndefined();
+    });
+  });
+
+  // ===========================================================================
+  // useUpdateInteraction
+  // ===========================================================================
+  describe("useUpdateInteraction", () => {
+    it("should update an interaction", async () => {
+      const updatedRecord = {
+        id: "inter-1",
+        objet: "Objet modifié",
+        type: "Réunion",
+        date: "2024-04-01",
+        resume: "Résumé modifié",
+        contact_id: "contact-1",
+        client_id: "client-1",
+        user_id: "user-1",
+        created_at: "2024-03-15T10:00:00Z",
+      };
+
+      mockSingle.mockResolvedValue({ data: updatedRecord, error: null });
+      mockSelect.mockReturnValue({ single: mockSingle });
+      mockEq.mockReturnValue({ select: mockSelect });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+
+      const queryClient = createTestQueryClient();
+      const invalidateQueriesSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result } = renderHook(() => useUpdateInteraction(), {
+        wrapper: ({ children }) =>
+          React.createElement(
+            QueryClientProvider,
+            { client: queryClient },
+            children
+          ),
+      });
+
+      result.current.mutate({
+        id: "inter-1",
+        data: {
+          objet: "Objet modifié",
+          type: "Réunion",
+          date: "2024-04-01",
+          resume: "Résumé modifié",
+        },
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(mockFrom).toHaveBeenCalledWith("interactions");
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockEq).toHaveBeenCalledWith("id", "inter-1");
+
+      expect(result.current.data?.objet).toBe("Objet modifié");
+      expect(result.current.data?.type).toBe("Réunion");
+
+      // Should invalidate interactions queries
+      expect(invalidateQueriesSpy).toHaveBeenCalled();
+    });
+
+    it("should only include defined fields in update", async () => {
+      const updatedRecord = {
+        id: "inter-1",
+        objet: "Nouvel objet",
+        type: "Appel",
+        date: "2024-03-15",
+        resume: "Discussion initiale sur les besoins",
+        contact_id: "contact-1",
+        client_id: "client-1",
+        user_id: "user-1",
+        created_at: "2024-03-15T10:00:00Z",
+      };
+
+      mockSingle.mockResolvedValue({ data: updatedRecord, error: null });
+      mockSelect.mockReturnValue({ single: mockSingle });
+      mockEq.mockReturnValue({ select: mockSelect });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+
+      const { result } = renderHook(() => useUpdateInteraction(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate({
+        id: "inter-1",
+        data: {
+          objet: "Nouvel objet",
+        },
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      const updateCall = mockUpdate.mock.calls[0][0];
+      expect(updateCall.objet).toBe("Nouvel objet");
+      expect(updateCall.type).toBeUndefined();
+      expect(updateCall.date).toBeUndefined();
+      expect(updateCall.resume).toBeUndefined();
+    });
+
+    it("should handle update errors", async () => {
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { message: "Update failed" },
+      });
+      mockSelect.mockReturnValue({ single: mockSingle });
+      mockEq.mockReturnValue({ select: mockSelect });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+
+      const { result } = renderHook(() => useUpdateInteraction(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate({
+        id: "inter-1",
+        data: { objet: "Test" },
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(result.current.error).toBeDefined();
+    });
+  });
+
+  // ===========================================================================
+  // useDeleteInteraction
+  // ===========================================================================
+  describe("useDeleteInteraction", () => {
+    it("should delete an interaction", async () => {
+      mockEq.mockResolvedValue({ error: null });
+      mockDelete.mockReturnValue({ eq: mockEq });
+
+      const queryClient = createTestQueryClient();
+      const invalidateQueriesSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result } = renderHook(() => useDeleteInteraction(), {
+        wrapper: ({ children }) =>
+          React.createElement(
+            QueryClientProvider,
+            { client: queryClient },
+            children
+          ),
+      });
+
+      result.current.mutate("inter-1");
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(mockFrom).toHaveBeenCalledWith("interactions");
+      expect(mockDelete).toHaveBeenCalled();
+      expect(mockEq).toHaveBeenCalledWith("id", "inter-1");
+
+      expect(result.current.data).toBe("inter-1");
+
+      // Should invalidate interactions queries
+      expect(invalidateQueriesSpy).toHaveBeenCalled();
+    });
+
+    it("should handle delete errors", async () => {
+      mockEq.mockResolvedValue({
+        error: { message: "Delete failed" },
+      });
+      mockDelete.mockReturnValue({ eq: mockEq });
+
+      const { result } = renderHook(() => useDeleteInteraction(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate("inter-1");
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(result.current.error).toBeDefined();
+    });
+
+    it("should handle deleting non-existent interaction", async () => {
+      mockEq.mockResolvedValue({
+        error: { message: "Row not found", code: "PGRST116" },
+      });
+      mockDelete.mockReturnValue({ eq: mockEq });
+
+      const { result } = renderHook(() => useDeleteInteraction(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate("non-existent");
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
     });
   });
 

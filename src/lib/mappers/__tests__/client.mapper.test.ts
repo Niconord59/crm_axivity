@@ -15,6 +15,7 @@ describe("client.mapper", () => {
         secteur: "Technology",
         statut: "Actif",
         site_web: "https://acme.com",
+        linkedin_page: "https://linkedin.com/company/acme",
         telephone: "+33123456789",
         notes: "Important client",
         created_at: "2024-01-15T10:00:00Z",
@@ -34,6 +35,7 @@ describe("client.mapper", () => {
         secteurActivite: "Technology",
         statut: "Actif",
         siteWeb: "https://acme.com",
+        linkedinPage: "https://linkedin.com/company/acme",
         telephone: "+33123456789",
         notes: "Important client",
         dateCreation: "2024-01-15T10:00:00Z",
@@ -59,6 +61,7 @@ describe("client.mapper", () => {
       expect(client.statut).toBe("Prospect"); // Default
       expect(client.secteurActivite).toBeUndefined();
       expect(client.siteWeb).toBeUndefined();
+      expect(client.linkedinPage).toBeUndefined();
       expect(client.telephone).toBeUndefined();
       expect(client.siret).toBeUndefined();
       expect(client.adresse).toBeUndefined();
@@ -119,6 +122,7 @@ describe("client.mapper", () => {
         secteurActivite: "Finance",
         statut: "Client" as const,
         siteWeb: "https://newclient.com",
+        linkedinPage: "https://linkedin.com/company/newclient",
         telephone: "+33987654321",
         notes: "New prospect",
         siret: "98765432109876",
@@ -135,6 +139,7 @@ describe("client.mapper", () => {
         secteur: "Finance",
         statut: "Client",
         site_web: "https://newclient.com",
+        linkedin_page: "https://linkedin.com/company/newclient",
         telephone: "+33987654321",
         notes: "New prospect",
         siret: "98765432109876",
@@ -197,6 +202,7 @@ describe("client.mapper", () => {
         secteurActivite: "Healthcare",
         statut: "Actif" as const,
         siteWeb: "https://updated.com",
+        linkedinPage: "https://linkedin.com/company/updated",
         telephone: "+33444555666",
         notes: "Updated notes",
         siret: "11111111111111",
@@ -213,6 +219,7 @@ describe("client.mapper", () => {
         secteur: "Healthcare",
         statut: "Actif",
         site_web: "https://updated.com",
+        linkedin_page: "https://linkedin.com/company/updated",
         telephone: "+33444555666",
         notes: "Updated notes",
         siret: "11111111111111",

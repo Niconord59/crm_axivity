@@ -241,6 +241,19 @@ export default function ClientDetailPage() {
                   </a>
                 </div>
               )}
+              {client.linkedinPage && (
+                <div className="flex items-center gap-3">
+                  <Linkedin className="h-4 w-4 text-muted-foreground" />
+                  <a
+                    href={client.linkedinPage}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm hover:underline text-primary"
+                  >
+                    Page LinkedIn
+                  </a>
+                </div>
+              )}
               {client.secteurActivite && (
                 <div className="flex items-center gap-3">
                   <Building2 className="h-4 w-4 text-muted-foreground" />

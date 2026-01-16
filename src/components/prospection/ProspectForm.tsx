@@ -210,6 +210,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     nom: string;
     secteurActivite?: string;
     siteWeb?: string;
+    linkedinPage?: string;
     telephone?: string;
     siret?: string;
     adresse?: string;
@@ -224,6 +225,9 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     }
     if (client.siteWeb) {
       form.setValue("siteWeb", client.siteWeb);
+    }
+    if (client.linkedinPage) {
+      form.setValue("linkedinPage", client.linkedinPage);
     }
     if (client.telephone) {
       form.setValue("telephoneEntreprise", client.telephone);
@@ -296,6 +300,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     form.setValue("pays", "France");
     form.setValue("secteurActivite", "");
     form.setValue("siteWeb", "");
+    form.setValue("linkedinPage", "");
     form.setValue("telephoneEntreprise", "");
     setSearchValue(name);
   };
@@ -333,6 +338,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
         clientId: data.clientId,
         secteurActivite: data.secteurActivite || undefined,
         siteWeb: data.siteWeb || undefined,
+        linkedinPage: data.linkedinPage || undefined,
         telephoneEntreprise: data.telephoneEntreprise || undefined,
         // Facturation
         siret: data.siret || undefined,
@@ -398,6 +404,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
         clientId: validatedFormData.clientId,
         secteurActivite: validatedFormData.secteurActivite || undefined,
         siteWeb: validatedFormData.siteWeb || undefined,
+        linkedinPage: validatedFormData.linkedinPage || undefined,
         telephoneEntreprise: validatedFormData.telephoneEntreprise || undefined,
         // Facturation
         siret: validatedFormData.siret || undefined,
@@ -493,6 +500,7 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
           clientId: validatedFormData.clientId,
           secteurActivite: validatedFormData.secteurActivite || undefined,
           siteWeb: validatedFormData.siteWeb || undefined,
+          linkedinPage: validatedFormData.linkedinPage || undefined,
           telephoneEntreprise: validatedFormData.telephoneEntreprise || undefined,
           // Facturation
           siret: validatedFormData.siret || undefined,
@@ -737,19 +745,29 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="telephoneEntreprise">Téléphone entreprise</Label>
-                  <div className="relative">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="telephoneEntreprise">Téléphone entreprise</Label>
+                    <div className="relative">
+                      <Input
+                        id="telephoneEntreprise"
+                        type="tel"
+                        placeholder="+33 1 00 00 00 00"
+                        {...form.register("telephoneEntreprise")}
+                        className={cn(isEnrichingData && "pr-8")}
+                      />
+                      {isEnrichingData && (
+                        <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="linkedinPage">Page LinkedIn</Label>
                     <Input
-                      id="telephoneEntreprise"
-                      type="tel"
-                      placeholder="+33 1 00 00 00 00"
-                      {...form.register("telephoneEntreprise")}
-                      className={cn(isEnrichingData && "pr-8")}
+                      id="linkedinPage"
+                      placeholder="https://www.linkedin.com/company/..."
+                      {...form.register("linkedinPage")}
                     />
-                    {isEnrichingData && (
-                      <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
                   </div>
                 </div>
               </div>

@@ -35,6 +35,9 @@ import {
   Plus,
   StickyNote,
   Send,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   Dialog,
@@ -60,6 +63,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { callResultSchema, type CallResultFormData } from "@/lib/schemas/prospect";
@@ -67,7 +86,9 @@ import {
   useUpdateProspectStatus,
   type Prospect,
 } from "@/hooks/use-prospects";
-import { useCreateInteraction, useInteractions } from "@/hooks/use-interactions";
+import { useCreateInteraction, useInteractions, useDeleteInteraction } from "@/hooks/use-interactions";
+import { InteractionEditDialog } from "./InteractionEditDialog";
+import type { Interaction } from "@/types";
 import { useClient } from "@/hooks/use-clients";
 import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { AgendaTab } from "./agenda";
@@ -151,7 +172,7 @@ function InfoCard({
   };
 
   return (
-    <div className="group flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+    <div className="group flex items-start gap-3 p-3 rounded-lg bg-muted/30 border hover:bg-muted/50 transition-colors">
       <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center shrink-0 shadow-sm">
         <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
@@ -216,7 +237,12 @@ export function CallResultDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
+  const deleteInteraction = useDeleteInteraction();
   const convertToOpportunity = useConvertToOpportunity();
+
+  // State for interaction edit/delete
+  const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
+  const [deletingInteraction, setDeletingInteraction] = useState<Interaction | null>(null);
 
   // Fetch client details
   const clientId = prospect?.client?.[0];
@@ -451,6 +477,7 @@ export function CallResultDialog({
   const statusConfig = getStatusConfig(prospect.statutProspection);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="sm:max-w-[750px] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden"
@@ -458,7 +485,7 @@ export function CallResultDialog({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         {/* Header amélioré - fixe */}
-        <div className="shrink-0 p-6 pb-4 pr-14 border-b bg-gradient-to-r from-muted/30 to-transparent">
+        <div className="shrink-0 p-6 pb-4 pr-8 border-b bg-gradient-to-r from-muted/30 to-transparent">
           <div className="flex items-start gap-4">
             <Avatar className={cn("h-14 w-14 shrink-0 ring-2 ring-background shadow-lg", statusConfig.avatar)}>
               <AvatarFallback className={cn("text-lg font-bold", statusConfig.avatar)}>
@@ -516,7 +543,7 @@ export function CallResultDialog({
 
         {/* Tabs avec icônes - flex pour remplir l'espace */}
         <Tabs defaultValue={isVisioRdv ? "meeting" : "lead"} className="flex-1 flex flex-col min-h-0">
-          <div className="shrink-0 px-6 pt-2 border-b">
+          <div className="shrink-0 pl-6 pr-8 pt-2 border-b">
             <TabsList className={cn(
               "grid w-full h-10",
               isVisioRdv ? "grid-cols-5" : isRdvContext ? "grid-cols-4" : "grid-cols-5"
@@ -554,8 +581,8 @@ export function CallResultDialog({
 
           {/* Lead Info Tab */}
           <TabsContent value="lead" className="mt-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-6">
-              <div className="space-y-3">
+            <ScrollArea className="h-full">
+              <div className="p-6 pr-8 space-y-3">
                 <InfoCard icon={User} label="Nom complet" value={fullName} />
                 <InfoCard icon={Briefcase} label="Poste" value={prospect.poste} />
 
@@ -607,7 +634,8 @@ export function CallResultDialog({
 
           {/* Company Info Tab */}
           <TabsContent value="company" className="mt-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-6">
+            <ScrollArea className="h-full">
+              <div className="p-6 pr-8">
               {clientLoading ? (
                 <div className="flex items-center justify-center h-32">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -637,10 +665,16 @@ export function CallResultDialog({
                     value={client.siteWeb}
                     href={client.siteWeb?.startsWith("http") ? client.siteWeb : `https://${client.siteWeb}`}
                   />
+                  <InfoCard
+                    icon={Linkedin}
+                    label="Page LinkedIn"
+                    value={client.linkedinPage ? "Voir la page" : undefined}
+                    href={client.linkedinPage}
+                  />
 
                   {/* Adresse */}
                   {(client.adresse || client.ville) && (
-                    <div className="p-3 rounded-lg bg-muted/30">
+                    <div className="p-3 rounded-lg bg-muted/30 border">
                       <div className="flex items-start gap-3">
                         <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center shrink-0 shadow-sm">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -707,12 +741,14 @@ export function CallResultDialog({
                   <p className="text-xs mt-1">Ce lead n&apos;est pas rattaché à un client</p>
                 </div>
               )}
+              </div>
             </ScrollArea>
           </TabsContent>
 
           {/* Interaction History Tab */}
           <TabsContent value="history" className="mt-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-6">
+            <ScrollArea className="h-full">
+              <div className="p-6 pr-8">
               {/* Manual Note Form */}
               <div className="mb-6 p-4 bg-amber-50/50 border border-amber-200 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
@@ -807,7 +843,7 @@ export function CallResultDialog({
                           </div>
 
                           <div className={cn(
-                            "p-4 rounded-xl border transition-colors",
+                            "p-4 rounded-xl border transition-colors group/card",
                             isEmail
                               ? "bg-blue-50/50 border-blue-200"
                               : isNote
@@ -815,29 +851,55 @@ export function CallResultDialog({
                               : "bg-muted/30"
                           )}>
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="font-medium text-sm">{interaction.objet}</span>
-                              <Badge variant="outline" className="text-[10px] shrink-0">
-                                {interaction.type}
-                              </Badge>
+                              <span className="font-medium text-sm break-words min-w-0 flex-1">{interaction.objet}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Badge variant="outline" className="text-[10px]">
+                                  {interaction.type}
+                                </Badge>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setEditingInteraction(interaction)}>
+                                      <Pencil className="h-4 w-4 mr-2" />
+                                      Modifier
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => setDeletingInteraction(interaction)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Supprimer
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </div>
 
                             {interaction.date && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-                                <Clock className="h-3 w-3" />
-                                {format(parseISO(interaction.date), "PPP 'à' HH:mm", { locale: fr })}
+                                <Clock className="h-3 w-3 shrink-0" />
+                                <span>{format(parseISO(interaction.date), "PPP 'à' HH:mm", { locale: fr })}</span>
                               </p>
                             )}
 
                             {interaction.resume && (
-                              <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-background/50 rounded-lg p-3 border">
+                              <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-background/50 rounded-lg p-3 border break-all">
                                 {interaction.resume}
                               </div>
                             )}
 
                             {interaction.prochaineTache && (
                               <p className="text-sm text-primary mt-2 flex items-center gap-1">
-                                <ArrowRight className="h-3 w-3" />
-                                {interaction.prochaineTache}
+                                <ArrowRight className="h-3 w-3 shrink-0" />
+                                <span className="break-words min-w-0">{interaction.prochaineTache}</span>
                               </p>
                             )}
                           </div>
@@ -853,12 +915,13 @@ export function CallResultDialog({
                   <p className="text-xs mt-1">Les appels et emails seront enregistrés ici</p>
                 </div>
               )}
+              </div>
             </ScrollArea>
           </TabsContent>
 
           {/* Agenda Tab */}
           {!isRdvContext && (
-            <TabsContent value="agenda" className="mt-0 flex-1 overflow-hidden p-6">
+            <TabsContent value="agenda" className="mt-0 flex-1 overflow-hidden p-6 pr-8">
               <div className="h-full">
                 <AgendaTab
                   prospect={{
@@ -878,7 +941,7 @@ export function CallResultDialog({
 
           {/* Live Meeting Tab */}
           {isVisioRdv && (
-            <TabsContent value="meeting" className="mt-0 flex-1 overflow-hidden p-6">
+            <TabsContent value="meeting" className="mt-0 flex-1 overflow-hidden p-6 pr-8">
               <div className="h-full flex flex-col">
                 {/* Meeting Info Header */}
                 <div className="bg-gradient-to-r from-violet-50 to-transparent border border-violet-200 rounded-xl p-4 mb-4">
@@ -907,16 +970,16 @@ export function CallResultDialog({
                     )}
                   </div>
                   {prospect.lienVisio && (
-                    <div className="mt-3 flex items-center gap-2 text-sm">
-                      <span className="text-violet-600">Lien :</span>
+                    <div className="mt-3 flex items-center gap-2 text-sm min-w-0">
+                      <span className="text-violet-600 shrink-0">Lien :</span>
                       <a
                         href={prospect.lienVisio}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-violet-700 hover:underline flex items-center gap-1 font-medium"
+                        className="text-violet-700 hover:underline flex items-center gap-1 font-medium min-w-0"
                       >
-                        {prospect.lienVisio}
-                        <ExternalLink className="h-3 w-3" />
+                        <span className="truncate">{prospect.lienVisio}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
                     </div>
                   )}
@@ -954,7 +1017,8 @@ export function CallResultDialog({
 
           {/* Call Result Tab */}
           <TabsContent value="call" className="mt-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-6">
+            <ScrollArea className="h-full">
+              <div className="p-6 pr-8">
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 {/* Result selection */}
                 <div className="space-y-3">
@@ -1206,10 +1270,55 @@ export function CallResultDialog({
                   </Button>
                 </DialogFooter>
               </form>
+              </div>
             </ScrollArea>
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    {/* Edit Interaction Dialog */}
+    <InteractionEditDialog
+      open={!!editingInteraction}
+      onOpenChange={(open) => !open && setEditingInteraction(null)}
+      interaction={editingInteraction}
+    />
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={!!deletingInteraction} onOpenChange={(open) => !open && setDeletingInteraction(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Supprimer cette interaction ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Cette action est irréversible. L&apos;interaction sera définitivement supprimée de l&apos;historique.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={async () => {
+              if (deletingInteraction) {
+                try {
+                  await deleteInteraction.mutateAsync(deletingInteraction.id);
+                  toast.success("Interaction supprimée");
+                  setDeletingInteraction(null);
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Erreur lors de la suppression");
+                }
+              }
+            }}
+          >
+            {deleteInteraction.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Supprimer"
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
