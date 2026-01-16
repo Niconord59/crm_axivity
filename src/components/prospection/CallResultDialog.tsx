@@ -662,7 +662,7 @@ export function CallResultDialog({
                   <InfoCard
                     icon={Globe}
                     label="Site web"
-                    value={client.siteWeb}
+                    value={client.siteWeb ? "Voir le site" : undefined}
                     href={client.siteWeb?.startsWith("http") ? client.siteWeb : `https://${client.siteWeb}`}
                   />
                   <InfoCard
