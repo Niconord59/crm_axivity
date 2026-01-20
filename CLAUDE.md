@@ -162,6 +162,11 @@ L'export Excel utilise **ExcelJS** (remplace xlsx pour 0 vulnérabilités npm):
 - Fonction async: `exportToExcel()`
 - Composant: `src/components/shared/ExportButton.tsx`
 
+### Watch Paths (Optimisation déploiement)
+
+Seuls les changements dans `crm/**` déclenchent un redéploiement.
+Les modifications dans `docs/`, `CLAUDE.md`, `supabase/migrations/` ne redéploient pas.
+
 ## Frontend Application - React + Shadcn/UI
 
 L'interface utilisateur est développée comme une application web SAAS complète.
