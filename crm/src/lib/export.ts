@@ -1,6 +1,6 @@
 "use client";
 
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import Papa from "papaparse";
 
 export interface ExportColumn<T> {
@@ -49,12 +49,12 @@ export function exportToCSV<T extends Record<string, unknown>>(
 /**
  * Export data to Excel file
  */
-export function exportToExcel<T extends Record<string, unknown>>(
+export async function exportToExcel<T extends Record<string, unknown>>(
   data: T[],
   filename: string,
   columns: ExportColumn<T>[],
   sheetName: string = "Données"
-): void {
+): Promise<void> {
   if (data.length === 0) {
     console.warn("No data to export");
     return;
@@ -72,21 +72,29 @@ export function exportToExcel<T extends Record<string, unknown>>(
   });
 
   // Create workbook and worksheet
-  const worksheet = XLSX.utils.json_to_sheet(transformedData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
 
-  // Auto-size columns
-  const colWidths = columns.map((col) => ({
-    wch: Math.max(
+  // Set column headers with auto-width
+  worksheet.columns = columns.map((col) => ({
+    header: col.header,
+    key: col.header,
+    width: Math.max(
       col.header.length,
       ...transformedData.map((row) => String(row[col.header] || "").length)
     ) + 2,
   }));
-  worksheet["!cols"] = colWidths;
+
+  // Add data rows
+  transformedData.forEach((row) => {
+    worksheet.addRow(row);
+  });
+
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
 
   // Generate Excel file
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const excelBuffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([excelBuffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });

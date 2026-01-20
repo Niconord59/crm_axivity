@@ -83,8 +83,8 @@ describe('exportToCSV', () => {
 });
 
 describe('exportToExcel', () => {
-  it('should create and download an Excel file', () => {
-    exportToExcel(testData, 'test-export', testColumns);
+  it('should create and download an Excel file', async () => {
+    await exportToExcel(testData, 'test-export', testColumns);
 
     expect(document.createElement).toHaveBeenCalledWith('a');
     expect(mockClick).toHaveBeenCalled();
@@ -92,28 +92,28 @@ describe('exportToExcel', () => {
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
 
-  it('should not export when data is empty', () => {
-    exportToExcel([], 'empty-export', testColumns);
+  it('should not export when data is empty', async () => {
+    await exportToExcel([], 'empty-export', testColumns);
 
     expect(console.warn).toHaveBeenCalledWith('No data to export');
     expect(mockClick).not.toHaveBeenCalled();
   });
 
-  it('should use custom sheet name', () => {
-    expect(() => exportToExcel(testData, 'test-export', testColumns, 'Custom Sheet')).not.toThrow();
+  it('should use custom sheet name', async () => {
+    await expect(exportToExcel(testData, 'test-export', testColumns, 'Custom Sheet')).resolves.not.toThrow();
   });
 
-  it('should use default sheet name when not provided', () => {
-    expect(() => exportToExcel(testData, 'test-export', testColumns)).not.toThrow();
+  it('should use default sheet name when not provided', async () => {
+    await expect(exportToExcel(testData, 'test-export', testColumns)).resolves.not.toThrow();
   });
 
-  it('should handle nested values', () => {
+  it('should handle nested values', async () => {
     const columnsWithNested: ExportColumn<TestData>[] = [
       { key: 'id', header: 'ID' },
       { key: 'nested.field', header: 'Nested Field' },
     ];
 
-    expect(() => exportToExcel(testData, 'nested-export', columnsWithNested)).not.toThrow();
+    await expect(exportToExcel(testData, 'nested-export', columnsWithNested)).resolves.not.toThrow();
   });
 });
 
@@ -159,7 +159,7 @@ describe('ExportColumn format function', () => {
 });
 
 describe('Edge cases', () => {
-  it('should handle special characters in data', () => {
+  it('should handle special characters in data', async () => {
     const dataWithSpecialChars: TestData[] = [
       { id: '1', name: 'Item with "quotes"', value: 100, active: true },
       { id: '2', name: 'Item with;semicolon', value: 200, active: false },
@@ -167,7 +167,7 @@ describe('Edge cases', () => {
     ];
 
     expect(() => exportToCSV(dataWithSpecialChars, 'special-chars', testColumns)).not.toThrow();
-    expect(() => exportToExcel(dataWithSpecialChars, 'special-chars', testColumns)).not.toThrow();
+    await expect(exportToExcel(dataWithSpecialChars, 'special-chars', testColumns)).resolves.not.toThrow();
   });
 
   it('should handle very long strings', () => {

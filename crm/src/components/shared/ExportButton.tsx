@@ -59,7 +59,7 @@ export function ExportButton({
       if (format === "csv") {
         exportToCSV(data, fullFilename, columns);
       } else {
-        exportToExcel(data, fullFilename, columns, sheetName);
+        await exportToExcel(data, fullFilename, columns, sheetName);
       }
 
       toast({
