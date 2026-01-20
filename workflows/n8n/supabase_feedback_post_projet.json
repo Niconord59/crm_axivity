@@ -1,0 +1,504 @@
+{
+  "name": "Feedback Post-Projet - Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Déclencheur Quotidien 9h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "projets",
+        "returnAll": false,
+        "limit": 50,
+        "filterType": "string",
+        "filterString": "={{ 'statut=eq.Terminé&feedback_envoye=eq.false&date_fin_reelle=lt.' + $now.minus({days: 7}).toISODate() }}"
+      },
+      "id": "supabase-search-projets",
+      "name": "Rechercher Projets Terminés +7j",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-projets-trouves",
+      "name": "Projets Trouvés?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.client_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-client",
+      "name": "Récupérer Client",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [660, -100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "contacts",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Projets Trouvés?').item.json.client_id }}"
+            },
+            {
+              "keyName": "est_principal",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-contact",
+      "name": "Récupérer Contact Principal",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [660, 100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Fusionner Données",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "projet_id",
+              "name": "projet_id",
+              "value": "={{ $('Projets Trouvés?').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "projet_nom",
+              "name": "projet_nom",
+              "value": "={{ $('Projets Trouvés?').item.json.nom }}",
+              "type": "string"
+            },
+            {
+              "id": "client_id",
+              "name": "client_id",
+              "value": "={{ $('Projets Trouvés?').item.json.client_id }}",
+              "type": "string"
+            },
+            {
+              "id": "contact_nom",
+              "name": "contact_nom",
+              "value": "={{ ($('Récupérer Contact Principal').item.json.prenom || '') + ' ' + ($('Récupérer Contact Principal').item.json.nom || '') }}",
+              "type": "string"
+            },
+            {
+              "id": "contact_email",
+              "name": "contact_email",
+              "value": "={{ $('Récupérer Contact Principal').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "client_nom",
+              "name": "client_nom",
+              "value": "={{ $('Récupérer Client').item.json.nom }}",
+              "type": "string"
+            },
+            {
+              "id": "feedback_form_url",
+              "name": "feedback_form_url",
+              "value": "https://crm.axivity.cloud/portail/{{ $('Projets Trouvés?').item.json.client_id }}/feedback",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-variables",
+      "name": "Préparer Variables Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-email",
+              "leftValue": "={{ $json.contact_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-email",
+      "name": "Email Contact Disponible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.contact_email }}",
+        "subject": "Votre avis compte ! - Retour sur le projet {{ $json.projet_nom }}",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }\n    .header h1 { color: white; margin: 0; font-size: 24px; }\n    .content { padding: 30px; background: #ffffff; border: 1px solid #e0e0e0; }\n    .highlight { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }\n    .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; margin: 20px 0; }\n    .cta-button:hover { opacity: 0.9; }\n    .footer { padding: 20px; text-align: center; color: #888; font-size: 12px; background: #f8f9fa; border-radius: 0 0 8px 8px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>Votre avis nous intéresse</h1>\n  </div>\n  <div class=\"content\">\n    <p>Bonjour <strong>{{ $json.contact_nom }}</strong>,</p>\n    \n    <p>Nous espérons que vous allez bien !</p>\n    \n    <p>Il y a une semaine, nous avons clôturé ensemble le projet :</p>\n    \n    <div class=\"highlight\">\n      <strong>{{ $json.projet_nom }}</strong><br>\n      <small>Client : {{ $json.client_nom }}</small>\n    </div>\n    \n    <p>Votre satisfaction est au cœur de nos préoccupations. Nous aimerions beaucoup connaître votre retour d'expérience sur notre collaboration.</p>\n    \n    <p><strong>Cela ne prend que 2 minutes</strong> et nous aide énormément à nous améliorer :</p>\n    \n    <p style=\"text-align: center;\">\n      <a href=\"{{ $json.feedback_form_url }}\" class=\"cta-button\">Donner mon avis</a>\n    </p>\n    \n    <p>Votre feedback est précieux pour nous et contribue directement à l'amélioration de nos services.</p>\n    \n    <p>Merci d'avance pour votre temps !</p>\n    \n    <p>Bien cordialement,<br>\n    <strong>L'équipe Axivity</strong></p>\n  </div>\n  <div class=\"footer\">\n    <p>Cet email a été envoyé automatiquement suite à la clôture de votre projet.<br>\n    Si vous avez des questions, n'hésitez pas à nous contacter.</p>\n  </div>\n</body>\n</html>",
+        "options": {
+          "replyTo": "contact@axivity.fr"
+        }
+      },
+      "id": "send-email",
+      "name": "Envoyer Email Feedback",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1540, -100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "projets",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.projet_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "feedback_envoye",
+              "fieldValue": "true"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-projet",
+      "name": "Marquer Feedback Envoyé",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1760, -100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "interactions",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldId": "type",
+              "fieldValue": "Email"
+            },
+            {
+              "fieldId": "resume",
+              "fieldValue": "={{ 'Email automatique - Demande de feedback post-projet: ' + $json.projet_nom }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-log-interaction",
+      "name": "Logger Interaction CRM",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1980, -100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-op-1",
+      "name": "Aucun Projet",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-2",
+      "name": "Pas d'Email",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1540, 100]
+    }
+  ],
+  "connections": {
+    "Déclencheur Quotidien 9h": {
+      "main": [
+        [
+          {
+            "node": "Rechercher Projets Terminés +7j",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechercher Projets Terminés +7j": {
+      "main": [
+        [
+          {
+            "node": "Projets Trouvés?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Projets Trouvés?": {
+      "main": [
+        [
+          {
+            "node": "Récupérer Client",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Récupérer Contact Principal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aucun Projet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupérer Client": {
+      "main": [
+        [
+          {
+            "node": "Fusionner Données",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupérer Contact Principal": {
+      "main": [
+        [
+          {
+            "node": "Fusionner Données",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fusionner Données": {
+      "main": [
+        [
+          {
+            "node": "Préparer Variables Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Variables Email": {
+      "main": [
+        [
+          {
+            "node": "Email Contact Disponible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Contact Disponible?": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Email Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pas d'Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer Email Feedback": {
+      "main": [
+        [
+          {
+            "node": "Marquer Feedback Envoyé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marquer Feedback Envoyé": {
+      "main": [
+        [
+          {
+            "node": "Logger Interaction CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "feedback-post-projet-supabase",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "id": "crm",
+      "name": "CRM"
+    },
+    {
+      "id": "feedback",
+      "name": "Feedback"
+    },
+    {
+      "id": "automatisation",
+      "name": "Automatisation"
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase"
+    }
+  ],
+  "pinData": {},
+  "_notes": "IMPORTANT: Ce workflow nécessite l'ajout de la colonne 'feedback_envoye' (BOOLEAN) dans la table 'projets' de Supabase."
+}

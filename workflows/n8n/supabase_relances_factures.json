@@ -1,0 +1,822 @@
+{
+  "name": "Relances Factures Automatiques - Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Declencheur 10h Lun-Ven",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "factures",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'statut=eq.Envoyé&date_echeance=lt.' + $now.toISODate() }}"
+      },
+      "id": "supabase-search",
+      "name": "Rechercher Factures Impayees",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [470, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-results",
+      "name": "Factures Trouvees?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const facture = item.json;\n  \n  const dateEcheanceStr = facture.date_echeance;\n  const dateEcheance = new Date(dateEcheanceStr);\n  const aujourdhui = new Date();\n  const joursRetard = Math.floor((aujourdhui - dateEcheance) / (1000 * 60 * 60 * 24));\n  \n  let niveauRelance = 0;\n  let doitRelancer = false;\n  const dernierNiveau = facture.niveau_relance_envoye || 0;\n  \n  // N3: >= 15 jours, N2: >= 7 jours, N1: >= 1 jour\n  if (joursRetard >= 15 && dernierNiveau < 3) {\n    niveauRelance = 3;\n    doitRelancer = true;\n  } else if (joursRetard >= 7 && dernierNiveau < 2) {\n    niveauRelance = 2;\n    doitRelancer = true;\n  } else if (joursRetard >= 1 && dernierNiveau < 1) {\n    niveauRelance = 1;\n    doitRelancer = true;\n  }\n  \n  if (doitRelancer) {\n    results.push({\n      json: {\n        facture_id: facture.id,\n        numero_facture: facture.numero || 'FACT-XXX',\n        projet_id: facture.projet_id,\n        client_id: facture.client_id,\n        montant_ht: facture.montant_ht || 0,\n        montant_ttc: facture.montant_ttc || 0,\n        date_echeance: dateEcheanceStr,\n        jours_retard: joursRetard,\n        niveau_relance: niveauRelance\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "code-calc-niveau",
+      "name": "Calculer Niveau Relance",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-2",
+              "leftValue": "={{ $json.niveau_relance }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-relance",
+      "name": "Doit Relancer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "projets",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.projet_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-projet",
+      "name": "Recuperer Projet",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1350, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Calculer Niveau Relance').item.json.client_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-client",
+      "name": "Recuperer Client",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1570, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "contacts",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Calculer Niveau Relance').item.json.client_id }}"
+            },
+            {
+              "keyName": "est_principal",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-contact",
+      "name": "Recuperer Contact Principal",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1790, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const facture = $('Calculer Niveau Relance').item.json;\nconst projet = $('Recuperer Projet').item.json;\nconst client = $('Recuperer Client').item.json;\nconst contact = $('Recuperer Contact Principal').item.json;\n\nreturn [{\n  json: {\n    facture_id: facture.facture_id,\n    numero_facture: facture.numero_facture,\n    montant_ht: facture.montant_ht,\n    montant_ttc: facture.montant_ttc,\n    date_echeance: facture.date_echeance,\n    jours_retard: facture.jours_retard,\n    niveau_relance: facture.niveau_relance,\n    client_id: facture.client_id,\n    projet_nom: projet.nom || 'Projet',\n    client_nom: client.nom || 'Client',\n    contact_nom: ((contact.prenom || '') + ' ' + (contact.nom || '')).trim() || 'Madame, Monsieur',\n    contact_email: contact.email || null\n  }\n}];"
+      },
+      "id": "code-merge",
+      "name": "Fusionner Donnees",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2010, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-3",
+              "leftValue": "={{ $json.contact_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email-valid",
+      "name": "Email Valide?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2230, 200]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.niveau_relance }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "N1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.niveau_relance }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "N2"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.niveau_relance }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "N3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-niveau",
+      "name": "Router par Niveau",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.contact_email }}",
+        "subject": "Rappel : Facture {{ $json.numero_facture }} - Echeance depassee",
+        "emailType": "html",
+        "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\"><div style=\"background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;\"><h1 style=\"color:white;margin:0;font-size:24px;\">Rappel de paiement</h1></div><div style=\"padding:30px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;\"><p style=\"font-size:16px;\">Bonjour {{ $json.contact_nom }},</p><p>Nous nous permettons de vous rappeler que la facture suivante est arrivee a echeance :</p><div style=\"background:#f8f9fa;padding:20px;margin:20px 0;border-radius:8px;border-left:4px solid #667eea;\"><table style=\"width:100%;border-collapse:collapse;\"><tr><td style=\"padding:8px 0;color:#666;\"><strong>Facture :</strong></td><td style=\"padding:8px 0;\">{{ $json.numero_facture }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Projet :</strong></td><td style=\"padding:8px 0;\">{{ $json.projet_nom }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Echeance :</strong></td><td style=\"padding:8px 0;\">{{ $json.date_echeance }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Montant TTC :</strong></td><td style=\"padding:8px 0;font-weight:bold;color:#667eea;\">{{ $json.montant_ttc }} EUR</td></tr></table></div><p>Si ce reglement a deja ete effectue, nous vous prions de ne pas tenir compte de ce message.</p><p>Nous restons a votre disposition pour toute question.</p><p style=\"margin-top:30px;\">Cordialement,<br><strong>L'equipe Axivity</strong></p></div><div style=\"text-align:center;padding:20px;color:#999;font-size:12px;\">Axivity - Agence IA</div></body></html>",
+        "options": {
+          "replyTo": "comptabilite@axivity.fr"
+        }
+      },
+      "id": "gmail-n1",
+      "name": "Email Relance N1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2700, 0],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.contact_email }}",
+        "subject": "Second rappel : Facture {{ $json.numero_facture }} en attente de reglement",
+        "emailType": "html",
+        "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\"><div style=\"background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;\"><h1 style=\"color:white;margin:0;font-size:24px;\">Second rappel de paiement</h1></div><div style=\"padding:30px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;\"><p style=\"font-size:16px;\">Bonjour {{ $json.contact_nom }},</p><div style=\"background:#fff3cd;border:1px solid #ffc107;padding:15px;margin:15px 0;border-radius:8px;text-align:center;\"><strong style=\"color:#856404;font-size:18px;\">Retard de paiement : {{ $json.jours_retard }} jours</strong></div><p>Malgre notre precedent rappel, nous constatons que la facture ci-dessous n'a toujours pas ete reglee :</p><div style=\"background:#f8f9fa;padding:20px;margin:20px 0;border-radius:8px;border-left:4px solid #f5576c;\"><table style=\"width:100%;border-collapse:collapse;\"><tr><td style=\"padding:8px 0;color:#666;\"><strong>Facture :</strong></td><td style=\"padding:8px 0;\">{{ $json.numero_facture }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Client :</strong></td><td style=\"padding:8px 0;\">{{ $json.client_nom }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Montant TTC :</strong></td><td style=\"padding:8px 0;font-weight:bold;color:#f5576c;\">{{ $json.montant_ttc }} EUR</td></tr></table></div><p>Nous vous remercions de bien vouloir proceder au reglement dans les plus brefs delais.</p><p>Si vous rencontrez des difficultes, n'hesitez pas a nous contacter pour trouver une solution.</p><p style=\"margin-top:30px;\">Cordialement,<br><strong>Service Comptabilite - Axivity</strong></p></div></body></html>",
+        "options": {
+          "replyTo": "comptabilite@axivity.fr"
+        }
+      },
+      "id": "gmail-n2",
+      "name": "Email Relance N2",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2700, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.contact_email }}",
+        "subject": "URGENT - Mise en demeure : Facture {{ $json.numero_facture }}",
+        "emailType": "html",
+        "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\"><div style=\"background:linear-gradient(135deg,#dc3545 0%,#c82333 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;\"><h1 style=\"color:white;margin:0;font-size:24px;\">MISE EN DEMEURE</h1></div><div style=\"padding:30px;border:2px solid #dc3545;border-top:none;border-radius:0 0 10px 10px;\"><p style=\"font-size:16px;\">Bonjour {{ $json.contact_nom }},</p><div style=\"background:#f8d7da;border:2px solid #dc3545;padding:20px;margin:20px 0;border-radius:8px;text-align:center;\"><strong style=\"color:#721c24;font-size:20px;\">MISE EN DEMEURE DE PAYER</strong><br><span style=\"color:#721c24;\">Retard : <strong>{{ $json.jours_retard }} jours</strong></span></div><p>Malgre nos precedentes relances restees sans effet, nous constatons que la somme suivante demeure impayee :</p><div style=\"background:#f8f9fa;padding:20px;margin:20px 0;border-radius:8px;border-left:4px solid #dc3545;\"><table style=\"width:100%;border-collapse:collapse;\"><tr><td style=\"padding:8px 0;color:#666;\"><strong>Facture :</strong></td><td style=\"padding:8px 0;\">{{ $json.numero_facture }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Client :</strong></td><td style=\"padding:8px 0;\">{{ $json.client_nom }}</td></tr><tr><td style=\"padding:8px 0;color:#666;\"><strong>Montant TTC :</strong></td><td style=\"padding:8px 0;font-weight:bold;color:#dc3545;font-size:18px;\">{{ $json.montant_ttc }} EUR</td></tr></table></div><div style=\"background:#dc3545;color:white;padding:15px;text-align:center;border-radius:8px;margin:20px 0;\"><strong>DELAI DE PAIEMENT : 8 JOURS</strong></div><p>Par la presente, nous vous mettons en demeure de nous regler cette somme dans un delai de <strong>8 jours</strong> a compter de la reception de ce courrier.</p><p>A defaut de reglement dans ce delai, nous serons contraints d'engager les procedures de recouvrement appropriees, ce qui entrainera des frais supplementaires a votre charge (penalites de retard, frais de recouvrement, frais de justice).</p><p style=\"font-size:12px;color:#666;margin-top:20px;\"><em>Conformement aux articles 1344 et suivants du Code civil.</em></p><p style=\"margin-top:30px;\">La Direction,<br><strong>Axivity</strong></p></div></body></html>",
+        "options": {
+          "replyTo": "direction@axivity.fr",
+          "ccEmail": "comptabilite@axivity.fr"
+        }
+      },
+      "id": "gmail-n3",
+      "name": "Email Mise en Demeure N3",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2700, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "factures",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Fusionner Donnees').item.json.facture_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "niveau_relance_envoye",
+              "fieldValue": "={{ $('Fusionner Donnees').item.json.niveau_relance }}"
+            },
+            {
+              "fieldId": "date_derniere_relance",
+              "fieldValue": "={{ $now.toISODate() }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-n1",
+      "name": "MAJ Facture N1",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2920, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "factures",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Fusionner Donnees').item.json.facture_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "niveau_relance_envoye",
+              "fieldValue": "={{ $('Fusionner Donnees').item.json.niveau_relance }}"
+            },
+            {
+              "fieldId": "date_derniere_relance",
+              "fieldValue": "={{ $now.toISODate() }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-n2",
+      "name": "MAJ Facture N2",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2920, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "factures",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Fusionner Donnees').item.json.facture_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "niveau_relance_envoye",
+              "fieldValue": "={{ $('Fusionner Donnees').item.json.niveau_relance }}"
+            },
+            {
+              "fieldId": "date_derniere_relance",
+              "fieldValue": "={{ $now.toISODate() }}"
+            },
+            {
+              "fieldId": "statut",
+              "fieldValue": "En retard"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-n3",
+      "name": "MAJ Facture N3",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2920, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "interactions",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $('Fusionner Donnees').item.json.client_id }}"
+            },
+            {
+              "fieldId": "type",
+              "fieldValue": "Email"
+            },
+            {
+              "fieldId": "objet",
+              "fieldValue": "={{ 'Relance N' + $('Fusionner Donnees').item.json.niveau_relance + ' - Facture ' + $('Fusionner Donnees').item.json.numero_facture }}"
+            },
+            {
+              "fieldId": "resume",
+              "fieldValue": "={{ 'Relance automatique niveau ' + $('Fusionner Donnees').item.json.niveau_relance + ' envoyee pour la facture ' + $('Fusionner Donnees').item.json.numero_facture + ' (' + $('Fusionner Donnees').item.json.montant_ttc + ' EUR TTC, ' + $('Fusionner Donnees').item.json.jours_retard + ' jours de retard)' }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-log-interaction",
+      "name": "Logger Interaction CRM",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [3140, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "noop-no-factures",
+      "name": "Fin - Aucune Facture",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {},
+      "id": "noop-no-relance",
+      "name": "Fin - Pas de Relance",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1350, 400]
+    },
+    {
+      "parameters": {},
+      "id": "noop-no-email",
+      "name": "Fin - Email Invalide",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2450, 500]
+    }
+  ],
+  "connections": {
+    "Declencheur 10h Lun-Ven": {
+      "main": [
+        [
+          {
+            "node": "Rechercher Factures Impayees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechercher Factures Impayees": {
+      "main": [
+        [
+          {
+            "node": "Factures Trouvees?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Factures Trouvees?": {
+      "main": [
+        [
+          {
+            "node": "Calculer Niveau Relance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - Aucune Facture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculer Niveau Relance": {
+      "main": [
+        [
+          {
+            "node": "Doit Relancer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doit Relancer?": {
+      "main": [
+        [
+          {
+            "node": "Recuperer Projet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - Pas de Relance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperer Projet": {
+      "main": [
+        [
+          {
+            "node": "Recuperer Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperer Client": {
+      "main": [
+        [
+          {
+            "node": "Recuperer Contact Principal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperer Contact Principal": {
+      "main": [
+        [
+          {
+            "node": "Fusionner Donnees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fusionner Donnees": {
+      "main": [
+        [
+          {
+            "node": "Email Valide?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Valide?": {
+      "main": [
+        [
+          {
+            "node": "Router par Niveau",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - Email Invalide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router par Niveau": {
+      "main": [
+        [
+          {
+            "node": "Email Relance N1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Relance N2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Mise en Demeure N3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Relance N1": {
+      "main": [
+        [
+          {
+            "node": "MAJ Facture N1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Relance N2": {
+      "main": [
+        [
+          {
+            "node": "MAJ Facture N2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Mise en Demeure N3": {
+      "main": [
+        [
+          {
+            "node": "MAJ Facture N3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAJ Facture N1": {
+      "main": [
+        [
+          {
+            "node": "Logger Interaction CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAJ Facture N2": {
+      "main": [
+        [
+          {
+            "node": "Logger Interaction CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAJ Facture N3": {
+      "main": [
+        [
+          {
+            "node": "Logger Interaction CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "relances-factures-supabase",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "id": "crm",
+      "name": "CRM"
+    },
+    {
+      "id": "facturation",
+      "name": "Facturation"
+    },
+    {
+      "id": "automatisation",
+      "name": "Automatisation"
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase"
+    }
+  ],
+  "pinData": {},
+  "_notes": "IMPORTANT: Ce workflow necessite les colonnes 'niveau_relance_envoye' (INTEGER) et 'date_derniere_relance' (DATE) dans la table 'factures' de Supabase."
+}

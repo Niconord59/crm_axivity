@@ -1,0 +1,684 @@
+{
+  "name": "Alertes Tâches en Retard - Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Déclencheur 9h Jours Ouvrés",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "taches",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ 'date_echeance=lt.' + $now.toISODate() + '&statut=neq.Terminé' }}"
+      },
+      "id": "supabase-search-taches",
+      "name": "Rechercher Tâches en Retard",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-taches-trouvees",
+      "name": "Tâches en Retard?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "projets",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.projet_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-projet",
+      "name": "Récupérer Projet",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [660, -100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "profiles",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Tâches en Retard?').item.json.assignee_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-responsable",
+      "name": "Récupérer Responsable",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [660, 100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "merge-projet-responsable",
+      "name": "Fusionner Données",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tache_id",
+              "name": "tache_id",
+              "value": "={{ $('Tâches en Retard?').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "tache_nom",
+              "name": "tache_nom",
+              "value": "={{ $('Tâches en Retard?').item.json.titre }}",
+              "type": "string"
+            },
+            {
+              "id": "projet_nom",
+              "name": "projet_nom",
+              "value": "={{ $('Récupérer Projet').item.json.nom || 'Projet non défini' }}",
+              "type": "string"
+            },
+            {
+              "id": "responsable_nom",
+              "name": "responsable_nom",
+              "value": "={{ ($('Récupérer Responsable').item.json.prenom || '') + ' ' + ($('Récupérer Responsable').item.json.nom || 'Non assigné') }}",
+              "type": "string"
+            },
+            {
+              "id": "responsable_email",
+              "name": "responsable_email",
+              "value": "={{ $('Récupérer Responsable').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "date_echeance",
+              "name": "date_echeance",
+              "value": "={{ $('Tâches en Retard?').item.json.date_echeance }}",
+              "type": "string"
+            },
+            {
+              "id": "jours_retard",
+              "name": "jours_retard",
+              "value": "={{ Math.floor((Date.now() - new Date($('Tâches en Retard?').item.json.date_echeance).getTime()) / (1000 * 60 * 60 * 24)) }}",
+              "type": "number"
+            },
+            {
+              "id": "statut",
+              "name": "statut",
+              "value": "={{ $('Tâches en Retard?').item.json.statut }}",
+              "type": "string"
+            },
+            {
+              "id": "priorite",
+              "name": "priorite",
+              "value": "={{ $('Tâches en Retard?').item.json.priorite || 'Moyenne' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-variables",
+      "name": "Enrichir Données Tâche",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "field": "tache_nom",
+              "aggregation": "append",
+              "separateBy": "other",
+              "customSeparator": "|||"
+            },
+            {
+              "field": "projet_nom",
+              "aggregation": "append",
+              "separateBy": "other",
+              "customSeparator": "|||"
+            },
+            {
+              "field": "date_echeance",
+              "aggregation": "append",
+              "separateBy": "other",
+              "customSeparator": "|||"
+            },
+            {
+              "field": "jours_retard",
+              "aggregation": "append",
+              "separateBy": "other",
+              "customSeparator": "|||"
+            },
+            {
+              "field": "priorite",
+              "aggregation": "append",
+              "separateBy": "other",
+              "customSeparator": "|||"
+            },
+            {
+              "field": "tache_id",
+              "aggregation": "append",
+              "separateBy": "other",
+              "customSeparator": "|||"
+            }
+          ]
+        },
+        "fieldsToGroupBy": {
+          "values": [
+            "responsable_email",
+            "responsable_nom"
+          ]
+        },
+        "options": {}
+      },
+      "id": "summarize-by-responsable",
+      "name": "Grouper par Responsable",
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-email",
+              "leftValue": "={{ $json.responsable_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email-exists",
+      "name": "Email Disponible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construire le tableau HTML des tâches pour ce responsable\nconst taches = $input.item.json.tache_nom.split('|||');\nconst projets = $input.item.json.projet_nom.split('|||');\nconst dates = $input.item.json.date_echeance.split('|||');\nconst retards = $input.item.json.jours_retard.split('|||');\nconst priorites = $input.item.json.priorite.split('|||');\nconst ids = $input.item.json.tache_id.split('|||');\n\nlet tableRows = '';\nfor (let i = 0; i < taches.length; i++) {\n  const prioriteColor = priorites[i] === 'Haute' || priorites[i] === 'Critique' ? '#dc3545' : \n                        priorites[i] === 'Moyenne' ? '#ffc107' : '#6c757d';\n  const retardBadge = parseInt(retards[i]) > 7 ? \n    '<span style=\"background:#dc3545;color:white;padding:2px 8px;border-radius:12px;font-size:11px;\">CRITIQUE</span>' :\n    parseInt(retards[i]) > 3 ?\n    '<span style=\"background:#ffc107;color:black;padding:2px 8px;border-radius:12px;font-size:11px;\">URGENT</span>' :\n    '<span style=\"background:#17a2b8;color:white;padding:2px 8px;border-radius:12px;font-size:11px;\">RETARD</span>';\n    \n  tableRows += `\n    <tr style=\"border-bottom: 1px solid #eee;\">\n      <td style=\"padding: 12px 8px;\">\n        <strong>${taches[i]}</strong><br>\n        <small style=\"color: #666;\">${projets[i]}</small>\n      </td>\n      <td style=\"padding: 12px 8px; text-align: center;\">\n        <span style=\"background:${prioriteColor};color:white;padding:2px 8px;border-radius:4px;font-size:11px;\">${priorites[i]}</span>\n      </td>\n      <td style=\"padding: 12px 8px; text-align: center;\">${dates[i]}</td>\n      <td style=\"padding: 12px 8px; text-align: center;\">\n        <strong>${retards[i]} jour(s)</strong><br>\n        ${retardBadge}\n      </td>\n      <td style=\"padding: 12px 8px; text-align: center;\">\n        <a href=\"https://crm.axivity.cloud/taches\" style=\"color:#667eea;text-decoration:none;\">Ouvrir</a>\n      </td>\n    </tr>`;\n}\n\nreturn {\n  ...($input.item.json),\n  tableRows: tableRows,\n  nbTaches: taches.length,\n  tachesArray: taches,\n  retardsArray: retards.map(r => parseInt(r)),\n  maxRetard: Math.max(...retards.map(r => parseInt(r)))\n};"
+      },
+      "id": "code-build-table",
+      "name": "Construire Tableau HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, -100]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.responsable_email }}",
+        "subject": "={{ '⚠️ [RAPPEL] ' + $json.nbTaches + ' tâche(s) en retard - Action requise' }}",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; }\n    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }\n    .header h1 { color: white; margin: 0; font-size: 24px; }\n    .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0 0; }\n    .content { padding: 30px; background: #ffffff; border: 1px solid #e0e0e0; }\n    .alert-box { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 20px; }\n    .alert-box.critical { background: #f8d7da; border-color: #dc3545; }\n    table { width: 100%; border-collapse: collapse; margin: 20px 0; }\n    th { background: #f8f9fa; padding: 12px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; }\n    .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; margin: 15px 5px; }\n    .footer { padding: 20px; text-align: center; color: #888; font-size: 12px; background: #f8f9fa; border-radius: 0 0 8px 8px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>⚠️ Tâches en Retard</h1>\n    <p>{{ $json.nbTaches }} tâche(s) nécessitent votre attention</p>\n  </div>\n  <div class=\"content\">\n    <p>Bonjour <strong>{{ $json.responsable_nom }}</strong>,</p>\n    \n    <div class=\"alert-box {{ $json.maxRetard > 7 ? 'critical' : '' }}\">\n      <strong>{{ $json.maxRetard > 7 ? '🚨 Attention critique !' : '⏰ Rappel important' }}</strong><br>\n      {{ $json.maxRetard > 7 ? 'Certaines tâches ont plus d\\'une semaine de retard.' : 'Voici les tâches en retard qui attendent votre action.' }}\n    </div>\n    \n    <table>\n      <thead>\n        <tr>\n          <th>Tâche / Projet</th>\n          <th style=\"text-align:center;\">Priorité</th>\n          <th style=\"text-align:center;\">Échéance</th>\n          <th style=\"text-align:center;\">Retard</th>\n          <th style=\"text-align:center;\">Action</th>\n        </tr>\n      </thead>\n      <tbody>\n        {{ $json.tableRows }}\n      </tbody>\n    </table>\n    \n    <p style=\"text-align: center;\">\n      <a href=\"https://crm.axivity.cloud/taches\" class=\"cta-button\">📋 Voir toutes mes tâches</a>\n    </p>\n    \n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 25px 0;\">\n    \n    <p><strong>💡 Conseils :</strong></p>\n    <ul style=\"color: #666;\">\n      <li>Mettez à jour le statut des tâches terminées</li>\n      <li>Si une tâche est bloquée, communiquez avec votre chef de projet</li>\n      <li>Priorisez les tâches marquées \"Haute\" ou \"CRITIQUE\"</li>\n    </ul>\n  </div>\n  <div class=\"footer\">\n    <p>📧 Email automatique du CRM Axivity - Envoyé chaque jour ouvré à 9h</p>\n  </div>\n</body>\n</html>",
+        "options": {
+          "replyTo": "support@axivity.fr"
+        }
+      },
+      "id": "send-email-responsable",
+      "name": "Envoyer Email au Responsable",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1980, -100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "=tache_nom",
+        "options": {}
+      },
+      "id": "split-all-taches",
+      "name": "Éclater Toutes Tâches",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "all_taches",
+        "options": {}
+      },
+      "id": "aggregate-for-summary",
+      "name": "Agréger pour Résumé",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construire le résumé pour le manager\nconst allItems = $('Enrichir Données Tâche').all();\n\nlet totalTaches = allItems.length;\nlet tachesParPriorite = { 'Critique': 0, 'Haute': 0, 'Moyenne': 0, 'Basse': 0 };\nlet tachesCritiques = 0; // > 7 jours\nlet tachesUrgentes = 0;  // 4-7 jours\nlet responsablesSet = new Set();\nlet projetsSet = new Set();\n\nlet detailsRows = '';\n\nallItems.forEach(item => {\n  const data = item.json;\n  const priorite = data.priorite || 'Moyenne';\n  tachesParPriorite[priorite] = (tachesParPriorite[priorite] || 0) + 1;\n  \n  if (data.jours_retard > 7) tachesCritiques++;\n  else if (data.jours_retard > 3) tachesUrgentes++;\n  \n  responsablesSet.add(data.responsable_nom);\n  projetsSet.add(data.projet_nom);\n  \n  const retardBadge = data.jours_retard > 7 ? '🔴' : data.jours_retard > 3 ? '🟠' : '🟡';\n  \n  detailsRows += `\n    <tr style=\"border-bottom: 1px solid #eee;\">\n      <td style=\"padding: 8px;\">${data.tache_nom}</td>\n      <td style=\"padding: 8px;\">${data.projet_nom}</td>\n      <td style=\"padding: 8px;\">${data.responsable_nom}</td>\n      <td style=\"padding: 8px; text-align: center;\">${retardBadge} ${data.jours_retard}j</td>\n    </tr>`;\n});\n\nreturn {\n  totalTaches,\n  tachesCritiques,\n  tachesUrgentes,\n  tachesNormales: totalTaches - tachesCritiques - tachesUrgentes,\n  nbResponsables: responsablesSet.size,\n  nbProjets: projetsSet.size,\n  prioriteCritique: tachesParPriorite['Critique'],\n  prioriteHaute: tachesParPriorite['Haute'],\n  prioriteMoyenne: tachesParPriorite['Moyenne'],\n  prioriteBasse: tachesParPriorite['Basse'],\n  detailsRows,\n  date: new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })\n};"
+      },
+      "id": "code-build-summary",
+      "name": "Construire Résumé Manager",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "manager@axivity.fr",
+        "subject": "={{ '📊 Rapport quotidien : ' + $json.totalTaches + ' tâches en retard - ' + $json.date }}",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }\n    .header h1 { color: white; margin: 0; font-size: 24px; }\n    .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0 0; }\n    .content { padding: 30px; background: #ffffff; border: 1px solid #e0e0e0; }\n    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }\n    .stat-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }\n    .stat-card.critical { background: #f8d7da; border-left: 4px solid #dc3545; }\n    .stat-card.warning { background: #fff3cd; border-left: 4px solid #ffc107; }\n    .stat-card.info { background: #d1ecf1; border-left: 4px solid #17a2b8; }\n    .stat-value { font-size: 32px; font-weight: bold; color: #333; }\n    .stat-label { font-size: 12px; color: #666; text-transform: uppercase; margin-top: 5px; }\n    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }\n    th { background: #f8f9fa; padding: 10px 8px; text-align: left; font-weight: 600; }\n    .footer { padding: 20px; text-align: center; color: #888; font-size: 12px; background: #f8f9fa; border-radius: 0 0 8px 8px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>📊 Rapport Quotidien des Retards</h1>\n    <p>{{ $json.date }}</p>\n  </div>\n  <div class=\"content\">\n    <h2>Vue d'ensemble</h2>\n    \n    <div class=\"stats-grid\">\n      <div class=\"stat-card\">\n        <div class=\"stat-value\">{{ $json.totalTaches }}</div>\n        <div class=\"stat-label\">Total en retard</div>\n      </div>\n      <div class=\"stat-card critical\">\n        <div class=\"stat-value\">{{ $json.tachesCritiques }}</div>\n        <div class=\"stat-label\">Critiques (>7j)</div>\n      </div>\n      <div class=\"stat-card warning\">\n        <div class=\"stat-value\">{{ $json.tachesUrgentes }}</div>\n        <div class=\"stat-label\">Urgentes (4-7j)</div>\n      </div>\n      <div class=\"stat-card info\">\n        <div class=\"stat-value\">{{ $json.tachesNormales }}</div>\n        <div class=\"stat-label\">Récentes (<4j)</div>\n      </div>\n    </div>\n    \n    <h3>📈 Répartition</h3>\n    <table>\n      <tr>\n        <td><strong>Collaborateurs concernés :</strong></td>\n        <td>{{ $json.nbResponsables }}</td>\n        <td><strong>Projets impactés :</strong></td>\n        <td>{{ $json.nbProjets }}</td>\n      </tr>\n    </table>\n    \n    <h3>📋 Détail des tâches en retard</h3>\n    <table>\n      <thead>\n        <tr>\n          <th>Tâche</th>\n          <th>Projet</th>\n          <th>Responsable</th>\n          <th style=\"text-align:center;\">Retard</th>\n        </tr>\n      </thead>\n      <tbody>\n        {{ $json.detailsRows }}\n      </tbody>\n    </table>\n    \n    <p style=\"text-align: center; margin-top: 30px;\">\n      <a href=\"https://crm.axivity.cloud/taches\" style=\"display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold;\">Voir les tâches</a>\n    </p>\n  </div>\n  <div class=\"footer\">\n    <p>📧 Rapport automatique généré par le CRM Axivity (Supabase)</p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-email-manager",
+      "name": "Envoyer Résumé Manager",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1980, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "VOTRE_CHANNEL_ID",
+          "mode": "id"
+        },
+        "text": "={{ ':warning: *Rapport des tâches en retard*\\n' + $json.totalTaches + ' tâches en retard ce matin' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "blocks": {
+            "block": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": ":warning: Tâches en retard",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Total:*\n{{ $json.totalTaches }} tâches"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Critiques (>7j):*\n:red_circle: {{ $json.tachesCritiques }}"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Urgentes (4-7j):*\n:large_orange_circle: {{ $json.tachesUrgentes }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Récentes (<4j):*\n:large_yellow_circle: {{ $json.tachesNormales }}"
+                  }
+                ]
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": ":busts_in_silhouette: {{ $json.nbResponsables }} collaborateurs concernés | :file_folder: {{ $json.nbProjets }} projets impactés"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": ":eyes: Voir les tâches",
+                      "emoji": true
+                    },
+                    "url": "https://crm.axivity.cloud/taches"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "id": "slack-summary",
+      "name": "Notifier Slack Équipe",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2200, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "VOTRE_SLACK_CREDENTIAL_ID",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-op-end",
+      "name": "Aucune Tâche en Retard",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-no-email",
+      "name": "Pas d'Email",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1760, 100]
+    }
+  ],
+  "connections": {
+    "Déclencheur 9h Jours Ouvrés": {
+      "main": [
+        [
+          {
+            "node": "Rechercher Tâches en Retard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechercher Tâches en Retard": {
+      "main": [
+        [
+          {
+            "node": "Tâches en Retard?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tâches en Retard?": {
+      "main": [
+        [
+          {
+            "node": "Récupérer Projet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Récupérer Responsable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aucune Tâche en Retard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupérer Projet": {
+      "main": [
+        [
+          {
+            "node": "Fusionner Données",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupérer Responsable": {
+      "main": [
+        [
+          {
+            "node": "Fusionner Données",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fusionner Données": {
+      "main": [
+        [
+          {
+            "node": "Enrichir Données Tâche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrichir Données Tâche": {
+      "main": [
+        [
+          {
+            "node": "Grouper par Responsable",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Éclater Toutes Tâches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grouper par Responsable": {
+      "main": [
+        [
+          {
+            "node": "Email Disponible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Disponible?": {
+      "main": [
+        [
+          {
+            "node": "Construire Tableau HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pas d'Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire Tableau HTML": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Email au Responsable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Éclater Toutes Tâches": {
+      "main": [
+        [
+          {
+            "node": "Agréger pour Résumé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agréger pour Résumé": {
+      "main": [
+        [
+          {
+            "node": "Construire Résumé Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire Résumé Manager": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Résumé Manager",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notifier Slack Équipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "alertes-taches-retard-supabase",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "id": "alertes",
+      "name": "Alertes"
+    },
+    {
+      "id": "taches",
+      "name": "Tâches"
+    },
+    {
+      "id": "automatisation",
+      "name": "Automatisation"
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase"
+    }
+  ],
+  "pinData": {}
+}

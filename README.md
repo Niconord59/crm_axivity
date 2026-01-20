@@ -1,53 +1,54 @@
 # CRM Axivity
 
-[![Tests](https://github.com/Niconord59/crm_axivity/actions/workflows/test.yml/badge.svg)](https://github.com/Niconord59/crm_axivity/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/Niconord59/crm_axivity/graph/badge.svg)](https://codecov.io/gh/Niconord59/crm_axivity)
+Operational cockpit for an AI Agency - managing the entire client lifecycle: prospecting, sales pipeline, project execution, invoicing, and client retention.
 
-Cockpit opérationnel pour agence IA - Interface Next.js
+## Project Structure
 
-## Stack Technique
-
-| Technologie | Version |
-|-------------|---------|
-| Next.js | 16.x |
-| React | 19.x |
-| TypeScript | 5.x |
-| Tailwind CSS | 3.x |
-| Shadcn/UI | Latest |
-| Supabase | Self-hosted |
-
-## Installation
-
-```bash
-npm install
-npm run dev
+```
+CRM_Axivity/
+├── crm/                    # Next.js application (production code)
+├── supabase/               # Database infrastructure (migrations)
+├── workflows/              # Automations (N8N)
+├── docs/                   # Documentation
+├── .github/                # CI/CD
+└── .claude/, _bmad/        # AI tooling
 ```
 
-## Tests
+## Quick Start
 
 ```bash
-# Lancer tous les tests
+# Install dependencies
+cd crm && npm install
+
+# Start development server
+npm run dev
+
+# Run tests
 npm test
 
-# Mode watch
-npm run test:watch
-
-# Rapport de couverture
-npm run test:coverage
+# Build for production
+npm run build
 ```
 
-**843 tests** couvrant :
-- Hooks React Query (7 fichiers)
-- Mappers (6 fichiers)
-- Routes API (4 fichiers)
-- Composants métier (6 fichiers)
-- Tests d'intégration (2 fichiers)
+## Tech Stack
+
+| Technology | Version |
+|------------|---------|
+| Next.js | 16.x (Turbopack) |
+| React | 19.x |
+| Supabase | Self-hosted |
+| Tailwind CSS | 3.x |
+| Shadcn/UI | Latest |
 
 ## Documentation
 
-- [Guide de Tests](docs/TESTING.md)
-- [CLAUDE.md](CLAUDE.md) - Instructions pour Claude Code
+- [Architecture](docs/architecture/architecture.md)
+- [API Contracts](docs/architecture/api-contracts.md)
+- [Data Models](docs/architecture/data-models.md)
+- [Feature Specs](docs/specs/)
 
-## Licence
+## Deployment
 
-Propriétaire - Axivity
+- **CRM**: `https://crm.axivity.cloud`
+- **Supabase**: `https://supabase.axivity.cloud`
+- **CI/CD**: GitHub Actions → Coolify

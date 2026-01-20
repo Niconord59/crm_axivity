@@ -1,0 +1,603 @@
+{
+  "name": "Conversion Opportunité vers Projet - Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Toutes les Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "opportunites",
+        "returnAll": false,
+        "limit": 50,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "statut",
+              "condition": "eq",
+              "keyValue": "Gagné"
+            },
+            {
+              "keyName": "projet_id",
+              "condition": "is",
+              "keyValue": "null"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-opportunites",
+      "name": "Chercher Opportunités Gagnées sans Projet",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-opportunites",
+      "name": "Des Opportunités à Convertir?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.client_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-get-client",
+      "name": "Récupérer Client",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [660, -100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "opportunite_id",
+              "name": "opportunite_id",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "opportunite_nom",
+              "name": "opportunite_nom",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.nom }}",
+              "type": "string"
+            },
+            {
+              "id": "client_id",
+              "name": "client_id",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.client_id }}",
+              "type": "string"
+            },
+            {
+              "id": "client_nom",
+              "name": "client_nom",
+              "value": "={{ $json.nom }}",
+              "type": "string"
+            },
+            {
+              "id": "budget",
+              "name": "budget",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.valeur_estimee || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "date_cloture",
+              "name": "date_cloture",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.date_cloture_prevue }}",
+              "type": "string"
+            },
+            {
+              "id": "contact_id",
+              "name": "contact_id",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.contact_id }}",
+              "type": "string"
+            },
+            {
+              "id": "notes",
+              "name": "notes",
+              "value": "={{ $('Des Opportunités à Convertir?').item.json.notes || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "date_debut",
+              "name": "date_debut",
+              "value": "={{ $now.toISODate() }}",
+              "type": "string"
+            },
+            {
+              "id": "date_fin_prevue",
+              "name": "date_fin_prevue",
+              "value": "={{ $now.plus({weeks: 4}).toISODate() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-variables",
+      "name": "Préparer Données Projet",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "projets",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "nom",
+              "fieldValue": "={{ $json.opportunite_nom }}"
+            },
+            {
+              "fieldId": "brief",
+              "fieldValue": "={{ $json.opportunite_nom }}"
+            },
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldId": "budget_initial",
+              "fieldValue": "={{ $json.budget }}"
+            },
+            {
+              "fieldId": "date_debut",
+              "fieldValue": "={{ $json.date_debut }}"
+            },
+            {
+              "fieldId": "date_fin_prevue",
+              "fieldValue": "={{ $json.date_fin_prevue }}"
+            },
+            {
+              "fieldId": "statut",
+              "fieldValue": "Cadrage"
+            },
+            {
+              "fieldId": "notes",
+              "fieldValue": "={{ 'Projet créé automatiquement depuis l\\'opportunité: ' + $json.opportunite_nom + '\\n\\n' + $json.notes }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-create-projet",
+      "name": "Créer Nouveau Projet",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1100, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "projet_id",
+              "name": "projet_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "projet_nom",
+              "name": "projet_nom",
+              "value": "={{ $json.nom || $('Préparer Données Projet').item.json.opportunite_nom }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "all",
+        "options": {}
+      },
+      "id": "set-projet-id",
+      "name": "Capturer ID Projet Créé",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "opportunites",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Préparer Données Projet').item.json.opportunite_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "projet_id",
+              "fieldValue": "={{ $json.projet_id }}"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-opportunite",
+      "name": "Lier Projet à Opportunité",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1540, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "VOTRE_CHANNEL_ID",
+          "mode": "id"
+        },
+        "text": "={{ ':tada: *Nouvelle affaire signée !*\\n\\n' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "blocks": {
+            "block": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": ":tada: Nouvelle affaire signée !",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Projet:*\n{{ $json.projet_nom }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Client:*\n{{ $('Préparer Données Projet').item.json.client_nom }}"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Budget:*\n{{ $('Préparer Données Projet').item.json.budget.toLocaleString('fr-FR') }} €"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Date de début:*\n{{ $('Préparer Données Projet').item.json.date_debut }}"
+                  }
+                ]
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": ":robot_face: Projet créé automatiquement depuis l'opportunité (Supabase)"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": ":eyes: Voir le projet",
+                      "emoji": true
+                    },
+                    "url": "https://crm.axivity.cloud/projets/{{ $json.projet_id }}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "id": "slack-notification",
+      "name": "Notifier Équipe Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1760, -100],
+      "credentials": {
+        "slackApi": {
+          "id": "VOTRE_SLACK_CREDENTIAL_ID",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "equipe@axivity.fr",
+        "subject": ":tada: Nouvelle affaire signée - {{ $('Préparer Données Projet').item.json.opportunite_nom }}",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }\n    .header { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }\n    .header h1 { color: white; margin: 0; font-size: 28px; }\n    .content { padding: 30px; background: #ffffff; border: 1px solid #e0e0e0; }\n    .details { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }\n    .cta-button { display: inline-block; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; margin: 20px 0; }\n    .footer { padding: 20px; text-align: center; color: #888; font-size: 12px; background: #f8f9fa; border-radius: 0 0 8px 8px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>:tada: Nouvelle Affaire !</h1>\n  </div>\n  <div class=\"content\">\n    <p>Excellente nouvelle pour l'équipe !</p>\n    \n    <p>L'opportunité <strong>{{ $('Préparer Données Projet').item.json.opportunite_nom }}</strong> vient d'être signée et un nouveau projet a été créé automatiquement.</p>\n    \n    <div class=\"details\">\n      <table style=\"width: 100%; border-collapse: collapse;\">\n        <tr>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\"><strong>Projet</strong></td>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">{{ $json.projet_nom }}</td>\n        </tr>\n        <tr>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\"><strong>Client</strong></td>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">{{ $('Préparer Données Projet').item.json.client_nom }}</td>\n        </tr>\n        <tr>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\"><strong>Budget</strong></td>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">{{ $('Préparer Données Projet').item.json.budget.toLocaleString('fr-FR') }} EUR</td>\n        </tr>\n        <tr>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\"><strong>Date de début</strong></td>\n          <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">{{ $('Préparer Données Projet').item.json.date_debut }}</td>\n        </tr>\n        <tr>\n          <td style=\"padding: 10px 0;\"><strong>Date de fin prévue</strong></td>\n          <td style=\"padding: 10px 0;\">{{ $('Préparer Données Projet').item.json.date_fin_prevue }}</td>\n        </tr>\n      </table>\n    </div>\n    \n    <p style=\"text-align: center;\">\n      <a href=\"https://crm.axivity.cloud/projets/{{ $json.projet_id }}\" class=\"cta-button\">Voir le projet</a>\n    </p>\n    \n    <p><strong>Prochaines étapes :</strong></p>\n    <ul>\n      <li>Assigner un chef de projet</li>\n      <li>Planifier le kick-off avec le client</li>\n      <li>Créer les tâches initiales</li>\n    </ul>\n  </div>\n  <div class=\"footer\">\n    <p>Notification automatique du CRM Axivity (Supabase)</p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "email-notification",
+      "name": "Notifier Équipe Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1760, 100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VOTRE_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "changelog",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ 'Auto - Conversion: ' + $('Préparer Données Projet').item.json.opportunite_nom + '\\nProjet créé automatiquement depuis l\\'opportunité gagnée.\\nID Opportunité: ' + $('Préparer Données Projet').item.json.opportunite_id + '\\nID Projet: ' + $json.projet_id + '\\nBudget: ' + $('Préparer Données Projet').item.json.budget + ' EUR' }}"
+            },
+            {
+              "fieldId": "type",
+              "fieldValue": "Feature"
+            }
+          ]
+        }
+      },
+      "id": "supabase-log-changelog",
+      "name": "Logger dans Changelog",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1980, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VOTRE_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-op",
+      "name": "Pas de Conversion",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 200]
+    }
+  ],
+  "connections": {
+    "Toutes les Minutes": {
+      "main": [
+        [
+          {
+            "node": "Chercher Opportunités Gagnées sans Projet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chercher Opportunités Gagnées sans Projet": {
+      "main": [
+        [
+          {
+            "node": "Des Opportunités à Convertir?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Des Opportunités à Convertir?": {
+      "main": [
+        [
+          {
+            "node": "Récupérer Client",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pas de Conversion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupérer Client": {
+      "main": [
+        [
+          {
+            "node": "Préparer Données Projet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Données Projet": {
+      "main": [
+        [
+          {
+            "node": "Créer Nouveau Projet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer Nouveau Projet": {
+      "main": [
+        [
+          {
+            "node": "Capturer ID Projet Créé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capturer ID Projet Créé": {
+      "main": [
+        [
+          {
+            "node": "Lier Projet à Opportunité",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lier Projet à Opportunité": {
+      "main": [
+        [
+          {
+            "node": "Notifier Équipe Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notifier Équipe Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notifier Équipe Slack": {
+      "main": [
+        [
+          {
+            "node": "Logger dans Changelog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notifier Équipe Email": {
+      "main": [
+        [
+          {
+            "node": "Logger dans Changelog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "conversion-opportunite-projet-supabase",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "id": "commercial",
+      "name": "Commercial"
+    },
+    {
+      "id": "projet",
+      "name": "Projet"
+    },
+    {
+      "id": "automatisation",
+      "name": "Automatisation"
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase"
+    }
+  ],
+  "pinData": {}
+}

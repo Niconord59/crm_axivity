@@ -1,58 +1,73 @@
+# ===================
+# CRM Application
+# ===================
+
 # Dependencies
-node_modules/
-.pnp
-.pnp.js
+crm/node_modules/
+crm/.pnp
+crm/.pnp.js
 
 # Build output
-.next/
-out/
-build/
-dist/
+crm/.next/
+crm/out/
+crm/build/
+crm/dist/
 
 # Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+crm/.env
+crm/.env.local
+crm/.env.development.local
+crm/.env.test.local
+crm/.env.production.local
 
-# IDE
+# Testing
+crm/coverage/
+crm/.nyc_output/
+
+# TypeScript
+crm/*.tsbuildinfo
+
+# ===================
+# Supabase
+# ===================
+supabase/.temp/
+supabase/logs/
+
+# ===================
+# BMAD Tooling
+# ===================
+_bmad-output/
+
+# ===================
+# IDE & OS
+# ===================
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Debug
+# ===================
+# Logs & Debug
+# ===================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Testing
-coverage/
-.nyc_output/
-
-# Misc
 *.log
-*.tsbuildinfo
 
-# Vercel
-.vercel
-
-# Claude
+# ===================
+# Claude Code
+# ===================
 .claude/settings.local.json
 
+# ===================
 # Temporary files
-issue.txt
-Capture.PNG
-*.png
-*.jpg
+# ===================
+*.tmp
+*.temp
 
-# Logs sensibles
-docs/logs_coolify.txt
-supabase/logs/
-Documentation/Refactorisation_Scalabilite_Plan.md
-docs/Miro_Parcours_Lead_to_Projet.md
+# ===================
+# Legacy (à supprimer)
+# ===================
+Interface/
