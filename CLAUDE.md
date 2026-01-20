@@ -115,6 +115,53 @@ Projets → Feedback Client
 | **Slack** | Team notifications |
 | **Google Calendar** | Deadline sync |
 
+## Déploiement Production (Coolify)
+
+### Docker Configuration
+
+Le projet utilise un Dockerfile multi-stage optimisé pour Next.js standalone:
+
+```dockerfile
+# Stage 1: deps     - Installation des dépendances
+# Stage 2: builder  - Build de l'application
+# Stage 3: runner   - Image de production minimale
+```
+
+**Important**: L'image Alpine nécessite `curl` pour les health checks Coolify:
+```dockerfile
+# Dans le stage runner
+RUN apk add --no-cache curl
+```
+
+### Health Check
+
+Endpoint: `GET /api/health`
+
+Réponse:
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-20T12:00:00.000Z"
+}
+```
+
+**Configuration Coolify**:
+| Paramètre | Valeur |
+|-----------|--------|
+| Command | `/usr/bin/curl http://localhost:3000/api/health` |
+| Interval | 30s |
+| Timeout | 30s |
+| Retries | 3 |
+| Start Period | 30s |
+| Response Text | *(vide - l'endpoint retourne du JSON)* |
+
+### Export Excel (ExcelJS)
+
+L'export Excel utilise **ExcelJS** (remplace xlsx pour 0 vulnérabilités npm):
+- Fichier: `src/lib/export.ts`
+- Fonction async: `exportToExcel()`
+- Composant: `src/components/shared/ExportButton.tsx`
+
 ## Frontend Application - React + Shadcn/UI
 
 L'interface utilisateur est développée comme une application web SAAS complète.

@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-07
+Auto-generated from all feature plans. Last updated: 2026-01-20
 
 ## Active Technologies
 
@@ -571,6 +571,16 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Nouveau hook `src/hooks/use-realtime.ts` avec 5 hooks spécialisés par page
   - Intégration dans : Prospection, Pipeline, Projets, Factures, Dashboard
   - Les données se mettent à jour instantanément sans Ctrl+Shift+R
+- **Migration xlsx → ExcelJS** (20 jan. 2026) : Correction de la vulnérabilité npm
+  - Remplacement de `xlsx` par `exceljs` (0 vulnérabilités npm)
+  - `exportToExcel()` devient async dans `src/lib/export.ts`
+  - Mise à jour de `ExportButton.tsx` avec `await`
+  - Tests mis à jour pour async
+- **Health Check Coolify** (20 jan. 2026) : Configuration du monitoring de santé
+  - Nouvel endpoint `GET /api/health` retournant `{ status: "ok", timestamp: "..." }`
+  - Ajout de `curl` dans le Dockerfile (Alpine n'inclut pas curl par défaut)
+  - Configuration Coolify : Command `/usr/bin/curl http://localhost:3000/api/health`, Start Period 30s
+  - Statut "Healthy" dans le dashboard Coolify
 
 ## Production Checklist
 
