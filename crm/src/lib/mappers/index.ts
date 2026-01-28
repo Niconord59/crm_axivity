@@ -26,6 +26,8 @@ export {
   mapToOpportunite,
   mapOpportuniteToInsert,
   mapOpportuniteToUpdate,
+  mapToOpportuniteWithContacts,
+  type OpportuniteWithContacts,
 } from "./opportunite.mapper";
 
 export {
@@ -46,3 +48,9 @@ export {
   mapFactureToInsert,
   mapFactureToUpdate,
 } from "./facture.mapper";
+
+export {
+  mapToOpportuniteContact,
+  mapOpportuniteContactToInsert,
+  mapOpportuniteContactToUpdate,
+} from "./opportunite-contact.mapper";

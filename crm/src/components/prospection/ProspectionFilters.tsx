@@ -9,8 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PROSPECT_STATUSES, PROSPECT_SOURCES } from "@/types";
+import { PROSPECT_STATUSES, PROSPECT_SOURCES, LIFECYCLE_STAGES, LIFECYCLE_STAGE_LABELS } from "@/types";
 import type { ProspectFilters } from "@/hooks/use-prospects";
+import type { LifecycleStage } from "@/types";
 
 interface ProspectionFiltersProps {
   filters: ProspectFilters;
@@ -86,6 +87,29 @@ export function ProspectionFilters({
           {PROSPECT_SOURCES.map((source) => (
             <SelectItem key={source} value={source}>
               {source}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Lifecycle Stage filter */}
+      <Select
+        value={filters.lifecycleStage || "all"}
+        onValueChange={(value) =>
+          onFiltersChange({
+            ...filters,
+            lifecycleStage: value === "all" ? undefined : value as LifecycleStage,
+          })
+        }
+      >
+        <SelectTrigger className="w-full sm:w-[150px]">
+          <SelectValue placeholder="Stage" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tous les stages</SelectItem>
+          {LIFECYCLE_STAGES.map((stage) => (
+            <SelectItem key={stage} value={stage}>
+              {LIFECYCLE_STAGE_LABELS[stage]}
             </SelectItem>
           ))}
         </SelectContent>

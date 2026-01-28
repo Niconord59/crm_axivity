@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { queryKeys } from "@/lib/queryKeys";
-import type { Contact, ProspectStatus, ProspectSource, RdvType } from "@/types";
+import type { Contact, ProspectStatus, ProspectSource, RdvType, LifecycleStage } from "@/types";
 
 // Extended prospect type with client name
 export interface Prospect extends Contact {
@@ -14,6 +14,7 @@ export interface Prospect extends Contact {
 export interface ProspectFilters {
   statut?: ProspectStatus | ProspectStatus[];
   source?: ProspectSource;
+  lifecycleStage?: LifecycleStage;
   dateRappel?: "today" | "this_week" | "overdue" | "all";
   search?: string;
 }
@@ -29,6 +30,8 @@ function mapToContact(record: Record<string, unknown>): Contact {
     poste: record.poste as string | undefined,
     linkedin: record.linkedin as string | undefined,
     estPrincipal: record.est_principal as boolean | undefined,
+    lifecycleStage: record.lifecycle_stage as LifecycleStage | undefined,
+    lifecycleStageChangedAt: record.lifecycle_stage_changed_at as string | undefined,
     statutProspection: record.statut_prospection as ProspectStatus,
     dateRappel: record.date_rappel as string | undefined,
     dateRdvPrevu: record.date_rdv_prevu as string | undefined,
@@ -82,6 +85,11 @@ export function useProspects(filters?: ProspectFilters) {
       // Filter by source
       if (filters?.source) {
         query = query.eq("source_lead", filters.source);
+      }
+
+      // Filter by lifecycle stage
+      if (filters?.lifecycleStage) {
+        query = query.eq("lifecycle_stage", filters.lifecycleStage);
       }
 
       // Filter by date rappel

@@ -213,6 +213,61 @@ export const TEAM_ROLE_LABELS: Record<TeamRole, string> = {
 };
 
 // =============================================================================
+// LIFECYCLE STAGES (Contact Funnel)
+// =============================================================================
+
+export const LIFECYCLE_STAGES = [
+  "Lead",
+  "MQL",
+  "SQL",
+  "Opportunity",
+  "Customer",
+  "Evangelist",
+  "Churned",
+] as const;
+export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];
+
+export const LIFECYCLE_STAGE_LABELS: Record<LifecycleStage, string> = {
+  Lead: "Lead",
+  MQL: "MQL",
+  SQL: "SQL",
+  Opportunity: "Opportunité",
+  Customer: "Client",
+  Evangelist: "Ambassadeur",
+  Churned: "Perdu",
+};
+
+// Note: Tailwind doesn't have bg-gold-*, using bg-amber-500 as closest match for Evangelist
+export const LIFECYCLE_STAGE_COLORS: Record<LifecycleStage, string> = {
+  Lead: "bg-gray-500",
+  MQL: "bg-blue-500",
+  SQL: "bg-indigo-500",
+  Opportunity: "bg-purple-500",
+  Customer: "bg-green-500",
+  Evangelist: "bg-amber-500", // Spec says "Gold" - amber is closest Tailwind equivalent
+  Churned: "bg-red-500",
+};
+
+// =============================================================================
+// CONTACT ROLES (in Opportunities)
+// =============================================================================
+
+export const CONTACT_ROLES = [
+  "Decideur",
+  "Influenceur",
+  "Utilisateur",
+  "Participant",
+] as const;
+export type ContactRole = (typeof CONTACT_ROLES)[number];
+
+export const CONTACT_ROLE_LABELS: Record<ContactRole, string> = {
+  Decideur: "Décideur",
+  Influenceur: "Influenceur",
+  Utilisateur: "Utilisateur",
+  Participant: "Participant",
+};
+
+// =============================================================================
 // VALEURS PAR DEFAUT
 // =============================================================================
 

@@ -3,10 +3,11 @@ import {
   PROSPECT_STATUSES,
   PROSPECT_SOURCES,
   RDV_TYPES,
+  LIFECYCLE_STAGES,
 } from "@/types/constants";
 
 // Export enum arrays for form Select components
-export { PROSPECT_STATUSES, PROSPECT_SOURCES, RDV_TYPES };
+export { PROSPECT_STATUSES, PROSPECT_SOURCES, RDV_TYPES, LIFECYCLE_STAGES };
 
 // Schéma pour la création/édition d'un contact
 export const contactSchema = z.object({
@@ -56,6 +57,20 @@ export const contactSchema = z.object({
 
   // Client ID (optionnel, peut être null pour contacts orphelins)
   clientId: z.string().uuid("ID client invalide").optional().or(z.literal("")),
+
+  // === Lifecycle Stage (HubSpot-style funnel) ===
+
+  // Lifecycle stage (peut être null depuis la base de données)
+  lifecycleStage: z.enum(LIFECYCLE_STAGES, {
+    errorMap: () => ({ message: "Veuillez sélectionner un lifecycle stage valide" }),
+  }).optional().nullable(),
+
+  // Date de changement du lifecycle stage (lecture seule, géré par trigger DB)
+  lifecycleStageChangedAt: z
+    .string()
+    .datetime({ message: "Format de date invalide" })
+    .optional()
+    .nullable(),
 
   // === Champs de prospection ===
 
@@ -115,6 +130,8 @@ export const contactDefaultValues: Partial<ContactFormData> = {
   linkedin: "",
   estPrincipal: false,
   clientId: "",
+  lifecycleStage: undefined,
+  lifecycleStageChangedAt: undefined,
   statutProspection: undefined,
   dateRappel: "",
   dateRdvPrevu: "",
@@ -133,6 +150,8 @@ export function contactToFormData(contact: {
   poste?: string;
   linkedin?: string;
   estPrincipal?: boolean;
+  lifecycleStage?: string;
+  lifecycleStageChangedAt?: string;
   statutProspection?: string;
   dateRappel?: string;
   dateRdvPrevu?: string;
@@ -151,6 +170,11 @@ export function contactToFormData(contact: {
     linkedin: contact.linkedin || "",
     estPrincipal: contact.estPrincipal || false,
     clientId: contact.client?.[0] || "",
+    // Validate lifecycleStage against enum, fallback to undefined if invalid
+    lifecycleStage: LIFECYCLE_STAGES.includes(contact.lifecycleStage as typeof LIFECYCLE_STAGES[number])
+      ? (contact.lifecycleStage as ContactFormData["lifecycleStage"])
+      : undefined,
+    lifecycleStageChangedAt: contact.lifecycleStageChangedAt || undefined,
     statutProspection: contact.statutProspection as ContactFormData["statutProspection"],
     dateRappel: contact.dateRappel || "",
     dateRdvPrevu: contact.dateRdvPrevu || "",

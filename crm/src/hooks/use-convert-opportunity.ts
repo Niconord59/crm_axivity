@@ -17,8 +17,12 @@ interface ConvertToOpportunityParams {
  * Hook to convert a prospect to an opportunity.
  * This:
  * 1. Creates an opportunity in the opportunites table
- * 2. Updates the contact status to "Qualifié"
- * 3. Updates the client status to "Actif" if it was "Prospect"
+ * 2. Creates the N:N link in opportunite_contacts (isPrimary: true, role: "Decideur")
+ * 3. Updates the contact lifecycle_stage to "Opportunity" and status to "Qualifié"
+ * 4. Creates an interaction "Passage en Opportunité" for audit trail
+ * 5. Updates the client status to "Actif" if it was "Prospect"
+ *
+ * Note: contact_id is still written for backward compatibility during transition period
  */
 export function useConvertToOpportunity() {
   const queryClient = useQueryClient();
@@ -32,14 +36,14 @@ export function useConvertToOpportunity() {
       valeurEstimee,
       notes,
     }: ConvertToOpportunityParams) => {
-      // 1. Create the opportunity
+      // 1. Create the opportunity (with contact_id for backward compatibility)
       const opportunityName = `${clientNom} - ${contactNom}`;
       const { data: opportunity, error: oppError } = await supabase
         .from("opportunites")
         .insert({
           nom: opportunityName,
           client_id: clientId,
-          contact_id: contactId,
+          contact_id: contactId, // Keep for backward compatibility
           statut: "Qualifié",
           valeur_estimee: valeurEstimee || null,
           probabilite: 20, // Default probability for new opportunities
@@ -51,15 +55,47 @@ export function useConvertToOpportunity() {
 
       if (oppError) throw oppError;
 
-      // 2. Update contact status to "Qualifié"
+      // 2. Create N:N link in opportunite_contacts
+      const { error: pivotError } = await supabase
+        .from("opportunite_contacts")
+        .insert({
+          opportunite_id: opportunity.id,
+          contact_id: contactId,
+          role: "Decideur",
+          is_primary: true,
+        });
+
+      if (pivotError) throw pivotError;
+
+      // 3. Update contact: lifecycle_stage to "Opportunity" and status to "Qualifié"
       const { error: contactError } = await supabase
         .from("contacts")
-        .update({ statut_prospection: "Qualifié" })
+        .update({
+          statut_prospection: "Qualifié",
+          lifecycle_stage: "Opportunity",
+          lifecycle_stage_changed_at: new Date().toISOString(),
+        })
         .eq("id", contactId);
 
       if (contactError) throw contactError;
 
-      // 3. Check if client is "Prospect" and update to "Actif"
+      // 4. Create interaction for audit trail
+      try {
+        await supabase
+          .from("interactions")
+          .insert({
+            objet: "Passage en Opportunité",
+            type: "Note",
+            date: new Date().toISOString().split("T")[0],
+            resume: `Contact converti en opportunité "${opportunityName}"`,
+            contact_id: contactId,
+            client_id: clientId,
+          });
+      } catch {
+        // Non-blocking: interaction creation is for audit, don't fail conversion
+      }
+
+      // 5. Check if client is "Prospect" and update to "Actif"
       try {
         const { data: client } = await supabase
           .from("clients")
@@ -87,6 +123,8 @@ export function useConvertToOpportunity() {
         queryClient.refetchQueries({ queryKey: queryKeys.opportunites.all }),
       ]);
       queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.opportuniteContacts.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.interactions.all });
     },
   });
 }

@@ -7,3 +7,6 @@ export * from "./use-factures";
 export * from "./use-equipe";
 export * from "./use-interactions";
 export * from "./use-prospects";
+export * from "./use-lifecycle-stage";
+export * from "./use-opportunite-contacts";
+export * from "./use-lifecycle-funnel";

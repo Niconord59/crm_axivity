@@ -45,6 +45,7 @@ import type { Prospect } from "@/hooks/use-prospects";
 import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { formatDate, cn } from "@/lib/utils";
 import { ContactForm } from "@/components/forms/ContactForm";
+import { LifecycleStageBadge } from "@/components/shared/LifecycleStageBadge";
 
 interface LeadCardProps {
   prospect: Prospect;
@@ -343,8 +344,8 @@ export const LeadCard = React.memo(function LeadCard({
               </DropdownMenu>
             </div>
 
-            {/* Badge statut */}
-            <div className="mt-2">
+            {/* Badges statut + lifecycle */}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -360,6 +361,13 @@ export const LeadCard = React.memo(function LeadCard({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              {prospect.lifecycleStage && (
+                <LifecycleStageBadge
+                  stage={prospect.lifecycleStage}
+                  size="sm"
+                  showLabel={true}
+                />
+              )}
             </div>
           </div>
         </div>

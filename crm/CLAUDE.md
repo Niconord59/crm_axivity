@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-20
+Auto-generated from all feature plans. Last updated: 2026-01-28
 
 ## Active Technologies
 
@@ -14,17 +14,19 @@ src/
 ├── components/
 │   ├── ui/                 # Shadcn/UI components (29 installed)
 │   ├── layout/             # Sidebar, Header, AppLayout
-│   ├── shared/             # KPICard, StatusBadge, SearchCommand, etc.
+│   ├── shared/             # KPICard, StatusBadge, LifecycleStageBadge, etc.
 │   ├── forms/              # Formulaires CRUD
 │   ├── charts/             # Graphiques Recharts
 │   ├── prospection/        # Module prospection (LeadCard, CallResultDialog, etc.)
 │   ├── opportunites/       # Pipeline commercial (OpportunityCard, OpportunityMiniSheet)
 │   │   ├── widgets/        # AmountSelector, ProbabilitySlider, ManualNoteForm
-│   │   └── tabs/           # OpportunityInfoTab, OpportunityHistoryTab
+│   │   └── tabs/           # OpportunityInfoTab, OpportunityHistoryTab, OpportunityContactsTab
 │   ├── devis/              # Génération de devis (QuoteEditorSheet, ServiceSelector)
 │   └── onboarding/         # Tour guidé (OnboardingTour, TourTrigger)
-├── hooks/                  # React Query hooks (17 hooks Supabase)
+├── hooks/                  # React Query hooks (19 hooks Supabase)
 │   ├── use-auth-sync.ts    # Synchronisation cross-tab des sessions
+│   ├── use-lifecycle-stage.ts    # Gestion lifecycle stage contacts
+│   ├── use-opportunite-contacts.ts # Relation N:N opportunites-contacts
 │   └── __tests__/          # Tests des hooks
 ├── lib/
 │   ├── supabase.ts         # Supabase client
@@ -262,6 +264,33 @@ npm run test:ui       # Vitest UI
   - Composants testés : 3/100+ (~3%)
   - Tests existants : 125
 
+### 009-lifecycle-model (Modèle Lifecycle HubSpot-inspired - COMPLETE)
+- **Status**: 100% - 52/52 tâches
+- **Specs**: `specs/009-lifecycle-model/`
+- **Content**:
+  - **Phase 1-3** ✅ : Database, Types, Hooks (lifecycle_stage, opportunite_contacts N:N)
+  - **Phase 4** ✅ : Mappers (opportunite-contact.mapper.ts, mapToOpportuniteWithContacts)
+  - **Phase 5** ✅ : Composants UI (LifecycleStageBadge, LifecycleStageSelect, OpportunityContactsTab)
+  - **Phase 6** ✅ : Conversion prospect→opportunité avec lien N:N et lifecycle_stage update
+  - **Phase 7** ✅ : Dashboard funnel lifecycle avec taux de conversion et cycle moyen
+  - **Phase 8** ✅ : Documentation mise à jour
+- **Nouveaux composants**:
+  - `components/shared/LifecycleStageBadge.tsx` : Badge coloré avec icône par stage
+  - `components/shared/LifecycleStageSelect.tsx` : Dropdown avec confirmation downgrade
+  - `components/shared/lifecycle-stage-icons.ts` : Mapping icônes centralisé
+  - `components/opportunites/tabs/OpportunityContactsTab.tsx` : Onglet contacts N:N
+  - `components/charts/LifecycleFunnelChart.tsx` : Graphique funnel horizontal (cliquable)
+- **Nouveaux hooks**:
+  - `use-lifecycle-stage.ts` : `useUpdateLifecycleStage`, `useBatchUpdateLifecycleStage`, `isLifecycleDowngrade`, `getNextLifecycleStage`
+  - `use-opportunite-contacts.ts` : `useOpportuniteContacts`, `useAddContactToOpportunite`, `useRemoveContactFromOpportunite`, `useSetPrimaryContact`
+  - `use-lifecycle-funnel.ts` : `useLifecycleFunnel` (stats par stage, taux conversion, cycle moyen Lead→Customer)
+- **Types ajoutés** (`types/constants.ts`):
+  - `LIFECYCLE_STAGES` : Lead, MQL, SQL, Opportunity, Customer, Evangelist, Churned
+  - `LIFECYCLE_STAGE_LABELS`, `LIFECYCLE_STAGE_COLORS`
+  - `CONTACT_ROLES` : Decideur, Influenceur, Utilisateur, Participant
+- **Migration SQL** : `24_lifecycle_stages.sql` (table pivot `opportunite_contacts`, enum, triggers)
+- **Note deprecation** : Le champ `contact_id` dans `opportunites` est maintenu pour rétrocompatibilité mais `opportunite_contacts.is_primary` fait foi. Planifier suppression en v2.
+
 ## Documentation
 
 | Fichier | Description |
@@ -284,6 +313,7 @@ npm run test:ui       # Vitest UI
 | `specs/006-devis/` | Module Devis & Factures | ✅ Complet |
 | `specs/007-refactorisation/` | Refactorisation & Scalabilité | ✅ Complet |
 | `specs/008-test-coverage/` | Couverture de Tests Progressive | 📋 Planifié |
+| `specs/009-lifecycle-model/` | Modèle Lifecycle HubSpot-inspired | ✅ Complet |
 
 ## Supabase (Backend)
 
@@ -581,6 +611,19 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Ajout de `curl` dans le Dockerfile (Alpine n'inclut pas curl par défaut)
   - Configuration Coolify : Command `/usr/bin/curl http://localhost:3000/api/health`, Start Period 30s
   - Statut "Healthy" dans le dashboard Coolify
+- **009-lifecycle-model Phase 5** (28 jan. 2026) : Composants UI Lifecycle Stages
+  - `LifecycleStageBadge` : Badge coloré avec icône et tooltip par stage (Lead→Churned)
+  - `LifecycleStageSelect` : Dropdown avec confirmation AlertDialog si downgrade
+  - `OpportunityContactsTab` : Nouvel onglet contacts dans OpportunityMiniSheet
+  - Filtre lifecycle_stage dans ProspectionFilters
+  - Badge lifecycle dans LeadCard
+  - Table pivot `opportunite_contacts` pour relation N:N (Phases 1-3 complétées précédemment)
+- **009-lifecycle-model Phase 7 COMPLETE** (28 jan. 2026) : Dashboard Funnel Lifecycle
+  - `use-lifecycle-funnel.ts` : Hook React Query pour statistiques funnel (contacts par stage, taux conversion, cycle moyen)
+  - `LifecycleFunnelChart.tsx` : Graphique horizontal Recharts avec barres cliquables (navigation vers /prospection?lifecycleStage=XXX)
+  - Intégration Dashboard : Widget funnel à côté du graphique CA Mensuel
+  - KPI "Cycle moyen Lead → Customer" affiché en jours
+  - 15 tests Vitest pour use-lifecycle-funnel.ts
 
 ## Production Checklist
 
