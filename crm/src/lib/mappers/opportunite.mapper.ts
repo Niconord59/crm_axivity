@@ -1,7 +1,20 @@
 // CRM Axivity - Opportunite Mapper
 // Maps Supabase records to Opportunite type
+//
+// DEPRECATION NOTE (v2 planned):
+// The `contact_id` field in the `opportunites` table is deprecated.
+// The source of truth for contact associations is now the `opportunite_contacts`
+// pivot table (N:N relation). The `contact_id` field is maintained for backward
+// compatibility during the transition period.
+//
+// For new code:
+// - Use `opportunite_contacts` table to associate contacts with opportunities
+// - Use `is_primary = true` to identify the primary contact
+// - The `contact` field in Opportunite type will be removed in v2
+//
+// Migration plan: Remove `contact_id` column from `opportunites` table in v2
 
-import type { Opportunite } from "@/types";
+import type { Opportunite, OpportuniteContact } from "@/types";
 import { OPPORTUNITY_STATUSES, type OpportunityStatus } from "@/types/constants";
 import {
   parseString,
@@ -11,6 +24,7 @@ import {
   parseEnum,
   type SupabaseRecord,
 } from "./base.mapper";
+import { mapToOpportuniteContact } from "./opportunite-contact.mapper";
 
 /**
  * Map a Supabase record to Opportunite type
@@ -79,4 +93,53 @@ export function mapOpportuniteToUpdate(data: Partial<Opportunite>): SupabaseReco
   if (data.notes !== undefined) updateData.notes = data.notes;
 
   return updateData;
+}
+
+/**
+ * Extended Opportunite type with loaded contacts from N:N relation
+ */
+export interface OpportuniteWithContacts extends Opportunite {
+  opportuniteContacts?: OpportuniteContact[];
+}
+
+/**
+ * Map a Supabase record with joined opportunite_contacts to OpportuniteWithContacts
+ * Used when fetching opportunities with their related contacts via join
+ *
+ * Expected Supabase query format:
+ * .select(`*, opportunite_contacts(*, contacts(*))`)
+ */
+export function mapToOpportuniteWithContacts(
+  record: SupabaseRecord
+): OpportuniteWithContacts {
+  const base = mapToOpportunite(record);
+
+  // Parse joined opportunite_contacts if present
+  const opportuniteContactsRaw = record.opportunite_contacts;
+  let opportuniteContacts: OpportuniteContact[] | undefined;
+
+  if (Array.isArray(opportuniteContactsRaw) && opportuniteContactsRaw.length > 0) {
+    opportuniteContacts = opportuniteContactsRaw.map((oc: SupabaseRecord) => {
+      const mapped = mapToOpportuniteContact(oc);
+
+      // If contacts relation was also joined, attach it
+      if (oc.contacts && typeof oc.contacts === "object") {
+        mapped.contact = {
+          id: parseString((oc.contacts as SupabaseRecord).id),
+          nom: parseString((oc.contacts as SupabaseRecord).nom),
+          prenom: parseOptionalString((oc.contacts as SupabaseRecord).prenom),
+          email: parseOptionalString((oc.contacts as SupabaseRecord).email),
+          telephone: parseOptionalString((oc.contacts as SupabaseRecord).telephone),
+          poste: parseOptionalString((oc.contacts as SupabaseRecord).poste),
+        };
+      }
+
+      return mapped;
+    });
+  }
+
+  return {
+    ...base,
+    opportuniteContacts,
+  };
 }

@@ -46,6 +46,20 @@ export const queryKeys = {
   },
 
   // =========================================================================
+  // OPPORTUNITE CONTACTS (N:N Pivot Table)
+  // =========================================================================
+  opportuniteContacts: {
+    all: ["opportunite-contacts"] as const,
+    lists: () => [...queryKeys.opportuniteContacts.all, "list"] as const,
+    byOpportunite: (opportuniteId: string) =>
+      [...queryKeys.opportuniteContacts.all, "by-opportunite", opportuniteId] as const,
+    byContact: (contactId: string) =>
+      [...queryKeys.opportuniteContacts.all, "by-contact", contactId] as const,
+    detail: (id: string) =>
+      [...queryKeys.opportuniteContacts.all, "detail", id] as const,
+  },
+
+  // =========================================================================
   // PROJETS
   // =========================================================================
   projets: {
@@ -178,6 +192,7 @@ export const queryKeys = {
     kpis: () => [...queryKeys.dashboard.all, "kpis"] as const,
     projetsRecents: () => [...queryKeys.dashboard.all, "projets-recents"] as const,
     tachesUrgentes: () => [...queryKeys.dashboard.all, "taches-urgentes"] as const,
+    lifecycleFunnel: () => [...queryKeys.dashboard.all, "lifecycle-funnel"] as const,
   },
 
   // =========================================================================

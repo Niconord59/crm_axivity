@@ -10,7 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { KPICard, StatusBadge, PageLoading } from "@/components/shared";
-import { CAMensuelChart } from "@/components/charts";
+import { CAMensuelChart, LifecycleFunnelChart } from "@/components/charts";
 import { useProjetsActifs } from "@/hooks/use-projets";
 import { useOpportunites } from "@/hooks/use-opportunites";
 import { useFacturesImpayees } from "@/hooks/use-factures";
@@ -121,8 +121,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* CA Mensuel Chart */}
-      <CAMensuelChart />
+      {/* Charts Row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <CAMensuelChart />
+        <LifecycleFunnelChart />
+      </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">

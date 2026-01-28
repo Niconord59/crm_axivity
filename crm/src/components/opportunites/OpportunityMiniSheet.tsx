@@ -7,6 +7,7 @@ import {
   Euro,
   Loader2,
   History,
+  Users,
 } from "lucide-react";
 import {
   Sheet,
@@ -21,7 +22,7 @@ import { useOpportunite, useUpdateOpportunite } from "@/hooks/use-opportunites";
 import { useInteractions, useCreateInteraction } from "@/hooks/use-interactions";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { OpportunityInfoTab, OpportunityHistoryTab } from "./tabs";
+import { OpportunityInfoTab, OpportunityHistoryTab, OpportunityContactsTab } from "./tabs";
 
 interface OpportunityMiniSheetProps {
   opportuniteId: string;
@@ -216,14 +217,18 @@ export function OpportunityMiniSheet({
 
             {/* Tabs */}
             <Tabs defaultValue="infos" className="flex-1">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="infos" className="text-xs gap-1.5">
-                  <Euro className="h-3.5 w-3.5" />
-                  Infos
+              <TabsList className="grid w-full grid-cols-3 h-auto">
+                <TabsTrigger value="infos" className="text-xs gap-1 px-2">
+                  <Euro className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Infos</span>
                 </TabsTrigger>
-                <TabsTrigger value="historique" className="text-xs gap-1.5">
-                  <History className="h-3.5 w-3.5" />
-                  Historique
+                <TabsTrigger value="contacts" className="text-xs gap-1 px-2">
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Contacts</span>
+                </TabsTrigger>
+                <TabsTrigger value="historique" className="text-xs gap-1 px-2">
+                  <History className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Historique</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -242,6 +247,14 @@ export function OpportunityMiniSheet({
                   isSaving={updateOpportunite.isPending}
                   onSave={handleSave}
                   onOpenQuoteEditor={onOpenQuoteEditor}
+                />
+              </TabsContent>
+
+              {/* Contacts Tab */}
+              <TabsContent value="contacts" className="mt-4">
+                <OpportunityContactsTab
+                  opportuniteId={opportuniteId}
+                  clientId={clientId}
                 />
               </TabsContent>
 

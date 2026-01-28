@@ -8,3 +8,6 @@ export { NotificationPanel } from "./NotificationPanel";
 export { ChartContainer } from "./ChartContainer";
 export { HealthBadge, getHealthStatus, getHealthLabel } from "./HealthBadge";
 export { ExportButton } from "./ExportButton";
+export { LifecycleStageBadge } from "./LifecycleStageBadge";
+export { LifecycleStageSelect } from "./LifecycleStageSelect";
+export { LIFECYCLE_STAGE_ICONS } from "./lifecycle-stage-icons";

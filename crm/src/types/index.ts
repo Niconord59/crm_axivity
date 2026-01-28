@@ -22,6 +22,8 @@ import type {
   RdvType as _RdvType,
   DevisStatus as _DevisStatus,
   TeamRole as _TeamRole,
+  LifecycleStage as _LifecycleStage,
+  ContactRole as _ContactRole,
 } from "./constants";
 
 // Re-export everything for external consumers
@@ -74,6 +76,15 @@ export {
   TEAM_ROLES,
   TEAM_ROLE_LABELS,
   type TeamRole,
+  // Lifecycle Stages
+  LIFECYCLE_STAGES,
+  LIFECYCLE_STAGE_LABELS,
+  LIFECYCLE_STAGE_COLORS,
+  type LifecycleStage,
+  // Contact Roles
+  CONTACT_ROLES,
+  CONTACT_ROLE_LABELS,
+  type ContactRole,
   // Defaults
   DEFAULTS,
 } from "./constants";
@@ -90,6 +101,8 @@ type ProspectStatus = _ProspectStatus;
 type ProspectSource = _ProspectSource;
 type RdvType = _RdvType;
 type TeamRole = _TeamRole;
+type LifecycleStage = _LifecycleStage;
+type ContactRole = _ContactRole;
 
 // =============================================================================
 // BASE ENTITY INTERFACE
@@ -143,6 +156,9 @@ export interface Contact extends BaseEntity {
   estPrincipal?: boolean;
   notes?: string;
   linkedin?: string;
+  // Lifecycle Stage (HubSpot-style funnel)
+  lifecycleStage?: LifecycleStage;
+  lifecycleStageChangedAt?: string;
   // Prospection fields
   statutProspection?: ProspectStatus;
   dateRappel?: string;
@@ -154,6 +170,8 @@ export interface Contact extends BaseEntity {
   // Linked records
   client?: string[];
   interactions?: string[];
+  // N:N relation with Opportunites
+  opportuniteContacts?: OpportuniteContact[];
 }
 
 // =============================================================================
@@ -176,6 +194,23 @@ export interface Opportunite extends BaseEntity {
   contact?: string[];
   lignesDevis?: string[];
   projetCree?: string[];
+}
+
+// =============================================================================
+// OPPORTUNITE_CONTACTS (N:N Pivot Table)
+// =============================================================================
+
+export interface OpportuniteContact extends BaseEntity {
+  opportuniteId: string;
+  contactId: string;
+  role: ContactRole;
+  // Note: isPrimary (not estPrincipal) to match DB column is_primary
+  // Contact.estPrincipal is a legacy field with different naming convention
+  isPrimary: boolean;
+  updatedAt?: string;
+  // Loaded relations (circular reference with Contact - handled by TypeScript)
+  contact?: Contact;
+  opportunite?: Opportunite;
 }
 
 // =============================================================================
