@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search, Building2, Globe } from "lucide-react";
+import { Search, Building2, Globe, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,9 +20,11 @@ import {
   EmptyState,
   ExportButton,
 } from "@/components/shared";
+import { Checkbox } from "@/components/ui/checkbox";
 import { clientExportColumns } from "@/lib/export";
 import { ClientForm } from "@/components/forms";
 import { useClients } from "@/hooks/use-clients";
+import { useFactures } from "@/hooks/use-factures";
 import { formatCurrency } from "@/lib/utils";
 import { CLIENT_STATUSES } from "@/types";
 
@@ -41,10 +43,27 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [secteurFilter, setSecteurFilter] = useState<string>("all");
   const [statutFilter, setStatutFilter] = useState<string>("all");
+  const [showOnlyPaidClients, setShowOnlyPaidClients] = useState(false);
 
   const { data: clients, isLoading } = useClients();
+  const { data: factures, isLoading: isLoadingFactures } = useFactures();
+
+  // Calcul des clients avec au moins une facture "Payé"
+  const paidClientIds = useMemo(() => {
+    if (!factures) return new Set<string>();
+    return new Set(
+      factures
+        .filter((f) => f.statut === "Payé")
+        .map((f) => f.client?.[0])
+        .filter((id): id is string => !!id)
+    );
+  }, [factures]);
 
   const filteredClients = clients?.filter((client) => {
+    // Toggle "clients facturés uniquement"
+    if (showOnlyPaidClients && !paidClientIds.has(client.id)) {
+      return false;
+    }
     // Search filter
     if (
       search &&
@@ -84,6 +103,29 @@ export default function ClientsPage() {
           <ClientForm />
         </div>
       </PageHeader>
+
+      {/* Toggle clients facturés */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="paid-clients-filter"
+            checked={showOnlyPaidClients}
+            onCheckedChange={(checked) => setShowOnlyPaidClients(!!checked)}
+            disabled={isLoadingFactures}
+          />
+          <label
+            htmlFor="paid-clients-filter"
+            className="text-sm font-medium leading-none"
+          >
+            Afficher uniquement les clients facturés
+          </label>
+        </div>
+        {showOnlyPaidClients && (
+          <span className="text-sm text-muted-foreground">
+            {paidClientIds.size} client{paidClientIds.size > 1 ? "s" : ""} facturé{paidClientIds.size > 1 ? "s" : ""} sur {clients?.length || 0} total
+          </span>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -152,7 +194,7 @@ export default function ClientsPage() {
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold truncate">{client.nom}</h3>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         {client.secteurActivite && (
                           <Badge variant="outline" className="text-xs">
                             {client.secteurActivite}
@@ -170,6 +212,12 @@ export default function ClientsPage() {
                             className="text-xs"
                           >
                             {client.statut}
+                          </Badge>
+                        )}
+                        {paidClientIds.has(client.id) && (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Facturé
                           </Badge>
                         )}
                       </div>

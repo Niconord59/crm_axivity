@@ -2,7 +2,7 @@
 // Maps Supabase records to Facture type
 
 import type { Facture } from "@/types";
-import { INVOICE_STATUSES, DEFAULTS } from "@/types/constants";
+import { INVOICE_STATUSES, FACTURE_TYPES, DEFAULTS } from "@/types/constants";
 import {
   parseString,
   parseOptionalString,
@@ -29,6 +29,12 @@ export function mapToFacture(record: SupabaseRecord): Facture {
     dateEcheance: parseOptionalString(record.date_echeance),
     datePaiement: parseOptionalString(record.date_paiement),
     notes: parseOptionalString(record.notes),
+    // Acompte fields (conformité Art. 289 CGI)
+    typeFacture: parseEnum(record.type_facture, FACTURE_TYPES, "unique") || "unique",
+    pourcentageAcompte: parseOptionalNumber(record.pourcentage_acompte),
+    factureParentId: parseOptionalString(record.facture_parent_id),
+    montantTotalProjet: parseOptionalNumber(record.montant_total_projet),
+    devisId: parseOptionalString(record.devis_id),
     // Relance fields
     niveauRelance: parseOptionalNumber(record.niveau_relance),
     niveauRelanceEnvoye: parseOptionalNumber(record.niveau_relance_envoye),
@@ -54,6 +60,13 @@ export function mapFactureToInsert(data: Partial<Facture>): SupabaseRecord {
     date_emission: data.dateEmission,
     date_echeance: data.dateEcheance,
     notes: data.notes,
+    // Acompte fields
+    type_facture: data.typeFacture || "unique",
+    pourcentage_acompte: data.pourcentageAcompte,
+    facture_parent_id: data.factureParentId,
+    montant_total_projet: data.montantTotalProjet,
+    devis_id: data.devisId,
+    // Linked records
     projet_id: data.projet?.[0],
     client_id: data.client?.[0],
   };
@@ -72,6 +85,12 @@ export function mapFactureToUpdate(data: Partial<Facture>): SupabaseRecord {
   if (data.dateEcheance !== undefined) updateData.date_echeance = data.dateEcheance;
   if (data.datePaiement !== undefined) updateData.date_paiement = data.datePaiement;
   if (data.notes !== undefined) updateData.notes = data.notes;
+  // Acompte fields
+  if (data.typeFacture !== undefined) updateData.type_facture = data.typeFacture;
+  if (data.pourcentageAcompte !== undefined) updateData.pourcentage_acompte = data.pourcentageAcompte;
+  if (data.factureParentId !== undefined) updateData.facture_parent_id = data.factureParentId;
+  if (data.montantTotalProjet !== undefined) updateData.montant_total_projet = data.montantTotalProjet;
+  // Relance fields
   if (data.niveauRelanceEnvoye !== undefined) updateData.niveau_relance_envoye = data.niveauRelanceEnvoye;
   if (data.dateDerniereRelance !== undefined) updateData.date_derniere_relance = data.dateDerniereRelance;
 

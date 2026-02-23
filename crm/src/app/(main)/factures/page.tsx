@@ -26,7 +26,7 @@ import { FactureForm } from "@/components/forms";
 import { useFactures, useMarquerFacturePayee } from "@/hooks/use-factures";
 import { useFacturesRealtime } from "@/hooks/use-realtime";
 import { formatCurrency, formatDate, isOverdue } from "@/lib/utils";
-import { INVOICE_STATUSES, type InvoiceStatus } from "@/types";
+import { INVOICE_STATUSES, FACTURE_TYPE_LABELS, FACTURE_TYPE_COLORS, type InvoiceStatus } from "@/types";
 
 export default function FacturesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -159,6 +159,14 @@ export default function FacturesPage() {
                         <p className="font-medium">
                           {facture.numero || "Sans numéro"}
                         </p>
+                        {facture.typeFacture && facture.typeFacture !== "unique" && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs text-white ${FACTURE_TYPE_COLORS[facture.typeFacture]}`}
+                          >
+                            {FACTURE_TYPE_LABELS[facture.typeFacture]}
+                          </Badge>
+                        )}
                         {facture.niveauRelance && facture.niveauRelance > 0 && (
                           <Badge variant="destructive" className="text-xs">
                             Relance N{facture.niveauRelance}

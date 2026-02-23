@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "context7": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "supabase": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@supabase/mcp-server-postgrest@latest",
+        "--apiUrl",
+        "https://supabase.axivity.cloud/rest/v1",
+        "--apiKey",
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc2NTk4MjA0MCwiZXhwIjo0OTIxNjU1NjQwLCJyb2xlIjoiYW5vbiJ9.ZJbZh6uQqPHEn22Tk6ZYMC5tkEj5lYgb-erWKfSyX3M",
+        "--schema",
+        "public"
+      ]
+    }
+  }
+}

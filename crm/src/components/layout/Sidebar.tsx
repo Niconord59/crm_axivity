@@ -11,6 +11,7 @@ import {
   CheckSquare,
   Users,
   FileText,
+  Mail,
   UsersRound,
   BarChart3,
   Menu,
@@ -68,6 +69,11 @@ const mainNavItems: NavItem[] = [
     title: "Factures",
     href: "/factures",
     icon: FileText,
+  },
+  {
+    title: "Emails",
+    href: "/emails",
+    icon: Mail,
   },
 ];
 

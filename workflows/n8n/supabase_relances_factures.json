@@ -24,7 +24,7 @@
         "tableId": "factures",
         "returnAll": true,
         "filterType": "string",
-        "filterString": "={{ 'statut=eq.Envoyé&date_echeance=lt.' + $now.toISODate() }}"
+        "filterString": "={{ 'statut=eq.Envoyé&date_echeance=lt.' + $now.toISODate() + '&type_facture=neq.acompte' }}"
       },
       "id": "supabase-search",
       "name": "Rechercher Factures Impayees",
@@ -818,5 +818,5 @@
     }
   ],
   "pinData": {},
-  "_notes": "IMPORTANT: Ce workflow necessite les colonnes 'niveau_relance_envoye' (INTEGER) et 'date_derniere_relance' (DATE) dans la table 'factures' de Supabase."
+  "_notes": "IMPORTANT: Ce workflow necessite les colonnes 'niveau_relance_envoye' (INTEGER), 'date_derniere_relance' (DATE), et 'type_facture' (ENUM) dans la table 'factures' de Supabase. Les factures d'acompte (type_facture='acompte') sont exclues des relances car elles sont payees avant execution."
 }

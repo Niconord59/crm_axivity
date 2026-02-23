@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { queryKeys } from "@/lib/queryKeys";
 import { mapToFacture, mapFactureToInsert, mapFactureToUpdate } from "@/lib/mappers";
-import type { Facture, InvoiceStatus } from "@/types";
+import type { Facture, InvoiceStatus, FactureType } from "@/types";
 
 export function useFactures(options?: {
   statut?: InvoiceStatus;
@@ -68,6 +68,54 @@ export function useFacturesARelancer() {
       return (data || []).map(mapToFacture);
     },
   });
+}
+
+/**
+ * Récupérer les factures liées à un devis (pour calcul du solde)
+ */
+export function useFacturesByDevis(devisId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.factures.byDevis(devisId),
+    queryFn: async () => {
+      if (!devisId) return [];
+      const { data, error } = await supabase
+        .from("factures")
+        .select("*")
+        .eq("devis_id", devisId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []).map(mapToFacture);
+    },
+    enabled: !!devisId,
+  });
+}
+
+/**
+ * Calculer le montant restant à facturer pour un devis
+ */
+export function calculateSoldeRestant(
+  montantTotal: number,
+  facturesExistantes: Facture[]
+): { montant: number; pourcentage: number } {
+  const totalAcomptes = facturesExistantes
+    .filter(f => f.typeFacture === "acompte" && f.statut === "Payé")
+    .reduce((sum, f) => sum + (f.montantHT || 0), 0);
+  const montant = montantTotal - totalAcomptes;
+  const pourcentage = montantTotal > 0 ? (montant / montantTotal) * 100 : 100;
+  return { montant, pourcentage };
+}
+
+/**
+ * Récupérer les acomptes payés pour un devis (pour affichage sur facture de solde)
+ */
+export function getAcomptesPayes(facturesExistantes: Facture[]): Facture[] {
+  return facturesExistantes
+    .filter(f => f.typeFacture === "acompte" && f.statut === "Payé")
+    .sort((a, b) => {
+      const dateA = a.dateEmission ? new Date(a.dateEmission).getTime() : 0;
+      const dateB = b.dateEmission ? new Date(b.dateEmission).getTime() : 0;
+      return dateA - dateB;
+    });
 }
 
 export function useFacture(id: string | undefined) {
