@@ -7,7 +7,7 @@ export const emailTemplateSchema = z.object({
   nom: z.string().min(1, "Le nom du template est requis").max(200),
   objet: z.string().min(1, "L'objet de l'email est requis").max(500),
   contenu: z.string().min(1, "Le contenu est requis").max(10000),
-  variables: z.array(z.string()).optional().default([]),
+  variables: z.array(z.string()),
 });
 
 export type EmailTemplateFormData = z.infer<typeof emailTemplateSchema>;

@@ -14,6 +14,7 @@ import type {
   TaskStatus as _TaskStatus,
   TaskPriority as _TaskPriority,
   InvoiceStatus as _InvoiceStatus,
+  FactureType as _FactureType,
   InteractionType as _InteractionType,
   ProspectStatus as _ProspectStatus,
   ProspectSource as _ProspectSource,
@@ -50,7 +51,11 @@ export {
   // Factures
   INVOICE_STATUSES,
   INVOICE_STATUS_COLORS,
+  FACTURE_TYPES,
+  FACTURE_TYPE_LABELS,
+  FACTURE_TYPE_COLORS,
   type InvoiceStatus,
+  type FactureType,
   // Interactions
   INTERACTION_TYPES,
   INTERACTION_TYPE_ICONS,
@@ -96,6 +101,7 @@ type ProjectStatus = _ProjectStatus;
 type TaskStatus = _TaskStatus;
 type TaskPriority = _TaskPriority;
 type InvoiceStatus = _InvoiceStatus;
+type FactureType = _FactureType;
 type InteractionType = _InteractionType;
 type ProspectStatus = _ProspectStatus;
 type ProspectSource = _ProspectSource;
@@ -295,6 +301,12 @@ export interface Facture extends BaseEntity {
   dateEcheance?: string;
   datePaiement?: string;
   notes?: string;
+  // Acompte fields
+  typeFacture?: FactureType;
+  pourcentageAcompte?: number;
+  factureParentId?: string;
+  montantTotalProjet?: number;
+  devisId?: string;
   // Relance fields
   niveauRelance?: number; // Formula: 0, 1, 2, 3
   niveauRelanceEnvoye?: number;
@@ -525,6 +537,18 @@ export interface FactureData {
   tva: number;
   totalTTC: number;
   conditionsPaiement: string;
+  // Acompte fields
+  typeFacture?: FactureType;
+  pourcentageAcompte?: number;
+  montantTotalProjet?: number;
+  acomptesVerses?: { numero: string; date: string; montantHT: number }[];
+}
+
+// Acompte data for display on solde facture
+export interface AcompteVerse {
+  numero: string;
+  date: string;
+  montantHT: number;
 }
 
 // =============================================================================

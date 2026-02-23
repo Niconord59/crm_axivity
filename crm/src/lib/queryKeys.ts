@@ -96,6 +96,7 @@ export const queryKeys = {
       [...queryKeys.factures.lists(), filters] as const,
     impayees: () => [...queryKeys.factures.all, "impayees"] as const,
     aRelancer: () => [...queryKeys.factures.all, "a-relancer"] as const,
+    byDevis: (devisId: string | undefined) => [...queryKeys.factures.all, "by-devis", devisId] as const,
     details: () => [...queryKeys.factures.all, "detail"] as const,
     detail: (id: string) => [...queryKeys.factures.details(), id] as const,
   },

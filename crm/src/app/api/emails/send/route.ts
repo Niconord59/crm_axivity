@@ -22,15 +22,15 @@ function getSupabaseServiceClient() {
  */
 function replaceVariables(
   text: string,
-  contact: Record<string, string | null | undefined>,
+  contact: Record<string, unknown>,
   clientNom?: string
 ): string {
   return text
-    .replace(/\{\{prenom\}\}/g, contact.prenom || "")
-    .replace(/\{\{nom\}\}/g, contact.nom || "")
-    .replace(/\{\{email\}\}/g, contact.email || "")
-    .replace(/\{\{telephone\}\}/g, contact.telephone || "")
-    .replace(/\{\{poste\}\}/g, contact.poste || "")
+    .replace(/\{\{prenom\}\}/g, String(contact.prenom || ""))
+    .replace(/\{\{nom\}\}/g, String(contact.nom || ""))
+    .replace(/\{\{email\}\}/g, String(contact.email || ""))
+    .replace(/\{\{telephone\}\}/g, String(contact.telephone || ""))
+    .replace(/\{\{poste\}\}/g, String(contact.poste || ""))
     .replace(/\{\{entreprise\}\}/g, clientNom || "");
 }
 

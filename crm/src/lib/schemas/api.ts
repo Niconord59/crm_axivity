@@ -62,6 +62,10 @@ export type SendDevisRequest = z.infer<typeof sendDevisSchema>;
 
 export const generateFactureSchema = z.object({
   devisId: z.string().uuid("ID devis invalide"),
+  typeFacture: z.enum(["acompte", "solde", "unique"]).optional().default("unique"),
+  pourcentageAcompte: z.number().min(0).max(100).optional(),
+  factureParentId: z.string().uuid("ID facture parent invalide").optional(),
+  montantTotalProjet: z.number().min(0).optional(),
 });
 
 export type GenerateFactureRequest = z.infer<typeof generateFactureSchema>;
