@@ -5,7 +5,7 @@ import { generatePDF } from "@/lib/pdf/browser-pool";
 import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
 import { generateFactureSchema } from "@/lib/schemas/api";
 import { NotFoundError, ConflictError, DatabaseError } from "@/lib/errors";
-import type { FactureData, FactureCompanyInfo, LigneDevis } from "@/types";
+import type { FactureData, FactureCompanyInfo, LigneDevis, FactureType, Facture } from "@/types";
 
 // Create a Supabase client with service role for server-side operations
 // SECURITY: Service role key is required - never fall back to anon key
@@ -49,12 +49,25 @@ function getDueDate(days: number = 30): string {
   return date.toISOString().split("T")[0];
 }
 
+// Type for acompte data for display on solde facture
+interface AcompteVerse {
+  numero: string;
+  date: string;
+  montantHT: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Get Supabase client with service role (throws if not configured)
     const supabase = getSupabaseServiceClient();
 
-    const { devisId } = await validateRequestBody(request, generateFactureSchema);
+    const {
+      devisId,
+      typeFacture = "unique",
+      pourcentageAcompte,
+      factureParentId,
+      montantTotalProjet,
+    } = await validateRequestBody(request, generateFactureSchema);
 
     // Fetch devis with related data
     const { data: devis, error: devisError } = await supabase
@@ -101,9 +114,36 @@ export async function POST(request: NextRequest) {
       throw new NotFoundError("Devis non trouvé");
     }
 
-    // Check if already converted
-    if (devis.facture_id) {
-      throw new ConflictError("Ce devis a déjà été converti en facture");
+    // Check if already converted to unique invoice (not acompte/solde)
+    // For acompte/solde, allow multiple invoices from same devis
+    if (devis.facture_id && typeFacture === "unique") {
+      throw new ConflictError("Ce devis a déjà été converti en facture unique");
+    }
+
+    // For solde invoice, check that there are acomptes payés
+    let acomptesVerses: AcompteVerse[] = [];
+    if (typeFacture === "solde") {
+      const { data: acomptesData, error: acomptesError } = await supabase
+        .from("factures")
+        .select("*")
+        .eq("devis_id", devisId)
+        .eq("type_facture", "acompte")
+        .eq("statut", "Payé")
+        .order("date_emission", { ascending: true });
+
+      if (acomptesError) {
+        throw new DatabaseError("Erreur lors de la récupération des acomptes", { error: acomptesError.message });
+      }
+
+      if (!acomptesData || acomptesData.length === 0) {
+        throw new ConflictError("Aucun acompte payé trouvé pour ce devis. Créez d'abord une facture d'acompte.");
+      }
+
+      acomptesVerses = acomptesData.map((a) => ({
+        numero: a.numero || "N/A",
+        date: a.date_emission || new Date().toISOString().split("T")[0],
+        montantHT: a.montant_ht || 0,
+      }));
     }
 
     // Fetch company settings
@@ -192,7 +232,34 @@ export async function POST(request: NextRequest) {
     const dateEmission = new Date().toISOString().split("T")[0];
     const dateEcheance = getDueDate(30);
 
-    // Build FactureData
+    // Calculate amounts based on invoice type
+    const tauxTva = devis.taux_tva || 20;
+    const totalDevisHT = montantTotalProjet || devis.total_ht || 0;
+
+    let montantHT: number;
+    let effectivePourcentage: number | undefined;
+
+    switch (typeFacture) {
+      case "acompte":
+        effectivePourcentage = pourcentageAcompte || 30;
+        montantHT = totalDevisHT * (effectivePourcentage / 100);
+        break;
+      case "solde":
+        const totalAcomptes = acomptesVerses.reduce((sum, a) => sum + a.montantHT, 0);
+        montantHT = totalDevisHT - totalAcomptes;
+        effectivePourcentage = (montantHT / totalDevisHT) * 100;
+        break;
+      case "unique":
+      default:
+        montantHT = totalDevisHT;
+        effectivePourcentage = undefined;
+        break;
+    }
+
+    const montantTVA = montantHT * (tauxTva / 100);
+    const montantTTC = montantHT + montantTVA;
+
+    // Build FactureData with acompte fields
     const factureData: FactureData = {
       numeroFacture,
       dateEmission,
@@ -218,11 +285,16 @@ export async function POST(request: NextRequest) {
       objet: opportunite?.nom || "Prestation de services",
       devisReference: devis.numero_devis,
       lignes,
-      totalHT: devis.total_ht || 0,
-      tauxTva: devis.taux_tva || 20,
-      tva: devis.tva || 0,
-      totalTTC: devis.total_ttc || 0,
+      totalHT: montantHT,
+      tauxTva,
+      tva: montantTVA,
+      totalTTC: montantTTC,
       conditionsPaiement,
+      // Acompte fields for PDF template
+      typeFacture,
+      pourcentageAcompte: effectivePourcentage,
+      montantTotalProjet: totalDevisHT,
+      acomptesVerses: typeFacture === "solde" ? acomptesVerses : undefined,
     };
 
     // Generate HTML
@@ -245,11 +317,16 @@ export async function POST(request: NextRequest) {
         statut: "Brouillon",
         date_emission: dateEmission,
         date_echeance: dateEcheance,
-        montant_ht: devis.total_ht,
-        taux_tva: devis.taux_tva || 20,
+        montant_ht: montantHT,
+        taux_tva: tauxTva,
         conditions_paiement: conditionsPaiement,
         objet: opportunite?.nom,
         pdf_filename: pdfFilename,
+        // Acompte fields (conformité Art. 289 CGI)
+        type_facture: typeFacture,
+        pourcentage_acompte: effectivePourcentage,
+        facture_parent_id: factureParentId || null,
+        montant_total_projet: totalDevisHT,
       })
       .select()
       .single();

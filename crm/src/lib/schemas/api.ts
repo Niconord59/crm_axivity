@@ -73,6 +73,18 @@ export const sendRelanceSchema = z.object({
 export type SendRelanceRequest = z.infer<typeof sendRelanceSchema>;
 
 // ============================================
+// BULK EMAIL (Templates + Contacts)
+// ============================================
+
+export const sendBulkEmailSchema = z.object({
+  contactIds: z.array(z.string().uuid("ID contact invalide")).min(1, "Au moins un contact requis"),
+  objet: z.string().min(1, "Le sujet est requis"),
+  contenu: z.string().min(1, "Le contenu est requis"),
+});
+
+export type SendBulkEmailRequest = z.infer<typeof sendBulkEmailSchema>;
+
+// ============================================
 // PLACES (Google Places)
 // ============================================
 

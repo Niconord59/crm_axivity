@@ -217,6 +217,17 @@ export const queryKeys = {
   },
 
   // =========================================================================
+  // EMAIL TEMPLATES
+  // =========================================================================
+  emailTemplates: {
+    all: ["email-templates"] as const,
+    lists: () => [...queryKeys.emailTemplates.all, "list"] as const,
+    list: () => [...queryKeys.emailTemplates.lists()] as const,
+    details: () => [...queryKeys.emailTemplates.all, "detail"] as const,
+    detail: (id: string) => [...queryKeys.emailTemplates.details(), id] as const,
+  },
+
+  // =========================================================================
   // NOTIFICATIONS
   // =========================================================================
   notifications: {

@@ -1,4 +1,4 @@
-import type { FactureData } from "@/types";
+import type { FactureData, FactureType, AcompteVerse } from "@/types";
 
 // Format number as currency (EUR)
 function formatCurrency(amount: number): string {
@@ -28,6 +28,77 @@ function escapeHtml(text: string | undefined | null): string {
     .replace(/'/g, "&#039;");
 }
 
+// Get invoice title based on type
+function getFactureTitle(typeFacture?: FactureType): string {
+  switch (typeFacture) {
+    case "acompte":
+      return "FACTURE D'ACOMPTE";
+    case "solde":
+      return "FACTURE DE SOLDE";
+    default:
+      return "FACTURE";
+  }
+}
+
+// Generate acompte mention for acompte invoices
+function generateAcompteMention(
+  typeFacture: FactureType | undefined,
+  pourcentage: number | undefined,
+  montantTotal: number | undefined
+): string {
+  if (typeFacture !== "acompte" || !pourcentage || !montantTotal) return "";
+
+  return `
+    <div class="acompte-mention">
+      <p><strong>Acompte de ${pourcentage}%</strong> sur un total de ${formatCurrency(montantTotal)} HT</p>
+    </div>
+  `;
+}
+
+// Generate acomptes summary for solde invoices
+function generateAcomptesSummary(
+  typeFacture: FactureType | undefined,
+  acomptesVerses: AcompteVerse[] | undefined,
+  montantTotalProjet: number | undefined,
+  soldeDuHT: number
+): string {
+  if (typeFacture !== "solde" || !acomptesVerses || acomptesVerses.length === 0) return "";
+
+  const acomptesLines = acomptesVerses.map((a) => `
+    <div class="acompte-line">
+      <span class="acompte-ref">${escapeHtml(a.numero)}</span>
+      <span class="acompte-date">du ${formatDate(a.date)}</span>
+      <span class="acompte-montant">-${formatCurrency(a.montantHT)}</span>
+    </div>
+  `).join("");
+
+  const totalAcomptes = acomptesVerses.reduce((sum, a) => sum + a.montantHT, 0);
+
+  return `
+    <div class="acomptes-summary">
+      <div class="summary-title">RÉCAPITULATIF DES ACOMPTES</div>
+      <div class="summary-content">
+        <div class="total-projet">
+          <span>Montant total du projet HT</span>
+          <span>${formatCurrency(montantTotalProjet || 0)}</span>
+        </div>
+        <div class="acomptes-list">
+          <div class="acomptes-label">Acomptes versés :</div>
+          ${acomptesLines}
+        </div>
+        <div class="total-acomptes">
+          <span>Total des acomptes</span>
+          <span>-${formatCurrency(totalAcomptes)}</span>
+        </div>
+        <div class="solde-du">
+          <span>SOLDE DÛ HT</span>
+          <span>${formatCurrency(soldeDuHT)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 export function generateFactureHTML(data: FactureData): string {
   // Get company info with fallback values
   const company = data.entreprise || {
@@ -36,6 +107,20 @@ export function generateFactureHTML(data: FactureData): string {
   };
 
   const primaryColor = company.couleurPrincipale || "#16a34a";
+
+  // Get invoice type-specific content
+  const factureTitle = getFactureTitle(data.typeFacture);
+  const acompteMentionHTML = generateAcompteMention(
+    data.typeFacture,
+    data.pourcentageAcompte,
+    data.montantTotalProjet
+  );
+  const acomptesSummaryHTML = generateAcomptesSummary(
+    data.typeFacture,
+    data.acomptesVerses,
+    data.montantTotalProjet,
+    data.totalHT
+  );
 
   // Build company info lines for header
   const companyInfoLines: string[] = [];
@@ -119,7 +204,7 @@ export function generateFactureHTML(data: FactureData): string {
       </div>
       <div class="header-below">
         <div class="invoice-info">
-          <div class="invoice-title">FACTURE</div>
+          <div class="invoice-title">${factureTitle}</div>
           <div class="invoice-number">${escapeHtml(data.numeroFacture)}</div>
           <div class="invoice-dates">
             <p><strong>Date d'émission :</strong> ${formatDate(data.dateEmission)}</p>
@@ -143,7 +228,7 @@ export function generateFactureHTML(data: FactureData): string {
           </div>
         </div>
         <div class="invoice-info">
-          <div class="invoice-title">FACTURE</div>
+          <div class="invoice-title">${factureTitle}</div>
           <div class="invoice-number">${escapeHtml(data.numeroFacture)}</div>
           <div class="invoice-dates">
             <p><strong>Date d'émission :</strong> ${formatDate(data.dateEmission)}</p>
@@ -320,6 +405,106 @@ export function generateFactureHTML(data: FactureData): string {
       color: #666;
       margin-top: 8px;
       font-style: italic;
+    }
+
+    /* Acompte mention section */
+    .acompte-mention {
+      margin-bottom: 30px;
+      padding: 15px 20px;
+      background: #f3e8ff;
+      border-left: 4px solid #9333ea;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .acompte-mention p {
+      font-size: 11pt;
+      color: #581c87;
+      margin: 0;
+    }
+
+    /* Acomptes summary section (for solde invoices) */
+    .acomptes-summary {
+      margin-bottom: 30px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .acomptes-summary .summary-title {
+      background: #f3f4f6;
+      padding: 12px 20px;
+      font-size: 10pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .acomptes-summary .summary-content {
+      padding: 15px 20px;
+    }
+
+    .acomptes-summary .total-projet {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 11pt;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 12px;
+    }
+
+    .acomptes-summary .acomptes-list {
+      margin-bottom: 12px;
+    }
+
+    .acomptes-summary .acomptes-label {
+      font-size: 10pt;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .acomptes-summary .acompte-line {
+      display: flex;
+      gap: 12px;
+      padding: 6px 0;
+      font-size: 10pt;
+      color: #374151;
+    }
+
+    .acomptes-summary .acompte-ref {
+      font-weight: 500;
+      color: ${primaryColor};
+    }
+
+    .acomptes-summary .acompte-date {
+      color: #666;
+      flex: 1;
+    }
+
+    .acomptes-summary .acompte-montant {
+      font-weight: 500;
+      color: #dc2626;
+    }
+
+    .acomptes-summary .total-acomptes {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 10pt;
+      border-top: 1px solid #e5e7eb;
+      color: #dc2626;
+    }
+
+    .acomptes-summary .solde-du {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      font-size: 12pt;
+      font-weight: 700;
+      border-top: 2px solid ${primaryColor};
+      margin-top: 8px;
+      color: ${primaryColor};
     }
 
     table {
@@ -527,6 +712,10 @@ export function generateFactureHTML(data: FactureData): string {
       ${devisRefHTML}
     </div>
   </div>
+
+  ${acompteMentionHTML}
+
+  ${acomptesSummaryHTML}
 
   <table>
     <thead>

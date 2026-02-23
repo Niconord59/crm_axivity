@@ -648,6 +648,18 @@ export interface ProjetMembre extends BaseEntity {
 }
 
 // =============================================================================
+// EMAIL TEMPLATES
+// =============================================================================
+
+export interface EmailTemplate extends BaseEntity {
+  nom: string;
+  objet: string;
+  contenu: string;
+  variables: string[];
+  createdBy?: string;
+}
+
+// =============================================================================
 // NOTIFICATIONS
 // =============================================================================
 

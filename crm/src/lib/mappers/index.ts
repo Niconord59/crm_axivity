@@ -54,3 +54,9 @@ export {
   mapOpportuniteContactToInsert,
   mapOpportuniteContactToUpdate,
 } from "./opportunite-contact.mapper";
+
+export {
+  mapToEmailTemplate,
+  mapEmailTemplateToInsert,
+  mapEmailTemplateToUpdate,
+} from "./email-template.mapper";

@@ -85,6 +85,22 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
   "En retard": "bg-amber-500",
 };
 
+// Types de facture (acompte, solde, unique)
+export const FACTURE_TYPES = ["acompte", "solde", "unique"] as const;
+export type FactureType = (typeof FACTURE_TYPES)[number];
+
+export const FACTURE_TYPE_LABELS: Record<FactureType, string> = {
+  acompte: "Acompte",
+  solde: "Solde",
+  unique: "Unique",
+};
+
+export const FACTURE_TYPE_COLORS: Record<FactureType, string> = {
+  acompte: "bg-purple-500",
+  solde: "bg-green-600",
+  unique: "bg-gray-500",
+};
+
 // =============================================================================
 // INTERACTIONS
 // =============================================================================
