@@ -411,26 +411,32 @@
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "changelog",
-        "dataToSend": "defineBelow",
-        "fieldsUi": {
-          "fieldValues": [
+        "method": "POST",
+        "url": "https://supabase.axivity.cloud/rest/v1/rpc/log_changelog",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "fieldId": "description",
-              "fieldValue": "={{ 'Auto - Conversion: ' + $('Préparer Données Projet').item.json.opportunite_nom + '\\nProjet créé automatiquement depuis l\\'opportunité gagnée.\\nID Opportunité: ' + $('Préparer Données Projet').item.json.opportunite_id + '\\nID Projet: ' + $json.projet_id + '\\nBudget: ' + $('Préparer Données Projet').item.json.budget + ' EUR' }}"
+              "name": "Content-Type",
+              "value": "application/json"
             },
             {
-              "fieldId": "type",
-              "fieldValue": "Feature"
+              "name": "Prefer",
+              "value": "return=representation"
             }
           ]
-        }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_description: 'Auto - Conversion: ' + $('Préparer Données Projet').item.json.opportunite_nom + '\\nProjet créé automatiquement depuis l\\'opportunité gagnée.\\nID Opportunité: ' + $('Préparer Données Projet').item.json.opportunite_id + '\\nID Projet: ' + $json.projet_id + '\\nBudget: ' + $('Préparer Données Projet').item.json.budget + ' EUR', p_type: 'Feature', p_auteur_id: null }) }}",
+        "options": {}
       },
       "id": "supabase-log-changelog",
-      "name": "Logger dans Changelog",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "name": "Logger dans Changelog (RPC)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [1980, 0],
       "credentials": {
         "supabaseApi": {
@@ -553,7 +559,7 @@
       "main": [
         [
           {
-            "node": "Logger dans Changelog",
+            "node": "Logger dans Changelog (RPC)",
             "type": "main",
             "index": 0
           }
@@ -564,7 +570,7 @@
       "main": [
         [
           {
-            "node": "Logger dans Changelog",
+            "node": "Logger dans Changelog (RPC)",
             "type": "main",
             "index": 0
           }
