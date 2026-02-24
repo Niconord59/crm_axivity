@@ -1,29 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 
-// Storage key for auth session - MUST match @/lib/supabase/client.ts
+// Storage key for auth session (legacy - kept for migration cleanup)
 export const AUTH_STORAGE_KEY = 'crm-axivity-auth'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    // Persiste la session dans localStorage
-    persistSession: true,
-    // Détecte les tokens dans l'URL (callbacks OAuth)
-    detectSessionInUrl: true,
-    // Utilise PKCE pour une meilleure sécurité
-    flowType: 'pkce',
-    // Clé de stockage unifiée avec @/lib/supabase/client.ts
-    storageKey: AUTH_STORAGE_KEY,
-    // Rafraîchit automatiquement le token avant expiration
-    autoRefreshToken: true,
-  },
-})
+// Use the SSR-compatible browser client (cookie-based auth).
+// This ensures data hooks share the same authenticated session as auth hooks.
+// Previously, a separate createClient from @supabase/supabase-js was used with
+// localStorage storage, which became desynchronized from the cookie-based auth
+// after RLS was re-enabled.
+export const supabase = createClient()
 
 // Types pour les tables Supabase
 export type UserRole = 'admin' | 'developpeur_nocode' | 'developpeur_automatisme' | 'commercial' | 'client'

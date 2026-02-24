@@ -200,10 +200,10 @@ describe("projet.mapper", () => {
       const insertData = mapProjetToInsert(projetData);
 
       expect(insertData.client_id).toBeUndefined();
-      expect("owner_id" in insertData).toBe(false);
+      expect("chef_projet_id" in insertData).toBe(false);
     });
 
-    it("should include owner_id when provided", () => {
+    it("should include chef_projet_id when provided", () => {
       const projetData = {
         briefProjet: "Owned Project",
         ownerId: "user-owner",
@@ -211,7 +211,7 @@ describe("projet.mapper", () => {
 
       const insertData = mapProjetToInsert(projetData);
 
-      expect(insertData.owner_id).toBe("user-owner");
+      expect(insertData.chef_projet_id).toBe("user-owner");
     });
 
     it("should extract first ID from array of linked clients", () => {
@@ -286,8 +286,8 @@ describe("projet.mapper", () => {
 
       const result = mapProjetToUpdate(updateData);
 
-      // Empty string for ownerId should set owner_id to null
-      expect(result.owner_id).toBe(null);
+      // Empty string for ownerId should set chef_projet_id to null
+      expect(result.chef_projet_id).toBe(null);
     });
 
     it("should handle zero budget", () => {
