@@ -138,7 +138,48 @@ CREATE INDEX IF NOT EXISTS idx_devis_created_by ON devis(created_by);
 CREATE INDEX IF NOT EXISTS idx_projet_membres_assigned_by ON projet_membres(assigned_by);
 
 -- ============================================================================
--- STEP 5: Notify PostgREST to reload
+-- STEP 5: Fix function_search_path_mutable (27 functions)
+-- Set search_path = '' to prevent search path manipulation attacks
+-- ============================================================================
+
+ALTER FUNCTION public.audit_auth_config() SET search_path = '';
+ALTER FUNCTION public.calculate_client_health() SET search_path = '';
+ALTER FUNCTION public.convert_opportunity_to_project(uuid, date) SET search_path = '';
+ALTER FUNCTION public.convert_prospect_to_opportunity(uuid, text, numeric) SET search_path = '';
+ALTER FUNCTION public.create_feedback(uuid, uuid, integer, text, text) SET search_path = '';
+ALTER FUNCTION public.generate_invoice_number() SET search_path = '';
+ALTER FUNCTION public.generer_numero_devis() SET search_path = '';
+ALTER FUNCTION public.generer_numero_facture() SET search_path = '';
+ALTER FUNCTION public.get_changelog(integer, integer) SET search_path = '';
+ALTER FUNCTION public.get_dashboard_kpis() SET search_path = '';
+ALTER FUNCTION public.get_pipeline_kpis() SET search_path = '';
+ALTER FUNCTION public.get_recent_logins(integer) SET search_path = '';
+ALTER FUNCTION public.get_team_profiles() SET search_path = '';
+ALTER FUNCTION public.get_user_role() SET search_path = '';
+ALTER FUNCTION public.handle_new_user() SET search_path = '';
+ALTER FUNCTION public.is_admin() SET search_path = '';
+ALTER FUNCTION public.is_developer() SET search_path = '';
+ALTER FUNCTION public.log_changelog(text, text, uuid) SET search_path = '';
+ALTER FUNCTION public.update_client_last_interaction() SET search_path = '';
+ALTER FUNCTION public.update_email_templates_updated_at() SET search_path = '';
+ALTER FUNCTION public.update_lifecycle_stage_changed_at() SET search_path = '';
+ALTER FUNCTION public.update_opportunite_contacts_updated_at() SET search_path = '';
+ALTER FUNCTION public.update_parametres_entreprise_updated_at() SET search_path = '';
+ALTER FUNCTION public.update_project_hours() SET search_path = '';
+ALTER FUNCTION public.update_task_hours() SET search_path = '';
+ALTER FUNCTION public.update_updated_at() SET search_path = '';
+ALTER FUNCTION public.update_updated_at_column() SET search_path = '';
+
+-- ============================================================================
+-- STEP 6: Move extensions from public to extensions schema
+-- ============================================================================
+
+ALTER EXTENSION unaccent SET SCHEMA extensions;
+ALTER EXTENSION btree_gist SET SCHEMA extensions;
+ALTER EXTENSION vector SET SCHEMA extensions;
+
+-- ============================================================================
+-- STEP 7: Notify PostgREST to reload
 -- ============================================================================
 NOTIFY pgrst, 'reload schema';
 NOTIFY pgrst, 'reload config';
