@@ -110,7 +110,7 @@ export type Projet = {
   heures_estimees: number | null
   heures_passees: number | null
   notes: string | null
-  owner_id: string | null
+  chef_projet_id: string | null
   created_at: string
   updated_at: string
 }

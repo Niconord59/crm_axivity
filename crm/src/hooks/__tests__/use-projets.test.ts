@@ -50,7 +50,7 @@ const sampleProjetRecords = [
     heures_estimees: 200,
     heures_passees: 80,
     client_id: "client-1",
-    owner_id: "user-1",
+    chef_projet_id: "user-1",
   },
   {
     id: "proj-2",
@@ -67,7 +67,7 @@ const sampleProjetRecords = [
     heures_estimees: 300,
     heures_passees: 0,
     client_id: "client-2",
-    owner_id: "user-2",
+    chef_projet_id: "user-2",
   },
   {
     id: "proj-3",
@@ -84,7 +84,7 @@ const sampleProjetRecords = [
     heures_estimees: 100,
     heures_passees: 95,
     client_id: "client-1",
-    owner_id: "user-1",
+    chef_projet_id: "user-1",
   },
 ];
 
@@ -353,7 +353,7 @@ describe("use-projets hooks", () => {
 
     it("should filter by userId when provided", async () => {
       const user1ActiveRecords = sampleProjetRecords.filter(
-        (r) => (r.statut === "En cours" || r.statut === "Cadrage") && r.owner_id === "user-1"
+        (r) => (r.statut === "En cours" || r.statut === "Cadrage") && r.chef_projet_id === "user-1"
       );
 
       mockOrder.mockReturnValue({
@@ -498,7 +498,7 @@ describe("use-projets hooks", () => {
         heures_estimees: null,
         heures_passees: null,
         client_id: "client-1",
-        owner_id: "user-1",
+        chef_projet_id: "user-1",
       };
       setupSuccessfulInsert(newRecord);
 
@@ -577,7 +577,7 @@ describe("use-projets hooks", () => {
         heures_estimees: null,
         heures_passees: null,
         client_id: null,
-        owner_id: null,
+        chef_projet_id: null,
       };
       setupSuccessfulInsert(newRecord);
 
@@ -612,7 +612,7 @@ describe("use-projets hooks", () => {
         heures_estimees: null,
         heures_passees: null,
         client_id: null,
-        owner_id: "user-1",
+        chef_projet_id: "user-1",
       };
       setupSuccessfulInsert(newRecord);
 
@@ -627,7 +627,7 @@ describe("use-projets hooks", () => {
       });
 
       const insertCall = mockInsert.mock.calls[0][0];
-      expect(insertCall.owner_id).toBe("user-1");
+      expect(insertCall.chef_projet_id).toBe("user-1");
     });
   });
 
@@ -783,7 +783,7 @@ describe("use-projets hooks", () => {
     it("should handle ownerId update", async () => {
       const updatedRecord = {
         ...sampleProjetRecords[0],
-        owner_id: "user-2",
+        chef_projet_id: "user-2",
       };
       setupSuccessfulUpdate(updatedRecord);
 
@@ -801,13 +801,13 @@ describe("use-projets hooks", () => {
       });
 
       const updateCall = mockUpdate.mock.calls[0][0];
-      expect(updateCall.owner_id).toBe("user-2");
+      expect(updateCall.chef_projet_id).toBe("user-2");
     });
 
     it("should allow clearing ownerId", async () => {
       const updatedRecord = {
         ...sampleProjetRecords[0],
-        owner_id: null,
+        chef_projet_id: null,
       };
       setupSuccessfulUpdate(updatedRecord);
 
@@ -825,7 +825,7 @@ describe("use-projets hooks", () => {
       });
 
       const updateCall = mockUpdate.mock.calls[0][0];
-      expect(updateCall.owner_id).toBe(null);
+      expect(updateCall.chef_projet_id).toBe(null);
     });
   });
 

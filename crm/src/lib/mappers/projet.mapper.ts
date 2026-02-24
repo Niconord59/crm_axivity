@@ -39,7 +39,7 @@ export function mapToProjet(record: SupabaseRecord): ProjetWithOwner {
       ? [parseLinkedId(record.client_id)!]
       : undefined,
     // Extended field
-    ownerId: parseOptionalString(record.owner_id),
+    ownerId: parseOptionalString(record.chef_projet_id),
   };
 }
 
@@ -59,7 +59,7 @@ export function mapProjetToInsert(data: Partial<ProjetWithOwner>): SupabaseRecor
   };
 
   if (data.ownerId) {
-    insertData.owner_id = data.ownerId;
+    insertData.chef_projet_id = data.ownerId;
   }
 
   return insertData;
@@ -80,7 +80,7 @@ export function mapProjetToUpdate(data: Partial<ProjetWithOwner>): SupabaseRecor
   if (data.budget !== undefined) updateData.budget_initial = data.budget;
   if (data.notes !== undefined) updateData.notes = data.notes;
   if (data.priorite !== undefined) updateData.priorite = data.priorite;
-  if (data.ownerId !== undefined) updateData.owner_id = data.ownerId || null;
+  if (data.ownerId !== undefined) updateData.chef_projet_id = data.ownerId || null;
 
   return updateData;
 }

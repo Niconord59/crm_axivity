@@ -42,7 +42,7 @@ export function useProjetsActifs(userId?: string) {
 
       // Filter by owner if provided
       if (userId) {
-        query = query.eq("owner_id", userId);
+        query = query.eq("chef_projet_id", userId);
       }
 
       const { data, error } = await query;

@@ -24,7 +24,7 @@ describe("projet.mapper", () => {
         heures_estimees: 500,
         heures_passees: 250,
         client_id: "client-456",
-        owner_id: "user-789",
+        chef_projet_id: "user-789",
       };
 
       const projet = mapToProjet(record);
@@ -168,7 +168,7 @@ describe("projet.mapper", () => {
         budget_initial: 50000,
         notes: "Important project",
         client_id: "client-123",
-        owner_id: "user-456",
+        chef_projet_id: "user-456",
       });
     });
 
@@ -269,7 +269,7 @@ describe("projet.mapper", () => {
         budget_initial: 100000,
         notes: "Updated notes",
         priorite: "Critique",
-        owner_id: "new-owner",
+        chef_projet_id: "new-owner",
       });
     });
 
