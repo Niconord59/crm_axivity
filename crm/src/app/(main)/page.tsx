@@ -209,7 +209,7 @@ export default function DashboardPage() {
                 >
                   <div className="min-w-0 flex-1">
                     <Link
-                      href={`/opportunites/${opp.id}`}
+                      href="/opportunites"
                       className="font-medium hover:underline truncate block"
                     >
                       {opp.nom}
