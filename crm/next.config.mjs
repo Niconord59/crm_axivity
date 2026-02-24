@@ -66,9 +66,9 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://supabase.axivity.cloud",
-              "font-src 'self' data:",
+              "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://supabase.axivity.cloud wss://supabase.axivity.cloud https://recherche-entreprises.api.gouv.fr https://places.googleapis.com https://maps.googleapis.com",
               "frame-src 'none'",
               "object-src 'none'",
