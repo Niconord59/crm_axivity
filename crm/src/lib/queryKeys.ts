@@ -157,6 +157,8 @@ export const queryKeys = {
       [...queryKeys.prospects.all, "rdv-aujourdhui", userId] as const,
     pastRdv: () =>
       [...queryKeys.prospects.all, "past-rdv"] as const,
+    upcomingRdv: () =>
+      [...queryKeys.prospects.all, "upcoming-rdv"] as const,
   },
 
   // =========================================================================

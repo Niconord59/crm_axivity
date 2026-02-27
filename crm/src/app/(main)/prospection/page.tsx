@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Upload, Phone as PhoneIcon } from "lucide-react";
+import { Upload, Phone as PhoneIcon, CalendarDays, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, PageLoading, EmptyState } from "@/components/shared";
 import {
@@ -13,6 +13,7 @@ import {
   ProspectForm,
   LeadImportDialog,
   PastRdvNotifications,
+  ProspectionAgendaView,
 } from "@/components/prospection";
 import {
   useProspectsWithClients,
@@ -34,7 +35,10 @@ export default function ProspectionPage() {
   );
 }
 
+type ViewMode = "leads" | "agenda";
+
 function ProspectionContent() {
+  const [view, setView] = useState<ViewMode>("leads");
   const [filters, setFilters] = useState<ProspectFilters>({});
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -93,11 +97,37 @@ function ProspectionContent() {
         description="Gérez vos leads et suivez vos appels"
       >
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importer
-          </Button>
-          <ProspectForm />
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border p-0.5">
+            <Button
+              variant={view === "leads" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setView("leads")}
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Leads</span>
+            </Button>
+            <Button
+              variant={view === "agenda" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setView("agenda")}
+            >
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline">Agenda</span>
+            </Button>
+          </div>
+
+          {view === "leads" && (
+            <>
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importer
+              </Button>
+              <ProspectForm />
+            </>
+          )}
         </div>
       </PageHeader>
 
@@ -112,26 +142,38 @@ function ProspectionContent() {
         }}
       />
 
-      {/* Filters */}
-      <ProspectionFilters filters={filters} onFiltersChange={setFilters} />
+      {/* Conditional view: Leads or Agenda */}
+      {view === "leads" ? (
+        <>
+          {/* Filters */}
+          <ProspectionFilters filters={filters} onFiltersChange={setFilters} />
 
-      {/* Leads List */}
-      {!activeProspects || activeProspects.length === 0 ? (
-        <EmptyState
-          icon={PhoneIcon}
-          title="Aucun lead à prospecter"
-          description="Importez vos premiers leads via le bouton 'Importer' ou créez-en un manuellement via 'Nouveau lead' ci-dessus."
-        />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {activeProspects.map((prospect) => (
-            <LeadCard
-              key={prospect.id}
-              prospect={prospect}
-              onCall={handleCall}
+          {/* Leads List */}
+          {!activeProspects || activeProspects.length === 0 ? (
+            <EmptyState
+              icon={PhoneIcon}
+              title="Aucun lead à prospecter"
+              description="Importez vos premiers leads via le bouton 'Importer' ou créez-en un manuellement via 'Nouveau lead' ci-dessus."
             />
-          ))}
-        </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {activeProspects.map((prospect) => (
+                <LeadCard
+                  key={prospect.id}
+                  prospect={prospect}
+                  onCall={handleCall}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <ProspectionAgendaView
+          onOpenProspect={(prospect) => {
+            setSelectedProspect(prospect);
+            setCallDialogOpen(true);
+          }}
+        />
       )}
 
       {/* Call Result Dialog */}

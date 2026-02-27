@@ -700,6 +700,61 @@ export function usePastRdvProspects() {
 }
 
 /**
+ * Hook to fetch upcoming RDV prospects (for agenda view)
+ * Returns prospects with status "RDV planifié" where dateRdvPrevu >= today
+ */
+export function useUpcomingRdvProspects() {
+  return useQuery({
+    queryKey: queryKeys.prospects.upcomingRdv(),
+    queryFn: async () => {
+      const today = getToday();
+
+      const { data: prospects, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("statut_prospection", "RDV planifié")
+        .not("date_rdv_prevu", "is", null)
+        .gte("date_rdv_prevu", today)
+        .order("date_rdv_prevu", { ascending: true });
+
+      if (error) throw error;
+
+      const mappedProspects = (prospects || []).map(mapToContact);
+
+      if (mappedProspects.length > 0) {
+        const clientIds = [...new Set(
+          mappedProspects
+            .flatMap(p => p.client || [])
+            .filter(Boolean)
+        )];
+
+        if (clientIds.length > 0) {
+          const { data: clients } = await supabase
+            .from("clients")
+            .select("id, nom")
+            .in("id", clientIds);
+
+          const clientMap = new Map<string, string>();
+          (clients || []).forEach(c => {
+            clientMap.set(c.id, c.nom || "");
+          });
+
+          return mappedProspects.map(prospect => ({
+            ...prospect,
+            clientNom: prospect.client?.[0]
+              ? clientMap.get(prospect.client[0])
+              : undefined,
+          }));
+        }
+      }
+
+      return mappedProspects as Prospect[];
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+}
+
+/**
  * Hook to fetch all contacts for a specific client
  * Used in Client 360 page to display and edit contacts
  */
