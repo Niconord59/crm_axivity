@@ -1,6 +1,6 @@
 # Interface Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-28
+Auto-generated from all feature plans. Last updated: 2026-02-27
 
 ## Active Technologies
 
@@ -100,6 +100,7 @@ npm run test:ui       # Vitest UI
   - Suivi des appels (statuts, rappels, notes)
   - Conversion Lead → Opportunité
   - KPIs de prospection (à appeler, rappels, taux qualification, retards)
+  - **Vue Agenda** : Toggle Leads/Agenda sur la page `/prospection` pour voir les RDV planifiés (WeekCalendar si OAuth connecté, liste Supabase sinon)
   - **Intégration Calendar** : Planifier des RDV (Google Calendar ou Microsoft 365)
   - **Intégration Email** : Envoyer des emails de suivi (Gmail ou Outlook)
   - **Création directe** : Mode pour leads historiques ou premiers contacts non téléphoniques
@@ -107,10 +108,10 @@ npm run test:ui       # Vitest UI
     - Statuts initiaux : À appeler, Rappeler, RDV planifié, RDV effectué, Qualifié
     - Création d'interaction automatique selon le type de contact
 - **Nouveaux composants**:
-  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer, CompanySearch
+  - `components/prospection/` : ProspectionKPIs, LeadCard, ProspectionFilters, CallResultDialog, ProspectForm, LeadImportDialog, EmailComposer, CompanySearch, ProspectionAgendaView
   - `components/prospection/agenda/` : AgendaTab, WeekCalendar, EventCard, CreateEventDialog, CalendarAuthButton
 - **Nouveaux hooks**:
-  - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs
+  - `use-prospects.ts` : useProspects, useProspectsWithClients, useUpdateProspectStatus, useCreateProspect, useProspectionKPIs, useUpcomingRdvProspects
   - `use-import-leads.ts` : useImportLeads (CSV parsing, mapping, batch import)
   - `use-convert-opportunity.ts` : useConvertToOpportunity
   - `use-calendar.ts` : useCalendarEvents, useCreateCalendarEvent, useCalendarStatus, useCalendarAuth
@@ -624,6 +625,15 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Intégration Dashboard : Widget funnel à côté du graphique CA Mensuel
   - KPI "Cycle moyen Lead → Customer" affiché en jours
   - 15 tests Vitest pour use-lifecycle-funnel.ts
+
+- **Vue Agenda Prospection** (27 fév. 2026) : Toggle Leads/Agenda sur la page `/prospection`
+  - Toggle Leads/Agenda dans le PageHeader avec boutons segmentés
+  - `ProspectionAgendaView.tsx` : Vue agenda dual-mode (calendrier OAuth ou liste Supabase)
+  - `useUpcomingRdvProspects()` : Hook pour RDV futurs (`statut_prospection = "RDV planifié"` + `date_rdv_prevu >= today`)
+  - Si calendrier connecté : WeekCalendar + overlay RDV CRM en carte séparée
+  - Si non connecté : Liste RDV groupés par date + invitation à connecter le calendrier
+  - Clic sur un RDV → ouvre le CallResultDialog du prospect
+  - KPIs et PastRdvNotifications restent visibles dans les deux vues
 
 ## Production Checklist
 
