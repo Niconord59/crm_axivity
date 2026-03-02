@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Upload, Phone as PhoneIcon, CalendarDays, Users } from "lucide-react";
+import { Upload, Phone as PhoneIcon, CalendarDays, Users, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, PageLoading, EmptyState } from "@/components/shared";
 import {
@@ -14,6 +14,7 @@ import {
   LeadImportDialog,
   PastRdvNotifications,
   ProspectionAgendaView,
+  LeadListTable,
 } from "@/components/prospection";
 import {
   useProspectsWithClients,
@@ -36,9 +37,11 @@ export default function ProspectionPage() {
 }
 
 type ViewMode = "leads" | "agenda";
+type LeadsDisplay = "cards" | "list";
 
 function ProspectionContent() {
   const [view, setView] = useState<ViewMode>("leads");
+  const [leadsDisplay, setLeadsDisplay] = useState<LeadsDisplay>("cards");
   const [filters, setFilters] = useState<ProspectFilters>({});
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -121,6 +124,26 @@ function ProspectionContent() {
 
           {view === "leads" && (
             <>
+              {/* Cards / List sub-toggle */}
+              <div className="flex items-center rounded-lg border p-0.5">
+                <Button
+                  variant={leadsDisplay === "cards" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setLeadsDisplay("cards")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={leadsDisplay === "list" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setLeadsDisplay("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+
               <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 Importer
@@ -155,7 +178,7 @@ function ProspectionContent() {
               title="Aucun lead à prospecter"
               description="Importez vos premiers leads via le bouton 'Importer' ou créez-en un manuellement via 'Nouveau lead' ci-dessus."
             />
-          ) : (
+          ) : leadsDisplay === "cards" ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {activeProspects.map((prospect) => (
                 <LeadCard
@@ -165,6 +188,11 @@ function ProspectionContent() {
                 />
               ))}
             </div>
+          ) : (
+            <LeadListTable
+              prospects={activeProspects}
+              onCall={handleCall}
+            />
           )}
         </>
       ) : (

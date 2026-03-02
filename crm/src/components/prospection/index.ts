@@ -1,5 +1,6 @@
 export { ProspectionKPIs } from "./ProspectionKPIs";
 export { LeadCard } from "./LeadCard";
+export { LeadListTable } from "./LeadListTable";
 export { ProspectionFilters } from "./ProspectionFilters";
 export { CallResultDialog } from "./CallResultDialog";
 export { ProspectForm } from "./ProspectForm";
