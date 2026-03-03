@@ -97,6 +97,9 @@ interface ContactRecord {
 interface ProspectFormProps {
   trigger?: React.ReactNode;
   onSuccess?: () => void;
+  defaultValues?: Partial<ProspectFormData>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Options de résultat pour appel entrant (pas de "Pas répondu" car c'est un appel entrant)
@@ -110,8 +113,11 @@ const CALL_RESULTS = [
 
 type CallResult = typeof CALL_RESULTS[number]["value"];
 
-export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
-  const [open, setOpen] = useState(false);
+export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaults, open: controlledOpen, onOpenChange }: ProspectFormProps) {
+  const isControlled = controlledOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
   const [activeTab, setActiveTab] = useState("entreprise");
   const [searchValue, setSearchValue] = useState("");
 
@@ -158,6 +164,14 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
     resolver: zodResolver(prospectSchema),
     defaultValues: prospectDefaultValues,
   });
+
+  // Pre-fill form when opened in controlled mode with external defaults (e.g. OCR scan)
+  useEffect(() => {
+    if (isControlled && open && externalDefaults) {
+      form.reset({ ...prospectDefaultValues, ...externalDefaults });
+      setActiveTab("entreprise");
+    }
+  }, [isControlled, open, externalDefaults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Quand les données sont validées, passer automatiquement à l'onglet Résultat
   useEffect(() => {
@@ -617,14 +631,16 @@ export function ProspectForm({ trigger, onSuccess }: ProspectFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau lead
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau lead
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent
         className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto"

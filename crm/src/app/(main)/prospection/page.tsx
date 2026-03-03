@@ -15,6 +15,7 @@ import {
   PastRdvNotifications,
   ProspectionAgendaView,
   LeadListTable,
+  BusinessCardScannerButton,
 } from "@/components/prospection";
 import {
   useProspectsWithClients,
@@ -148,6 +149,7 @@ function ProspectionContent() {
                 <Upload className="h-4 w-4 mr-2" />
                 Importer
               </Button>
+              <BusinessCardScannerButton />
               <ProspectForm />
             </>
           )}

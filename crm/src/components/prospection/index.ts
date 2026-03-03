@@ -8,3 +8,4 @@ export { LeadImportDialog } from "./LeadImportDialog";
 export { PastRdvNotifications } from "./PastRdvNotifications";
 export { EmailComposer } from "./EmailComposer";
 export { ProspectionAgendaView } from "./ProspectionAgendaView";
+export { BusinessCardScannerButton } from "./BusinessCardScannerButton";
