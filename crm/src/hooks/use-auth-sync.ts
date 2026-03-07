@@ -39,7 +39,10 @@ export function useAuthSync() {
           // On page reload, @supabase/ssr fires multiple SIGNED_IN events
           // (one per cookie chunk) — clearing the cache each time destroys
           // in-flight queries and prevents data from loading.
-          if (!isInitialLoad && currentUserId && currentUserId !== newUserId) {
+          const shouldClear = !isInitialLoad && currentUserId && currentUserId !== newUserId;
+          console.log("[AuthSync] SIGNED_IN", { isInitialLoad, currentUserId: currentUserId?.slice(0, 8), newUserId: newUserId?.slice(0, 8), shouldClear });
+          if (shouldClear) {
+            console.warn("[AuthSync] Clearing query cache — user changed");
             queryClient.clear();
           }
           currentUserId = newUserId;
