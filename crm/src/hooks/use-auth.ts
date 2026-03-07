@@ -57,13 +57,25 @@ export function useAuth() {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // getUser() valide le token côté serveur (contrairement à getSession()
+        // qui retourne la session locale sans vérification).
+        // Cela détecte immédiatement les tokens expirés/révoqués (ex: refresh
+        // token invalidé par un autre appareil).
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !authUser) {
+          // Token invalide ou expiré - nettoyer la session locale
+          setSession(null);
+          setUser(null);
+          return;
+        }
+
+        // Si getUser() réussit, récupérer la session pour le state
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
 
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id, session.user.email || "");
-          setUser(profile);
-        }
+        const profile = await fetchProfile(authUser.id, authUser.email || "");
+        setUser(profile);
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
