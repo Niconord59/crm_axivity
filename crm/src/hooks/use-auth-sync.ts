@@ -21,32 +21,35 @@ export function useAuthSync() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Track the current user ID to detect actual user changes
-    // (not just cookie chunk updates that fire multiple SIGNED_IN events)
     let currentUserId: string | null = null;
-    let isInitialLoad = true;
+    // Debounce: only invalidate once after a burst of events
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleInvalidate = () => {
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      invalidateTimer = setTimeout(() => {
+        console.log("[AuthSync] Invalidating all queries after auth settled");
+        queryClient.invalidateQueries();
+        invalidateTimer = null;
+      }, 100);
+    };
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[AuthSync] Event:", event, "userId:", session?.user?.id?.slice(0, 8) ?? "null");
-
       const newUserId = session?.user?.id ?? null;
 
       switch (event) {
         case "SIGNED_IN": {
-          // Only clear cache if the user actually changed (different user logged in).
-          // On page reload, @supabase/ssr fires multiple SIGNED_IN events
-          // (one per cookie chunk) — clearing the cache each time destroys
-          // in-flight queries and prevents data from loading.
-          const shouldClear = !isInitialLoad && currentUserId && currentUserId !== newUserId;
-          console.log("[AuthSync] SIGNED_IN", { isInitialLoad, currentUserId: currentUserId?.slice(0, 8), newUserId: newUserId?.slice(0, 8), shouldClear });
-          if (shouldClear) {
-            console.warn("[AuthSync] Clearing query cache — user changed");
+          // If a different user signed in, clear entirely
+          if (currentUserId && currentUserId !== newUserId) {
             queryClient.clear();
           }
           currentUserId = newUserId;
-          isInitialLoad = false;
+          // SIGNED_IN fires when GoTrue refreshed the token internally.
+          // During this refresh, the client lock blocks data queries.
+          // Schedule an invalidation after the events settle to unblock them.
+          scheduleInvalidate();
           break;
         }
 
@@ -67,12 +70,13 @@ export function useAuthSync() {
 
         case "INITIAL_SESSION":
           currentUserId = newUserId;
-          isInitialLoad = false;
+          // No need to invalidate — queries fire normally with INITIAL_SESSION
           break;
       }
     });
 
     return () => {
+      if (invalidateTimer) clearTimeout(invalidateTimer);
       subscription.unsubscribe();
     };
   }, [supabase, queryClient]);
