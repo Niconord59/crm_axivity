@@ -63,6 +63,7 @@ export function BusinessCardScannerButton() {
       {/* Mobile-only scan button */}
       <Button
         variant="outline"
+        size="sm"
         className="sm:hidden"
         onClick={() => fileInputRef.current?.click()}
         disabled={scanMutation.isPending}

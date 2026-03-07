@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Upload, Phone as PhoneIcon, CalendarDays, Users, LayoutGrid, List } from "lucide-react";
+import { Upload, Phone as PhoneIcon, CalendarDays, Users, LayoutGrid, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, PageLoading, EmptyState } from "@/components/shared";
 import {
@@ -100,7 +100,7 @@ function ProspectionContent() {
         title="Prospection"
         description="Gérez vos leads et suivez vos appels"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* View toggle */}
           <div className="flex items-center rounded-lg border p-0.5">
             <Button
@@ -145,12 +145,19 @@ function ProspectionContent() {
                 </Button>
               </div>
 
-              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Importer
+              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Importer</span>
               </Button>
               <BusinessCardScannerButton />
-              <ProspectForm />
+              <ProspectForm
+                trigger={
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Nouveau lead</span>
+                  </Button>
+                }
+              />
             </>
           )}
         </div>
