@@ -95,9 +95,11 @@ export async function updateSession(request: NextRequest) {
     error,
   } = await supabase.auth.getUser();
 
-  // Log auth errors in development for debugging
-  if (error && process.env.NODE_ENV === "development") {
-    console.error("[Proxy] Auth error:", error.message);
+  // Log auth state for debugging multi-device issues
+  if (error) {
+    console.error("[Middleware] Auth error:", error.message, "| path:", request.nextUrl.pathname);
+  } else {
+    console.log("[Middleware] Auth OK | user:", user?.email, "| path:", request.nextUrl.pathname);
   }
 
   const pathname = request.nextUrl.pathname;

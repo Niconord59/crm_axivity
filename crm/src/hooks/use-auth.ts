@@ -64,7 +64,8 @@ export function useAuth() {
         // a déjà été roté par le proxy) → perte de session sur le 2ème appareil.
         // La détection des sessions invalides est gérée par le QueryProvider
         // qui intercepte les erreurs 401 des requêtes API.
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log("[Auth] getSession result:", session ? `user=${session.user.email}` : "null", sessionError ? `error=${sessionError.message}` : "");
         setSession(session);
 
         if (session?.user) {
@@ -83,6 +84,7 @@ export function useAuth() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("[Auth] onAuthStateChange:", event, session ? `user=${session.user.email}` : "session=null");
         setSession(session);
 
         if (session?.user) {

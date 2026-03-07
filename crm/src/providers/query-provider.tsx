@@ -28,6 +28,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   const handleAuthError = useCallback(async () => {
     // Éviter les sign-out en cascade (plusieurs queries échouent en même temps)
     if (signOutInProgressRef.current) return;
+    console.warn("[QueryProvider] Auth error detected — triggering sign-out");
     signOutInProgressRef.current = true;
 
     try {
