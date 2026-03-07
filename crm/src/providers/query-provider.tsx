@@ -14,8 +14,8 @@ function isAuthError(error: unknown): boolean {
   const err = error as Record<string, unknown>;
   // PostgREST retourne code "PGRST301" pour 401 Unauthorized
   if (err.code === "PGRST301") return true;
-  // Supabase-js retourne un status 401 ou 403
-  if (err.status === 401 || err.status === 403) return true;
+  // Supabase-js retourne un status 401 (ne pas inclure 403 qui peut venir de RLS)
+  if (err.status === 401) return true;
   // Vérifier le message d'erreur
   const msg = String(err.message || "").toLowerCase();
   if (msg.includes("jwt expired") || msg.includes("invalid claim") || msg.includes("token is expired")) return true;
