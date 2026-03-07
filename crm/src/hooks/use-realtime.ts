@@ -26,8 +26,7 @@ export function useProspectionRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "contacts" },
-      (payload) => {
-        console.log("[Realtime] Contact change:", payload.eventType);
+      () => {
         // Invalider toutes les queries liées aux prospects
         queryClient.invalidateQueries({ queryKey: ["prospects"] });
       }
@@ -37,22 +36,16 @@ export function useProspectionRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "clients" },
-      (payload) => {
-        console.log("[Realtime] Client change:", payload.eventType);
+      () => {
         // Invalider les queries clients et prospects (car prospects affichent le nom client)
         queryClient.invalidateQueries({ queryKey: ["clients"] });
         queryClient.invalidateQueries({ queryKey: ["prospects"] });
       }
     );
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        console.log("[Realtime] Prospection channel connected");
-      }
-    });
+    channel.subscribe();
 
     return () => {
-      console.log("[Realtime] Prospection channel disconnected");
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -80,8 +73,7 @@ export function usePipelineRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "opportunites" },
-      (payload) => {
-        console.log("[Realtime] Opportunité change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["opportunites"] });
       }
     );
@@ -89,8 +81,7 @@ export function usePipelineRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "clients" },
-      (payload) => {
-        console.log("[Realtime] Client change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["clients"] });
         queryClient.invalidateQueries({ queryKey: ["opportunites"] });
       }
@@ -99,8 +90,7 @@ export function usePipelineRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "contacts" },
-      (payload) => {
-        console.log("[Realtime] Contact change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         queryClient.invalidateQueries({ queryKey: ["opportunites"] });
       }
@@ -109,18 +99,13 @@ export function usePipelineRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "interactions" },
-      (payload) => {
-        console.log("[Realtime] Interaction change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["interactions"] });
         queryClient.invalidateQueries({ queryKey: ["opportunites"] });
       }
     );
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        console.log("[Realtime] Pipeline channel connected");
-      }
-    });
+    channel.subscribe();
 
     return () => {
       if (channelRef.current) {
@@ -150,8 +135,7 @@ export function useProjetsRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "projets" },
-      (payload) => {
-        console.log("[Realtime] Projet change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["projets"] });
       }
     );
@@ -159,18 +143,13 @@ export function useProjetsRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "taches" },
-      (payload) => {
-        console.log("[Realtime] Tâche change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["taches"] });
         queryClient.invalidateQueries({ queryKey: ["projets"] });
       }
     );
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        console.log("[Realtime] Projets channel connected");
-      }
-    });
+    channel.subscribe();
 
     return () => {
       if (channelRef.current) {
@@ -199,8 +178,7 @@ export function useFacturesRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "factures" },
-      (payload) => {
-        console.log("[Realtime] Facture change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["factures"] });
       }
     );
@@ -208,8 +186,7 @@ export function useFacturesRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "devis" },
-      (payload) => {
-        console.log("[Realtime] Devis change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["devis"] });
       }
     );
@@ -217,18 +194,13 @@ export function useFacturesRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "lignes_devis" },
-      (payload) => {
-        console.log("[Realtime] Ligne devis change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["lignes-devis"] });
         queryClient.invalidateQueries({ queryKey: ["devis"] });
       }
     );
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        console.log("[Realtime] Factures channel connected");
-      }
-    });
+    channel.subscribe();
 
     return () => {
       if (channelRef.current) {
@@ -259,8 +231,7 @@ export function useDashboardRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "clients" },
-      (payload) => {
-        console.log("[Realtime] Dashboard - clients change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["clients"] });
       }
     );
@@ -269,8 +240,7 @@ export function useDashboardRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "opportunites" },
-      (payload) => {
-        console.log("[Realtime] Dashboard - opportunites change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["opportunites"] });
       }
     );
@@ -279,8 +249,7 @@ export function useDashboardRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "projets" },
-      (payload) => {
-        console.log("[Realtime] Dashboard - projets change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["projets"] });
       }
     );
@@ -289,8 +258,7 @@ export function useDashboardRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "taches" },
-      (payload) => {
-        console.log("[Realtime] Dashboard - taches change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["taches"] });
       }
     );
@@ -299,8 +267,7 @@ export function useDashboardRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "factures" },
-      (payload) => {
-        console.log("[Realtime] Dashboard - factures change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["factures"] });
       }
     );
@@ -309,18 +276,13 @@ export function useDashboardRealtime(enabled = true) {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "contacts" },
-      (payload) => {
-        console.log("[Realtime] Dashboard - contacts change:", payload.eventType);
+      () => {
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         queryClient.invalidateQueries({ queryKey: ["prospects"] });
       }
     );
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        console.log("[Realtime] Dashboard channel connected");
-      }
-    });
+    channel.subscribe();
 
     return () => {
       if (channelRef.current) {

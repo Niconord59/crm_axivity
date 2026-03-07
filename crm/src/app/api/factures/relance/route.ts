@@ -103,8 +103,6 @@ export async function POST(request: NextRequest) {
       contact_email: contactEmail,
     };
 
-    console.log("Calling N8N webhook with payload:", webhookPayload);
-
     const n8nResponse = await fetch(
       `${N8N_WEBHOOK_URL}/webhook/relance-facture-manuelle`,
       {
@@ -122,7 +120,6 @@ export async function POST(request: NextRequest) {
     }
 
     const n8nResult = await n8nResponse.json();
-    console.log("N8N webhook response:", n8nResult);
 
     // 5. Mettre à jour la facture dans Supabase (si les colonnes existent)
     try {

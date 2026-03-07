@@ -192,9 +192,6 @@ export function CreateEventDialog({
       },
       {
         onSuccess: async (event) => {
-          // Create interaction in CRM if we have contact/client IDs
-          console.log("Prospect data for interaction:", { id: prospect.id, clientId: prospect.clientId });
-
           // Build interaction resume with meeting details
           const formattedDate = format(start, "PPP à HH:mm", { locale: fr });
           const meetingInfo = meetingType === "visio"

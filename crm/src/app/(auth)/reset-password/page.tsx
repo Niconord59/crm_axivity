@@ -56,7 +56,6 @@ export default function ResetPasswordPage() {
       // If we hit the timeout, the password might still have been saved
       // Check by trying to verify the session is still valid
       if (result.error?.message === "TIMEOUT") {
-        console.log("[ResetPassword] Request timed out, checking if password was updated...");
         // Assume success since Supabase often completes but Promise doesn't resolve
         setSuccess(true);
         setTimeout(() => {

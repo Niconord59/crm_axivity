@@ -148,8 +148,6 @@ async function fetchMicrosoftCalendarEvents(
   url.searchParams.set("$top", "50");
   url.searchParams.set("$select", "id,subject,bodyPreview,start,end,location,attendees,webLink,onlineMeeting,showAs");
 
-  console.log("[Microsoft Calendar] Fetching events:", url.toString());
-
   const response = await fetch(url.toString(), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -165,7 +163,6 @@ async function fetchMicrosoftCalendarEvents(
 
   const data = await response.json();
   const events = (data.value || []).map(microsoftEventToCalendarEvent);
-  console.log("[Microsoft Calendar] Fetched", events.length, "events");
   return { events };
 }
 
