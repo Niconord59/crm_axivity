@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 /**
  * Hook de synchronisation d'authentification cross-tab
@@ -28,7 +27,6 @@ export function useAuthSync() {
     const scheduleInvalidate = () => {
       if (invalidateTimer) clearTimeout(invalidateTimer);
       invalidateTimer = setTimeout(() => {
-        console.log("[AuthSync] Invalidating all queries after auth settled");
         queryClient.invalidateQueries();
         invalidateTimer = null;
       }, 100);

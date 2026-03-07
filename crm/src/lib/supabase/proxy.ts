@@ -95,13 +95,6 @@ export async function updateSession(request: NextRequest) {
     error,
   } = await supabase.auth.getUser();
 
-  // Log auth state for debugging multi-device issues
-  if (error) {
-    console.error("[Middleware] Auth error:", error.message, "| path:", request.nextUrl.pathname);
-  } else {
-    console.log("[Middleware] Auth OK | user:", user?.email, "| path:", request.nextUrl.pathname);
-  }
-
   const pathname = request.nextUrl.pathname;
   const isPublicRoute = matchesRoute(pathname, ROUTE_CONFIG.public);
   const isAuthOnlyRoute = matchesRoute(pathname, ROUTE_CONFIG.authOnly);

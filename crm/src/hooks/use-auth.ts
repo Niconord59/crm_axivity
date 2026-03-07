@@ -54,21 +54,28 @@ export function useAuth() {
   }, [supabase]);
 
   // Initialize auth state via onAuthStateChange only.
-  // DO NOT call getSession() — it can deadlock with @supabase/ssr when
-  // the middleware has already refreshed tokens server-side.
-  // onAuthStateChange fires INITIAL_SESSION/SIGNED_IN immediately on setup,
-  // which is sufficient to initialize the auth state.
+  //
+  // CRITICAL: This callback must NOT be async and must NOT await any
+  // supabase.from().select() calls. GoTrue's _notifyAllSubscribers()
+  // awaits all callbacks while holding an internal lock. If a callback
+  // calls getSession() (which supabase.from().select() does internally
+  // via _getAccessToken), it tries to acquire the same lock → DEADLOCK.
+  // Using .then() lets the callback return immediately, releasing the lock.
   useEffect(() => {
     let isFirstEvent = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("[Auth] onAuthStateChange:", event, session ? `user=${session.user.email}` : "session=null");
+      (event, session) => {
         setSession(session);
 
         if (session?.user) {
-          const profile = await fetchProfile(session.user.id, session.user.email || "");
-          setUser(profile);
+          // Use .then() instead of await to avoid deadlocking GoTrue's lock.
+          // fetchProfile() calls supabase.from("profiles").select() which
+          // internally calls getSession() → _acquireLock(). If we awaited here,
+          // the lock held by _notifyAllSubscribers would never be released.
+          fetchProfile(session.user.id, session.user.email || "").then(profile => {
+            setUser(profile);
+          });
         } else {
           setUser(null);
         }

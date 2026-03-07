@@ -120,7 +120,6 @@ export function useProspects(filters?: ProspectFilters) {
 
       const { data, error } = await query;
 
-      console.log("[useProspects] fetch result:", data?.length ?? 0, "prospects", error ? `error=${error.message}` : "");
       if (error) throw error;
       return (data || []).map(mapToContact);
     },
