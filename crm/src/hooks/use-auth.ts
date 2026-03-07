@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import type { Profile, UserRole } from "@/lib/supabase";
 
 export interface AuthUser {
@@ -53,35 +53,14 @@ export function useAuth() {
     };
   }, [supabase]);
 
-  // Initialize auth state
+  // Initialize auth state via onAuthStateChange only.
+  // DO NOT call getSession() — it can deadlock with @supabase/ssr when
+  // the middleware has already refreshed tokens server-side.
+  // onAuthStateChange fires INITIAL_SESSION/SIGNED_IN immediately on setup,
+  // which is sufficient to initialize the auth state.
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // IMPORTANT: Utiliser getSession() et NON getUser() ici.
-        // Le proxy (middleware) valide déjà le token côté serveur via getUser()
-        // et rafraîchit les cookies. Si on appelle getUser() une 2ème fois côté
-        // client, ça provoque un double refresh qui échoue (le refresh token
-        // a déjà été roté par le proxy) → perte de session sur le 2ème appareil.
-        // La détection des sessions invalides est gérée par le QueryProvider
-        // qui intercepte les erreurs 401 des requêtes API.
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        console.log("[Auth] getSession result:", session ? `user=${session.user.email}` : "null", sessionError ? `error=${sessionError.message}` : "");
-        setSession(session);
+    let isFirstEvent = true;
 
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id, session.user.email || "");
-          setUser(profile);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[Auth] onAuthStateChange:", event, session ? `user=${session.user.email}` : "session=null");
@@ -92,6 +71,12 @@ export function useAuth() {
           setUser(profile);
         } else {
           setUser(null);
+        }
+
+        // Mark loading complete after the first event
+        if (isFirstEvent) {
+          isFirstEvent = false;
+          setIsLoading(false);
         }
 
         // Handle specific events
