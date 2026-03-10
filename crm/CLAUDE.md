@@ -352,9 +352,9 @@ npm run test:ui       # Vitest UI
 | Rôle | Description |
 |------|-------------|
 | `admin` | Accès total |
-| `manager` | Gestion équipe + clients |
+| `developpeur_nocode` | Développeur no-code — lecture + modification tâches assignées |
+| `developpeur_automatisme` | Développeur automatisme — lecture + modification tâches assignées |
 | `commercial` | Pipeline + prospects |
-| `membre` | Ses tâches + projets assignés |
 | `client` | Portail client (lecture seule) |
 
 ## N8N Workflows

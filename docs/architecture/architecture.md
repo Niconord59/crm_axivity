@@ -254,7 +254,7 @@ clients ─────→ contacts ─────→ interactions             
 | `task_priority` | Basse, Moyenne, Haute, Critique |
 | `invoice_status` | Brouillon, Envoyé, Payé, En retard, Annulé |
 | `prospect_status` | À appeler, Appelé - pas répondu, Rappeler, RDV planifié, RDV effectué, Qualifié, Non qualifié, Perdu |
-| `user_role` | admin, manager, commercial, membre, client |
+| `user_role` | admin, developpeur_nocode, developpeur_automatisme, commercial, client |
 
 ---
 
@@ -386,9 +386,9 @@ clients ─────→ contacts ─────→ interactions             
 | Role | Access |
 |------|--------|
 | `admin` | Full access to all data |
-| `manager` | Team management + clients |
+| `developpeur_nocode` | Read + modify assigned tasks (no-code developer) |
+| `developpeur_automatisme` | Read + modify assigned tasks (automation developer) |
 | `commercial` | Pipeline + prospects |
-| `membre` | Own tasks + assigned projects |
 | `client` | Client portal (read-only) |
 
 ### Authentication
