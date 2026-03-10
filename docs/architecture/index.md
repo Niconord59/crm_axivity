@@ -264,9 +264,9 @@ Interface/
 | Role | Access |
 |------|--------|
 | `admin` | Full access |
-| `manager` | Team + clients |
+| `developpeur_nocode` | Assigned tasks/projects (no-code dev) |
+| `developpeur_automatisme` | Assigned tasks/projects (automation dev) |
 | `commercial` | Pipeline + prospects |
-| `membre` | Assigned tasks/projects |
 | `client` | Portal (read-only) |
 
 ### Authentication

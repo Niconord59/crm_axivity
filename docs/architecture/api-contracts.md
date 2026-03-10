@@ -392,7 +392,7 @@ Updates a user's role. **Admin only**.
 **Request Body**:
 ```json
 {
-  "role": "manager"
+  "role": "developpeur_nocode"
 }
 ```
 
