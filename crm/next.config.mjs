@@ -3,6 +3,10 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Derive Supabase host from env for CSP headers
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.axivity.cloud';
+const supabaseHost = new URL(supabaseUrl).origin;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -67,9 +71,9 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://supabase.axivity.cloud",
+              `img-src 'self' data: blob: ${supabaseHost}`,
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https://supabase.axivity.cloud wss://supabase.axivity.cloud https://recherche-entreprises.api.gouv.fr https://places.googleapis.com https://maps.googleapis.com",
+              `connect-src 'self' ${supabaseHost} ${supabaseHost.replace('https://', 'wss://')} https://recherche-entreprises.api.gouv.fr https://places.googleapis.com https://maps.googleapis.com`,
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",
