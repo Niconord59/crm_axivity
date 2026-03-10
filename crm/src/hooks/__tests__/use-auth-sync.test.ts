@@ -78,15 +78,41 @@ describe('useAuthSync', () => {
     expect(authChangeCallback).not.toBeNull();
   });
 
-  it('should clear query cache on SIGNED_IN event', () => {
+  it('should schedule invalidateQueries on SIGNED_IN event (debounced)', async () => {
+    vi.useFakeTimers();
     const { wrapper, queryClient } = createWrapper();
-    const clearSpy = vi.spyOn(queryClient, 'clear');
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     renderHook(() => useAuthSync(), { wrapper });
 
     // Simulate SIGNED_IN event
     act(() => {
       authChangeCallback?.('SIGNED_IN', { user: { id: '123' } });
+    });
+
+    // Debounce: invalidation happens after 100ms
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(invalidateSpy).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('should clear query cache on SIGNED_IN when user changes', () => {
+    const { wrapper, queryClient } = createWrapper();
+    const clearSpy = vi.spyOn(queryClient, 'clear');
+
+    renderHook(() => useAuthSync(), { wrapper });
+
+    // First sign in as user A
+    act(() => {
+      authChangeCallback?.('SIGNED_IN', { user: { id: 'user-A' } });
+    });
+
+    // Then sign in as user B (different user)
+    act(() => {
+      authChangeCallback?.('SIGNED_IN', { user: { id: 'user-B' } });
     });
 
     expect(clearSpy).toHaveBeenCalled();
