@@ -16,8 +16,10 @@ const { mockOn, mockSubscribe, mockRemoveChannel, mockChannel } = vi.hoisted(() 
 
   // Setup default implementations
   mockOn.mockReturnValue(mockChannel);
-  mockSubscribe.mockImplementation((callback: (status: string) => void) => {
-    setTimeout(() => callback("SUBSCRIBED"), 0);
+  mockSubscribe.mockImplementation((callback?: (status: string) => void) => {
+    if (typeof callback === "function") {
+      setTimeout(() => callback("SUBSCRIBED"), 0);
+    }
     return mockChannel;
   });
 
@@ -66,8 +68,10 @@ describe("use-realtime hooks", () => {
     vi.clearAllMocks();
     // Reset mock implementations
     mockOn.mockReturnValue(mockChannel);
-    mockSubscribe.mockImplementation((callback: (status: string) => void) => {
-      setTimeout(() => callback("SUBSCRIBED"), 0);
+    mockSubscribe.mockImplementation((callback?: (status: string) => void) => {
+      if (typeof callback === "function") {
+        setTimeout(() => callback("SUBSCRIBED"), 0);
+      }
       return mockChannel;
     });
   });
