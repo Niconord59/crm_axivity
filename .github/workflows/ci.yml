@@ -23,7 +23,7 @@ jobs:
 
       - name: Lint
         working-directory: crm
-        run: npm run lint
+        run: npx next lint --dir .
 
       - name: Test
         working-directory: crm
