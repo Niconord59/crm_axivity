@@ -37,7 +37,40 @@ CRM_Axivity/
 cd crm && npm run dev       # Development server
 cd crm && npm run build     # Production build
 cd crm && npm test          # Run tests
+cd crm && npm run lint      # ESLint (replaces deprecated next lint)
 ```
+
+## Git Workflow
+
+### Branching Strategy
+
+- `main` → production (auto-deploy via Coolify to `crm.axivity.cloud`)
+- `develop` → staging (auto-deploy via Coolify to `crm-staging.axivity.cloud`)
+- `feature/xxx`, `fix/xxx` → branches de travail
+
+### Workflow
+
+1. Créer une branche depuis `develop`
+2. Push → ouvrir une PR vers `develop`
+3. CI vérifie automatiquement (lint + tests + build)
+4. Merge dans `develop` → staging se redéploie
+5. PR de `develop` vers `main` quand validé en staging
+6. Merge → prod se redéploie
+
+### Rules
+
+- **Ne jamais push directement sur `main`** (branch protection active)
+- Commits en **Conventional Commits** (`feat:`, `fix:`, `chore:`, etc.) — validé par `commitlint`
+- CI pipeline : `.github/workflows/ci.yml`
+
+## Environments
+
+| Environnement | CRM URL | Supabase URL | Branche |
+|---------------|---------|--------------|---------|
+| **Production** | `crm.axivity.cloud` | `supabase.axivity.cloud` | `main` |
+| **Staging** | `crm-staging.axivity.cloud` | `supabase-staging.axivity.cloud` | `develop` |
+
+Les deux environnements sont **complètement isolés** (bases de données et clés séparées).
 
 ## Project Overview
 
@@ -115,7 +148,7 @@ Projets → Feedback Client
 | **Slack** | Team notifications |
 | **Google Calendar** | Deadline sync |
 
-## Déploiement Production (Coolify)
+## Déploiement (Coolify)
 
 ### Docker Configuration
 
