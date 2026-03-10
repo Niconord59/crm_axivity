@@ -60,6 +60,8 @@ cd crm && npm run lint      # ESLint (replaces deprecated next lint)
 ### Rules
 
 - **Ne jamais push directement sur `main`** (branch protection active)
+- **Toujours travailler sur `develop` ou une branche feature/fix** créée depuis `develop`
+- Avant de commencer à coder, vérifier la branche active (`git branch --show-current`) et switcher sur `develop` si nécessaire
 - Commits en **Conventional Commits** (`feat:`, `fix:`, `chore:`, etc.) — validé par `commitlint`
 - CI pipeline : `.github/workflows/ci.yml`
 
