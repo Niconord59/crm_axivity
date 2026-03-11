@@ -17,6 +17,7 @@ import {
   LeadListTable,
   BusinessCardScannerButton,
 } from "@/components/prospection";
+import { OpportuniteForm } from "@/components/forms/OpportuniteForm";
 import {
   useProspectsWithClients,
   useUpdateProspectStatus,
@@ -24,6 +25,7 @@ import {
   type ProspectFilters,
   type Prospect,
 } from "@/hooks/use-prospects";
+import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { useProspectionRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +49,9 @@ function ProspectionContent() {
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+  // State for OpportuniteForm after qualification
+  const [convertingProspect, setConvertingProspect] = useState<{ prospect: Prospect; clientId: string } | null>(null);
+  const convertToOpportunity = useConvertToOpportunity();
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -94,6 +99,45 @@ function ProspectionContent() {
     // Open CallResultDialog
     setSelectedProspect(prospect);
     setCallDialogOpen(true);
+  };
+
+  // Called when a prospect is qualified (from CallResultDialog or LeadCard)
+  const handleQualified = (prospect: Prospect, clientId: string) => {
+    setConvertingProspect({ prospect, clientId });
+  };
+
+  // Called when LeadCard "Créer une opportunité" is clicked
+  const handleConvertFromCard = (prospect: Prospect) => {
+    if (prospect.client?.[0]) {
+      setConvertingProspect({ prospect, clientId: prospect.client[0] });
+    }
+  };
+
+  // Called after OpportuniteForm successfully creates the opportunity
+  const handleOpportunityCreated = async (opportuniteId: string) => {
+    if (!convertingProspect) return;
+    const { prospect, clientId } = convertingProspect;
+    const fullName = `${prospect.prenom || ""} ${prospect.nom}`.trim();
+
+    try {
+      // Run the lifecycle updates (N:N link, lifecycle_stage, interaction, client status)
+      await convertToOpportunity.mutateAsync({
+        contactId: prospect.id,
+        clientId,
+        contactNom: fullName,
+        clientNom: prospect.clientNom || "Client",
+        notes: prospect.notesProspection,
+        opportuniteId, // Pass existing opportunity ID instead of creating a new one
+      });
+      toast.success("Lead converti en opportunité !", {
+        description: "Le prospect a été lié à l'opportunité dans le pipeline.",
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error("Error linking prospect to opportunity:", error);
+      toast.error("L'opportunité a été créée mais le lien avec le prospect a échoué");
+    }
+    setConvertingProspect(null);
   };
 
   // Afficher le loading uniquement au chargement initial (pas lors des refetch)
@@ -201,6 +245,7 @@ function ProspectionContent() {
                   key={prospect.id}
                   prospect={prospect}
                   onCall={handleCall}
+                  onConvert={handleConvertFromCard}
                 />
               ))}
             </div>
@@ -225,6 +270,7 @@ function ProspectionContent() {
         open={callDialogOpen}
         onOpenChange={setCallDialogOpen}
         prospect={selectedProspect}
+        onQualified={handleQualified}
       />
 
       {/* Lead Import Dialog */}
@@ -236,6 +282,21 @@ function ProspectionContent() {
           queryClient.invalidateQueries({ queryKey: ["prospects-with-clients"] });
           queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
         }}
+      />
+
+      {/* OpportuniteForm — opens after qualifying a lead */}
+      <OpportuniteForm
+        open={!!convertingProspect}
+        onOpenChange={(open) => {
+          if (!open) setConvertingProspect(null);
+        }}
+        initialData={{
+          clientId: convertingProspect?.clientId || "",
+          statut: "Qualifié",
+          notes: convertingProspect?.prospect.notesProspection || "",
+        }}
+        onSuccess={handleOpportunityCreated}
+        trigger={<span />}
       />
     </div>
   );

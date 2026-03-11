@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
@@ -90,7 +89,6 @@ import { useCreateInteraction, useInteractions, useDeleteInteraction } from "@/h
 import { InteractionEditDialog } from "./InteractionEditDialog";
 import type { Interaction } from "@/types";
 import { useClient } from "@/hooks/use-clients";
-import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
 import { AgendaTab } from "./agenda";
 import { ProspectProgressStepper } from "./ProspectProgressStepper";
 import { EmailComposer } from "./EmailComposer";
@@ -100,6 +98,8 @@ interface CallResultDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prospect: Prospect | null;
+  /** Called when a prospect is qualified — parent should open OpportuniteForm */
+  onQualified?: (prospect: Prospect, clientId: string) => void;
 }
 
 // Options pour un appel classique (avant RDV)
@@ -232,13 +232,12 @@ export function CallResultDialog({
   open,
   onOpenChange,
   prospect,
+  onQualified,
 }: CallResultDialogProps) {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
   const deleteInteraction = useDeleteInteraction();
-  const convertToOpportunity = useConvertToOpportunity();
 
   // State for interaction edit/delete
   const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
@@ -377,24 +376,9 @@ export function CallResultDialog({
       form.reset();
       onOpenChange(false);
 
-      if (data.resultat === "Qualifié" && prospect && clientId && client) {
-        // Create the opportunity automatically
-        try {
-          await convertToOpportunity.mutateAsync({
-            contactId: prospect.id,
-            clientId: clientId,
-            contactNom: `${prospect.prenom || ""} ${prospect.nom}`.trim(),
-            clientNom: client.nom,
-            notes: data.notes || prospect.notesProspection,
-          });
-          toast.success("Opportunité créée !", {
-            description: "Le lead a été converti en opportunité dans le pipeline.",
-            duration: 5000,
-          });
-        } catch (error) {
-          console.error("Error creating opportunity:", error);
-          toast.error("Erreur lors de la création de l'opportunité");
-        }
+      // If qualified, notify parent to open OpportuniteForm
+      if (data.resultat === "Qualifié" && prospect && clientId) {
+        onQualified?.(prospect, clientId);
       }
     } catch (error) {
       toast.error("Erreur lors de l'enregistrement");
@@ -1233,30 +1217,16 @@ export function CallResultDialog({
                   </div>
                 )}
 
-                {/* CTA Qualifié */}
+                {/* Info Qualifié */}
                 {selectedResult === "Qualifié" && (
-                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl space-y-3">
+                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl">
                     <div className="flex items-center gap-2 text-emerald-800">
                       <Target className="h-5 w-5" />
                       <span className="font-bold">Lead qualifié !</span>
                     </div>
-                    <p className="text-sm text-emerald-700">
-                      Créez une opportunité pour suivre le deal dans votre pipeline.
+                    <p className="text-sm text-emerald-700 mt-1">
+                      En enregistrant, vous pourrez créer l'opportunité avec les détails de votre choix.
                     </p>
-                    <Button
-                      type="button"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => {
-                        form.handleSubmit(async (data) => {
-                          await handleSubmit(data);
-                          router.push(`/opportunites?create=true&client=${prospect?.client?.[0]}&contact=${prospect?.id}&nom=${encodeURIComponent(prospect?.clientNom || "")}`);
-                        })();
-                      }}
-                    >
-                      <Target className="mr-2 h-4 w-4" />
-                      Créer une opportunité
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
                   </div>
                 )}
 
