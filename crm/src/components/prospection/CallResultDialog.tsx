@@ -398,7 +398,6 @@ export function CallResultDialog({
             probabilite: 20,
             dateClotureEstimee: getDefaultClotureDate(),
             statut: "Qualifié",
-            source: prospect.sourceLead || undefined,
             notes: data.notes || prospect.notesProspection || undefined,
           });
 
