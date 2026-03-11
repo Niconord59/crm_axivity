@@ -64,7 +64,7 @@ export function OpportunityMiniSheet({
       if (!opportunity?.client?.[0]) return null;
       const { data, error } = await supabase
         .from("clients")
-        .select("id, nom, secteur_activite")
+        .select("id, nom")
         .eq("id", opportunity.client[0])
         .single();
       if (error) return null;
@@ -152,6 +152,7 @@ export function OpportunityMiniSheet({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         className="sm:max-w-md overflow-y-auto"
+        aria-describedby={undefined}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <SheetHeader>
@@ -183,11 +184,6 @@ export function OpportunityMiniSheet({
                   </div>
                   <div>
                     <p className="font-medium text-sm">{clientInfo.nom}</p>
-                    {clientInfo.secteur_activite && (
-                      <p className="text-xs text-muted-foreground">
-                        {clientInfo.secteur_activite}
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
