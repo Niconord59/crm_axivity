@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useForm, FieldValues, DefaultValues, UseFormReturn, Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -68,6 +68,13 @@ export function FormDialog<T extends FieldValues>({
     resolver: zodResolver(schema),
     defaultValues,
   });
+
+  // Reset form with current defaultValues when dialog opens
+  useEffect(() => {
+    if (open && defaultValues) {
+      form.reset(defaultValues);
+    }
+  }, [open]);
 
   const handleSubmit = async (data: T) => {
     setIsLoading(true);
