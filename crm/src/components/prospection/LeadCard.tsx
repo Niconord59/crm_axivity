@@ -16,12 +16,20 @@ import {
   Edit2,
   Trash2,
   Briefcase,
+  ChevronRight,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +57,7 @@ import { toast } from "sonner";
 import type { Prospect } from "@/hooks/use-prospects";
 import { useDeleteContact } from "@/hooks/use-prospects";
 import { useAuth } from "@/hooks/use-auth";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, formatCurrency, cn } from "@/lib/utils";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { LifecycleStageBadge } from "@/components/shared/LifecycleStageBadge";
 
@@ -200,9 +208,11 @@ export const LeadCard = React.memo(function LeadCard({
   onConvert,
 }: LeadCardProps) {
   const { isAdmin } = useAuth();
+  const router = useRouter();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteContact = useDeleteContact();
+  const hasOpps = (prospect.opportuniteCount ?? 0) > 0;
 
   const fullName = prospect.prenom
     ? `${prospect.prenom} ${prospect.nom}`
@@ -349,14 +359,71 @@ export const LeadCard = React.memo(function LeadCard({
                   showLabel={true}
                 />
               )}
-              {(prospect.opportuniteCount ?? 0) > 0 && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] font-medium px-2 py-0 bg-primary/5 text-primary border-primary/20"
-                >
-                  <Briefcase className="h-2.5 w-2.5 mr-1" />
-                  {prospect.opportuniteCount} opp.
-                </Badge>
+              {hasOpps && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center"
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] font-medium px-2 py-0 bg-indigo-50 text-indigo-700 border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
+                      >
+                        <Briefcase className="h-2.5 w-2.5 mr-1" />
+                        {prospect.opportuniteCount} opp.
+                        {prospect.totalValeurPipeline ? ` · ${formatCurrency(prospect.totalValeurPipeline)}` : ""}
+                        <ChevronRight className="h-2.5 w-2.5 ml-0.5" />
+                      </Badge>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-72 p-0"
+                    align="start"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-3 border-b">
+                      <p className="text-sm font-semibold">Pipeline</p>
+                    </div>
+                    <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+                      {(prospect.opportunites || []).slice(0, 3).map((opp) => (
+                        <div key={opp.id} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs truncate">{opp.nom}</p>
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 mt-0.5">
+                              {opp.statut}
+                            </Badge>
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground ml-2 shrink-0">
+                            {opp.valeurEstimee ? formatCurrency(opp.valeurEstimee) : "—"}
+                          </span>
+                        </div>
+                      ))}
+                      {(prospect.opportuniteCount ?? 0) > 3 && (
+                        <p className="text-xs text-muted-foreground px-2 py-1">
+                          +{(prospect.opportuniteCount ?? 0) - 3} autre{(prospect.opportuniteCount ?? 0) - 3 > 1 ? "s" : ""}
+                        </p>
+                      )}
+                    </div>
+                    {prospect.totalValeurPipeline ? (
+                      <div className="px-3 py-2 border-t bg-muted/30">
+                        <p className="text-xs font-medium">
+                          Total : {formatCurrency(prospect.totalValeurPipeline)}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div className="p-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs justify-start text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        onClick={() => router.push("/opportunites")}
+                      >
+                        Voir dans le pipeline →
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
           </div>
@@ -514,7 +581,34 @@ export const LeadCard = React.memo(function LeadCard({
         <div className="flex-1" />
 
         {/* Bouton d'action principal - toujours en bas */}
-        {isQualified ? (
+        {isQualified && hasOpps ? (
+          /* Qualifié avec opportunités existantes : bouton pipeline + lien nouvelle opp */
+          <div className="space-y-1 mt-auto">
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full h-8 text-xs font-medium bg-indigo-600 hover:bg-indigo-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push("/opportunites");
+              }}
+            >
+              <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+              Voir dans le pipeline ({prospect.opportuniteCount})
+            </Button>
+            <button
+              className="w-full text-[10px] text-muted-foreground hover:text-indigo-600 transition-colors py-0.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleConvert();
+              }}
+            >
+              <Plus className="h-2.5 w-2.5 inline mr-0.5" />
+              Créer une autre offre
+            </button>
+          </div>
+        ) : isQualified ? (
+          /* Qualifié sans opportunité : bouton création vert */
           <Button
             variant="default"
             size="sm"
@@ -528,6 +622,7 @@ export const LeadCard = React.memo(function LeadCard({
             Créer une opportunité
           </Button>
         ) : (
+          /* Autre statut : bouton contextuel normal */
           <Button
             variant={actionButton.variant}
             size="sm"

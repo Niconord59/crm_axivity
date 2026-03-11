@@ -5,10 +5,20 @@ import { supabase } from "@/lib/supabase";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Contact, ProspectStatus, ProspectSource, RdvType, LifecycleStage } from "@/types";
 
-// Extended prospect type with client name and opportunity count
+// Summary of a linked opportunity (for display on LeadCard)
+export interface ProspectOpportunite {
+  id: string;
+  nom: string;
+  statut: string;
+  valeurEstimee?: number;
+}
+
+// Extended prospect type with client name and opportunity info
 export interface Prospect extends Contact {
   clientNom?: string;
   opportuniteCount?: number;
+  opportunites?: ProspectOpportunite[];
+  totalValeurPipeline?: number;
 }
 
 // Filters for prospects list
@@ -183,27 +193,48 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
         clientMap.set(c.id, c.nom || "");
       });
 
-      // Fetch opportunity counts per contact in one query
+      // Fetch opportunity details per contact in one batch query
       const contactIds = prospects.map(p => p.id);
       const { data: oppLinks } = await supabase
         .from("opportunite_contacts")
-        .select("contact_id")
+        .select("contact_id, opportunite_id, opportunites(id, nom, statut, valeur_estimee)")
         .in("contact_id", contactIds);
 
-      const oppCountMap = new Map<string, number>();
-      (oppLinks || []).forEach(link => {
-        const id = link.contact_id as string;
-        oppCountMap.set(id, (oppCountMap.get(id) || 0) + 1);
+      // Group opportunities by contact
+      const oppMap = new Map<string, ProspectOpportunite[]>();
+      (oppLinks || []).forEach((link: Record<string, unknown>) => {
+        const contactId = link.contact_id as string;
+        const opp = link.opportunites as Record<string, unknown> | null;
+        if (!opp) return;
+        const mapped: ProspectOpportunite = {
+          id: opp.id as string,
+          nom: (opp.nom as string) || "",
+          statut: (opp.statut as string) || "",
+          valeurEstimee: opp.valeur_estimee as number | undefined,
+        };
+        const existing = oppMap.get(contactId) || [];
+        // Avoid duplicates (same contact linked to same opp via multiple roles)
+        if (!existing.some(e => e.id === mapped.id)) {
+          existing.push(mapped);
+        }
+        oppMap.set(contactId, existing);
       });
 
-      // Merge client names and opportunity counts with prospects
-      return prospects.map(prospect => ({
-        ...prospect,
-        clientNom: prospect.client?.[0]
-          ? clientMap.get(prospect.client[0])
-          : undefined,
-        opportuniteCount: oppCountMap.get(prospect.id) || 0,
-      }));
+      // Merge client names and opportunity data with prospects
+      return prospects.map(prospect => {
+        const opps = oppMap.get(prospect.id) || [];
+        return {
+          ...prospect,
+          clientNom: prospect.client?.[0]
+            ? clientMap.get(prospect.client[0])
+            : undefined,
+          opportuniteCount: opps.length,
+          opportunites: opps.length > 0 ? opps : undefined,
+          totalValeurPipeline: opps.length > 0
+            ? opps.reduce((sum, o) => sum + (o.valeurEstimee || 0), 0)
+            : undefined,
+        };
+      });
     },
     // Enable when prospects query is done (even if empty)
     enabled: !prospectsLoading && prospects !== undefined,
