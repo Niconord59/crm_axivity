@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
@@ -89,17 +90,19 @@ import { useCreateInteraction, useInteractions, useDeleteInteraction } from "@/h
 import { InteractionEditDialog } from "./InteractionEditDialog";
 import type { Interaction } from "@/types";
 import { useClient } from "@/hooks/use-clients";
+import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
+import { useCreateOpportunite } from "@/hooks/use-opportunites";
+import { getDefaultClotureDate } from "@/lib/schemas/opportunite";
 import { AgendaTab } from "./agenda";
 import { ProspectProgressStepper } from "./ProspectProgressStepper";
 import { EmailComposer } from "./EmailComposer";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
 interface CallResultDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prospect: Prospect | null;
-  /** Called when a prospect is qualified — parent should open OpportuniteForm */
-  onQualified?: (prospect: Prospect, clientId: string) => void;
 }
 
 // Options pour un appel classique (avant RDV)
@@ -228,16 +231,25 @@ function StatCard({
   );
 }
 
+// Quick amount presets for opportunity value
+const AMOUNT_PRESETS = [5000, 10000, 25000, 50000] as const;
+
 export function CallResultDialog({
   open,
   onOpenChange,
   prospect,
-  onQualified,
 }: CallResultDialogProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
   const deleteInteraction = useDeleteInteraction();
+  const createOpportunite = useCreateOpportunite();
+  const convertToOpportunity = useConvertToOpportunity();
+
+  // Inline opportunity fields state (when Qualifié is selected)
+  const [oppNom, setOppNom] = useState("");
+  const [oppValeur, setOppValeur] = useState(0);
 
   // State for interaction edit/delete
   const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
@@ -369,17 +381,60 @@ export function CallResultDialog({
         });
       }
 
-      toast.success("Résultat enregistré", {
-        description: `Statut mis à jour: ${data.resultat}`,
-      });
+      // If qualified, create opportunity inline
+      if (data.resultat === "Qualifié" && prospect && clientId) {
+        if (!oppNom.trim()) {
+          toast.error("Veuillez saisir un nom pour l'opportunité");
+          setIsSubmitting(false);
+          return;
+        }
+
+        try {
+          // 1. Create the opportunity
+          const opp = await createOpportunite.mutateAsync({
+            nom: oppNom.trim(),
+            client: [clientId],
+            valeurEstimee: oppValeur,
+            probabilite: 20,
+            dateClotureEstimee: getDefaultClotureDate(),
+            statut: "Qualifié",
+            source: prospect.sourceLead || undefined,
+            notes: data.notes || prospect.notesProspection || undefined,
+          });
+
+          // 2. Run lifecycle updates (N:N link, lifecycle_stage, interaction, client status)
+          if (opp?.id) {
+            await convertToOpportunity.mutateAsync({
+              contactId: prospect.id,
+              clientId,
+              contactNom: `${prospect.prenom || ""} ${prospect.nom}`.trim(),
+              clientNom: client?.nom || "Client",
+              opportuniteId: opp.id,
+            });
+          }
+
+          toast.success("Lead converti en opportunité !", {
+            description: oppNom.trim(),
+            action: {
+              label: "Voir le pipeline",
+              onClick: () => router.push("/opportunites"),
+            },
+            duration: 5000,
+          });
+        } catch (error) {
+          console.error("Error creating opportunity:", error);
+          toast.error("Erreur lors de la création de l'opportunité");
+        }
+      } else {
+        toast.success("Résultat enregistré", {
+          description: `Statut mis à jour: ${data.resultat}`,
+        });
+      }
 
       form.reset();
+      setOppNom("");
+      setOppValeur(0);
       onOpenChange(false);
-
-      // If qualified, notify parent to open OpportuniteForm
-      if (data.resultat === "Qualifié" && prospect && clientId) {
-        onQualified?.(prospect, clientId);
-      }
     } catch (error) {
       toast.error("Erreur lors de l'enregistrement");
       console.error(error);
@@ -395,6 +450,8 @@ export function CallResultDialog({
     setLeftVoicemail(false);
     setWantToSendEmail(false);
     setEmailSent(false);
+    setOppNom("");
+    setOppValeur(0);
     onOpenChange(false);
   };
 
@@ -1217,16 +1274,58 @@ export function CallResultDialog({
                   </div>
                 )}
 
-                {/* Info Qualifié */}
+                {/* Inline opportunity creation when Qualifié */}
                 {selectedResult === "Qualifié" && (
-                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl">
+                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-emerald-800">
                       <Target className="h-5 w-5" />
-                      <span className="font-bold">Lead qualifié !</span>
+                      <span className="font-bold">Créer l'opportunité</span>
                     </div>
-                    <p className="text-sm text-emerald-700 mt-1">
-                      En enregistrant, vous pourrez créer l'opportunité avec les détails de votre choix.
-                    </p>
+
+                    {/* Client (read-only) */}
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Client</p>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border text-sm">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        {prospect?.clientNom || "Client inconnu"}
+                      </div>
+                    </div>
+
+                    {/* Nom de l'opportunité */}
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Nom de l'opportunité *</p>
+                      <Input
+                        placeholder="Ex: Refonte site web, Automatisation CRM..."
+                        value={oppNom}
+                        onChange={(e) => setOppNom(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Valeur estimée avec presets */}
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Valeur estimée (€)</p>
+                      <div className="flex gap-2 mb-2">
+                        {AMOUNT_PRESETS.map((amount) => (
+                          <Button
+                            key={amount}
+                            type="button"
+                            variant={oppValeur === amount ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => setOppValeur(oppValeur === amount ? 0 : amount)}
+                          >
+                            {amount >= 1000 ? `${amount / 1000}k` : amount}€
+                          </Button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Autre montant..."
+                        value={oppValeur || ""}
+                        onChange={(e) => setOppValeur(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1234,9 +1333,20 @@ export function CallResultDialog({
                   <Button type="button" variant="outline" onClick={handleClose}>
                     Annuler
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={selectedResult === "Qualifié" ? "bg-emerald-600 hover:bg-emerald-700" : undefined}
+                  >
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Enregistrer
+                    {selectedResult === "Qualifié" ? (
+                      <>
+                        <Target className="h-4 w-4 mr-2" />
+                        Enregistrer et Convertir
+                      </>
+                    ) : (
+                      "Enregistrer"
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
