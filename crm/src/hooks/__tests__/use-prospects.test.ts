@@ -442,23 +442,8 @@ describe("use-prospects", () => {
       expect(mockEq).toHaveBeenCalledWith("source_lead", "LinkedIn");
     });
 
-    it("should handle search filter with or()", async () => {
-      const searchTerm = "Dupont";
-      setupFilterQuery([sampleProspectRecords[0]]);
-
-      const { result } = renderHook(
-        () => useProspects({ search: searchTerm }),
-        { wrapper: createWrapper() }
-      );
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
-
-      expect(mockOr).toHaveBeenCalledWith(
-        `nom.ilike.%${searchTerm}%,prenom.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
-      );
-    });
+    // Note: search filtering is now done client-side in the page component (useMemo)
+    // to support searching by company name (clientNom). See prospection/page.tsx.
 
     it("should handle Supabase error", async () => {
       mockOrder.mockResolvedValue({

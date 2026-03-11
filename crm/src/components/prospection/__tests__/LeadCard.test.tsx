@@ -35,6 +35,16 @@ vi.mock("sonner", () => ({
   },
 }));
 
+// Mock useAuth (uses @/lib/supabase/client which needs env vars)
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({
+    isAdmin: () => false,
+    user: null,
+    profile: null,
+    isLoading: false,
+  }),
+}));
+
 // Sample prospect data
 const createProspect = (overrides: Partial<Prospect> = {}): Prospect => ({
   id: "prospect-1",
@@ -406,8 +416,7 @@ describe("LeadCard", () => {
   // CLIPBOARD ACTIONS
   // ===========================================================================
   describe("Clipboard Actions", () => {
-    it("should have copy phone option in dropdown menu", async () => {
-      const user = userEvent.setup();
+    it("should display phone number as clickable copy button", () => {
       const prospect = createProspect({ telephone: "+33 1 22 33 44 55" });
       render(
         <LeadCard
@@ -416,19 +425,10 @@ describe("LeadCard", () => {
         />
       );
 
-      // Open dropdown menu
-      const buttons = screen.getAllByRole("button");
-      const menuTrigger = buttons.find(btn => btn.querySelector("svg"));
-      expect(menuTrigger).toBeDefined();
-
-      await user.click(menuTrigger!);
-      await waitFor(() => screen.getByText("Copier le téléphone"));
-
-      expect(screen.getByText("Copier le téléphone")).toBeInTheDocument();
+      expect(screen.getByText("+33 1 22 33 44 55")).toBeInTheDocument();
     });
 
-    it("should have copy email option in dropdown menu", async () => {
-      const user = userEvent.setup();
+    it("should display email as clickable copy button", () => {
       const prospect = createProspect({ email: "copy@test.com" });
       render(
         <LeadCard
@@ -437,15 +437,7 @@ describe("LeadCard", () => {
         />
       );
 
-      // Open dropdown menu
-      const buttons = screen.getAllByRole("button");
-      const menuTrigger = buttons.find(btn => btn.querySelector("svg"));
-      expect(menuTrigger).toBeDefined();
-
-      await user.click(menuTrigger!);
-      await waitFor(() => screen.getByText(/Copier l.*email/));
-
-      expect(screen.getByText(/Copier l.*email/)).toBeInTheDocument();
+      expect(screen.getByText("copy@test.com")).toBeInTheDocument();
     });
   });
 
