@@ -27,6 +27,7 @@ import {
 import { useProspectionRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDebouncedValue } from "@/hooks/use-debounce";
 
 // Wrapper component to handle Suspense boundary for useSearchParams
 export default function ProspectionPage() {
@@ -48,12 +49,19 @@ function ProspectionContent() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
+  // Debounce search to avoid re-fetching on every keystroke (and losing input focus)
+  const debouncedSearch = useDebouncedValue(filters.search, 300);
+  const debouncedFilters = useMemo(
+    () => ({ ...filters, search: debouncedSearch }),
+    [filters, debouncedSearch]
+  );
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const leadIdFromUrl = searchParams.get("leadId");
 
   const queryClient = useQueryClient();
-  const { data: prospects, isLoading } = useProspectsWithClients(filters);
+  const { data: prospects, isLoading } = useProspectsWithClients(debouncedFilters);
   const { data: prospectFromUrl } = useProspect(leadIdFromUrl || undefined);
 
   // S'abonner aux changements Realtime pour rafraîchir automatiquement

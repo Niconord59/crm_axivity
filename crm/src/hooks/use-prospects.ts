@@ -65,6 +65,7 @@ function getEndOfWeek(): string {
 export function useProspects(filters?: ProspectFilters) {
   return useQuery({
     queryKey: queryKeys.prospects.list(filters),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       let query = supabase
         .from("contacts")
@@ -156,6 +157,7 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
 
   return useQuery({
     queryKey: queryKeys.prospects.withClients(filters),
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<Prospect[]> => {
       // Return empty array if no prospects (important for filters!)
       if (!prospects || prospects.length === 0) return [];
