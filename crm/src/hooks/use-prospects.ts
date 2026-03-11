@@ -5,9 +5,10 @@ import { supabase } from "@/lib/supabase";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Contact, ProspectStatus, ProspectSource, RdvType, LifecycleStage } from "@/types";
 
-// Extended prospect type with client name
+// Extended prospect type with client name and opportunity count
 export interface Prospect extends Contact {
   clientNom?: string;
+  opportuniteCount?: number;
 }
 
 // Filters for prospects list
@@ -182,12 +183,26 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
         clientMap.set(c.id, c.nom || "");
       });
 
-      // Merge client names with prospects
+      // Fetch opportunity counts per contact in one query
+      const contactIds = prospects.map(p => p.id);
+      const { data: oppLinks } = await supabase
+        .from("opportunite_contacts")
+        .select("contact_id")
+        .in("contact_id", contactIds);
+
+      const oppCountMap = new Map<string, number>();
+      (oppLinks || []).forEach(link => {
+        const id = link.contact_id as string;
+        oppCountMap.set(id, (oppCountMap.get(id) || 0) + 1);
+      });
+
+      // Merge client names and opportunity counts with prospects
       return prospects.map(prospect => ({
         ...prospect,
         clientNom: prospect.client?.[0]
           ? clientMap.get(prospect.client[0])
           : undefined,
+        opportuniteCount: oppCountMap.get(prospect.id) || 0,
       }));
     },
     // Enable when prospects query is done (even if empty)

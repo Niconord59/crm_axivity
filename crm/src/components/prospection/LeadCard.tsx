@@ -15,6 +15,7 @@ import {
   MapPin,
   Edit2,
   Trash2,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -347,6 +348,15 @@ export const LeadCard = React.memo(function LeadCard({
                   size="sm"
                   showLabel={true}
                 />
+              )}
+              {(prospect.opportuniteCount ?? 0) > 0 && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-medium px-2 py-0 bg-primary/5 text-primary border-primary/20"
+                >
+                  <Briefcase className="h-2.5 w-2.5 mr-1" />
+                  {prospect.opportuniteCount} opp.
+                </Badge>
               )}
             </div>
           </div>

@@ -27,11 +27,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   PageHeader,
   PageLoading,
   ExportButton,
 } from "@/components/shared";
+import { OpportuniteForm } from "@/components/forms/OpportuniteForm";
 import { opportuniteExportColumns } from "@/lib/export";
 import { PipelineChart } from "@/components/charts";
 import { OpportunityCard, OpportunityMiniSheet } from "@/components/opportunites";
@@ -154,12 +156,22 @@ export default function OpportunitesPage() {
         title="Pipeline Commercial"
         description="Gérez vos opportunités et suivez votre pipeline"
       >
-        <ExportButton
-          data={allOpportunites}
-          columns={opportuniteExportColumns}
-          filename="opportunites"
-          sheetName="Pipeline"
-        />
+        <div className="flex items-center gap-2">
+          <ExportButton
+            data={allOpportunites}
+            columns={opportuniteExportColumns}
+            filename="opportunites"
+            sheetName="Pipeline"
+          />
+          <OpportuniteForm
+            trigger={
+              <Button size="sm">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nouvelle opportunité</span>
+              </Button>
+            }
+          />
+        </div>
       </PageHeader>
 
       {/* KPIs Cards */}
