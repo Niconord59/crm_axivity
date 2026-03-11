@@ -16,6 +16,7 @@ import {
   MapPin,
   Loader2,
   Edit2,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,9 +41,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { Prospect } from "@/hooks/use-prospects";
+import { useDeleteContact } from "@/hooks/use-prospects";
 import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDate, cn } from "@/lib/utils";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { LifecycleStageBadge } from "@/components/shared/LifecycleStageBadge";
@@ -191,10 +204,13 @@ export const LeadCard = React.memo(function LeadCard({
   onCall,
 }: LeadCardProps) {
   const router = useRouter();
+  const { isAdmin } = useAuth();
   const [convertPopoverOpen, setConvertPopoverOpen] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const convertToOpportunity = useConvertToOpportunity();
+  const deleteContact = useDeleteContact();
 
   const fullName = prospect.prenom
     ? `${prospect.prenom} ${prospect.nom}`
@@ -317,21 +333,6 @@ export const LeadCard = React.memo(function LeadCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={handleCopyPhone}
-                    disabled={!prospect.telephone}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copier le téléphone
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleCopyEmail}
-                    disabled={!prospect.email}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Copier l&apos;email
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditDialogOpen(true);
@@ -340,6 +341,21 @@ export const LeadCard = React.memo(function LeadCard({
                     <Edit2 className="h-4 w-4 mr-2" />
                     Modifier le contact
                   </DropdownMenuItem>
+                  {isAdmin() && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer le contact
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -607,6 +623,37 @@ export const LeadCard = React.memo(function LeadCard({
       onOpenChange={setEditDialogOpen}
       trigger={<span className="hidden" />}
     />
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Supprimer ce contact ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Cette action est irréversible. Le contact <strong>{fullName}</strong> sera
+            définitivement supprimé ainsi que ses liens avec les opportunités.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              deleteContact.mutate(prospect.id, {
+                onSuccess: () => {
+                  toast.success(`Contact "${fullName}" supprimé`);
+                },
+                onError: () => {
+                  toast.error("Erreur lors de la suppression du contact");
+                },
+              });
+            }}
+          >
+            Supprimer
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 });

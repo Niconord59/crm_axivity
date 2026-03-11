@@ -355,6 +355,30 @@ export function useUpdateContact() {
 }
 
 /**
+ * Hook to delete a contact (admin only per RLS policy contacts_delete_admin)
+ */
+export function useDeleteContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.lists() });
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.prospects.all, "with-clients"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+    },
+  });
+}
+
+/**
  * Hook to create a new prospect (creates client if needed, then contact)
  */
 export function useCreateProspect() {
