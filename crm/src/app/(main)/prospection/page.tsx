@@ -27,7 +27,6 @@ import {
 import { useProspectionRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDebouncedValue } from "@/hooks/use-debounce";
 
 // Wrapper component to handle Suspense boundary for useSearchParams
 export default function ProspectionPage() {
@@ -49,19 +48,12 @@ function ProspectionContent() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
-  // Debounce search to avoid re-fetching on every keystroke (and losing input focus)
-  const debouncedSearch = useDebouncedValue(filters.search, 300);
-  const debouncedFilters = useMemo(
-    () => ({ ...filters, search: debouncedSearch }),
-    [filters, debouncedSearch]
-  );
-
   const searchParams = useSearchParams();
   const router = useRouter();
   const leadIdFromUrl = searchParams.get("leadId");
 
   const queryClient = useQueryClient();
-  const { data: prospects, isLoading } = useProspectsWithClients(debouncedFilters);
+  const { data: prospects, isLoading } = useProspectsWithClients(filters);
   const { data: prospectFromUrl } = useProspect(leadIdFromUrl || undefined);
 
   // S'abonner aux changements Realtime pour rafraîchir automatiquement
@@ -78,11 +70,18 @@ function ProspectionContent() {
   }, [leadIdFromUrl, prospectFromUrl, router]);
   const updateStatus = useUpdateProspectStatus();
 
-  // "Tous les statuts" = vraiment tous les statuts
+  // Client-side search filter (includes company name, instant response)
   const activeProspects = useMemo(() => {
     if (!prospects) return [];
-    return prospects;
-  }, [prospects]);
+    if (!filters.search) return prospects;
+    const term = filters.search.toLowerCase();
+    return prospects.filter(p =>
+      p.nom?.toLowerCase().includes(term) ||
+      p.prenom?.toLowerCase().includes(term) ||
+      p.email?.toLowerCase().includes(term) ||
+      p.clientNom?.toLowerCase().includes(term)
+    );
+  }, [prospects, filters.search]);
 
   const handleCall = async (prospect: Prospect) => {
     // Copy phone to clipboard

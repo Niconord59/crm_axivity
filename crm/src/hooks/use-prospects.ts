@@ -63,10 +63,8 @@ function getEndOfWeek(): string {
  * Hook to fetch prospects (contacts with prospection status)
  */
 export function useProspects(filters?: ProspectFilters) {
-  // Exclude search from query key — search is applied client-side in useProspectsWithClients
-  const { search: _search, ...serverFilters } = filters || {};
   return useQuery({
-    queryKey: queryKeys.prospects.list(serverFilters),
+    queryKey: queryKeys.prospects.list(filters),
     placeholderData: keepPreviousData,
     queryFn: async () => {
       let query = supabase
@@ -115,9 +113,6 @@ export function useProspects(filters?: ProspectFilters) {
         }
       }
 
-      // Note: search filter is applied client-side in useProspectsWithClients
-      // to also match on client/company name
-
       const { data, error } = await query;
 
       if (error) throw error;
@@ -152,10 +147,12 @@ export function useProspect(id: string | undefined) {
  * Hook to get prospects with client names (for display)
  */
 export function useProspectsWithClients(filters?: ProspectFilters) {
-  const { data: prospects, isLoading: prospectsLoading } = useProspects(filters);
+  // Exclude search from both queries — search filtering is done client-side in the page
+  const { search: _search, ...serverFilters } = filters || {};
+  const { data: prospects, isLoading: prospectsLoading } = useProspects(serverFilters as ProspectFilters);
 
   return useQuery({
-    queryKey: queryKeys.prospects.withClients(filters),
+    queryKey: queryKeys.prospects.withClients(serverFilters),
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<Prospect[]> => {
       // Return empty array if no prospects (important for filters!)
@@ -186,25 +183,12 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
       });
 
       // Merge client names with prospects
-      const merged = prospects.map(prospect => ({
+      return prospects.map(prospect => ({
         ...prospect,
         clientNom: prospect.client?.[0]
           ? clientMap.get(prospect.client[0])
           : undefined,
       }));
-
-      // Client-side search filter (includes company name)
-      if (filters?.search) {
-        const term = filters.search.toLowerCase();
-        return merged.filter(p =>
-          p.nom?.toLowerCase().includes(term) ||
-          p.prenom?.toLowerCase().includes(term) ||
-          p.email?.toLowerCase().includes(term) ||
-          p.clientNom?.toLowerCase().includes(term)
-        );
-      }
-
-      return merged;
     },
     // Enable when prospects query is done (even if empty)
     enabled: !prospectsLoading && prospects !== undefined,
