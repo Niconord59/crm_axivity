@@ -341,8 +341,11 @@ export function useUpdateContact() {
       return mapToContact(data);
     },
     onSuccess: async (_, variables) => {
-      // Invalidate and refetch all related queries
-      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
+      // 1. Refetch base prospects list first (updates cache)
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.lists() });
+      // 2. Invalidate withClients AFTER list is updated, so its queryFn
+      //    picks up the new prospects data from the re-render closure
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.prospects.all, "with-clients"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.prospects.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
       // Also invalidate clients if client association changed
