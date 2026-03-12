@@ -17,7 +17,6 @@ import {
   Trash2,
   Briefcase,
   ChevronRight,
-  Plus,
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -586,31 +585,19 @@ export const LeadCard = React.memo(function LeadCard({
 
         {/* Bouton d'action principal - toujours en bas */}
         {isQualified && hasActiveOpps ? (
-          /* Qualifié avec opportunités actives : bouton pipeline + lien nouvelle opp */
-          <div className="space-y-1 mt-auto">
-            <Button
-              variant="default"
-              size="sm"
-              className="w-full h-8 text-xs font-medium bg-indigo-600 hover:bg-indigo-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push("/opportunites");
-              }}
-            >
-              <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-              Voir dans le pipeline ({activeOpps.length})
-            </Button>
-            <button
-              className="w-full text-[10px] text-muted-foreground hover:text-indigo-600 transition-colors py-0.5"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleConvert();
-              }}
-            >
-              <Plus className="h-2.5 w-2.5 inline mr-0.5" />
-              Créer une autre offre
-            </button>
-          </div>
+          /* Qualifié avec opportunités actives : bouton pipeline */
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full h-8 text-xs font-medium mt-auto bg-indigo-600 hover:bg-indigo-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push("/opportunites");
+            }}
+          >
+            <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+            Voir dans le pipeline ({activeOpps.length})
+          </Button>
         ) : isQualified ? (
           /* Qualifié sans opportunité : bouton création vert */
           <Button
