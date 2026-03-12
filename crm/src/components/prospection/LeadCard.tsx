@@ -212,6 +212,10 @@ export const LeadCard = React.memo(function LeadCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteContact = useDeleteContact();
+  const activeOpps = (prospect.opportunites || []).filter(
+    (opp) => ["Qualifié", "Proposition", "Négociation"].includes(opp.statut)
+  );
+  const hasActiveOpps = activeOpps.length > 0;
   const hasOpps = (prospect.opportuniteCount ?? 0) > 0;
 
   const fullName = prospect.prenom
@@ -581,8 +585,8 @@ export const LeadCard = React.memo(function LeadCard({
         <div className="flex-1" />
 
         {/* Bouton d'action principal - toujours en bas */}
-        {isQualified && hasOpps ? (
-          /* Qualifié avec opportunités existantes : bouton pipeline + lien nouvelle opp */
+        {isQualified && hasActiveOpps ? (
+          /* Qualifié avec opportunités actives : bouton pipeline + lien nouvelle opp */
           <div className="space-y-1 mt-auto">
             <Button
               variant="default"
@@ -594,7 +598,7 @@ export const LeadCard = React.memo(function LeadCard({
               }}
             >
               <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-              Voir dans le pipeline ({prospect.opportuniteCount})
+              Voir dans le pipeline ({activeOpps.length})
             </Button>
             <button
               className="w-full text-[10px] text-muted-foreground hover:text-indigo-600 transition-colors py-0.5"
