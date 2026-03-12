@@ -578,7 +578,7 @@ export function CallResultDialog({
           </div>
 
           {/* Progress Stepper */}
-          <ProspectProgressStepper currentStatus={prospect.statutProspection} className="mt-4" />
+          <ProspectProgressStepper currentStatus={prospect.statutProspection} hasOpportunite={(prospect.opportuniteCount ?? 0) > 0} className="mt-4" />
         </div>
 
         {/* Tabs avec icônes - flex pour remplir l'espace */}
