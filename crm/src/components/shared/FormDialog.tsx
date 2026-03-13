@@ -116,7 +116,9 @@ export function FormDialog<T extends FieldValues>({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleSubmit)}
+            onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+              console.error("[FormDialog] Validation errors:", errors);
+            })}
             className="space-y-4"
           >
             {children(form)}
