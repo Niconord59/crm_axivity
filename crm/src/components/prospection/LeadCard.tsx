@@ -636,7 +636,6 @@ export const LeadCard = React.memo(function LeadCard({
       contact={prospect}
       open={editDialogOpen}
       onOpenChange={setEditDialogOpen}
-      trigger={<span className="hidden" />}
     />
 
     {/* Delete Confirmation Dialog */}
