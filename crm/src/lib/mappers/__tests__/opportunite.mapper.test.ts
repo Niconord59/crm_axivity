@@ -34,7 +34,6 @@ describe("opportunite.mapper", () => {
         probabilite: 75,
         valeurPonderee: 37500, // 50000 * 0.75
         dateClotureEstimee: "2024-06-30",
-        source: "LinkedIn",
         notes: "Client interessé",
         dateCreation: "2024-01-15T10:00:00Z",
         client: ["client-456"],
@@ -171,7 +170,6 @@ describe("opportunite.mapper", () => {
         valeur_estimee: 75000,
         probabilite: 60,
         date_cloture_prevue: "2024-09-30",
-        source: "Referral",
         notes: "Hot lead",
         client_id: "client-123",
         contact_id: "contact-456",
@@ -238,7 +236,6 @@ describe("opportunite.mapper", () => {
         valeurEstimee: 150000,
         probabilite: 85,
         dateClotureEstimee: "2024-12-31",
-        source: "Website",
         notes: "Updated notes",
       };
 
@@ -250,7 +247,6 @@ describe("opportunite.mapper", () => {
         valeur_estimee: 150000,
         probabilite: 85,
         date_cloture_prevue: "2024-12-31",
-        source: "Website",
         notes: "Updated notes",
       });
     });

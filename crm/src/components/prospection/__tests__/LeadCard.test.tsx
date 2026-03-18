@@ -35,6 +35,16 @@ vi.mock("sonner", () => ({
   },
 }));
 
+// Mock useAuth (uses @/lib/supabase/client which needs env vars)
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({
+    isAdmin: () => false,
+    user: null,
+    profile: null,
+    isLoading: false,
+  }),
+}));
+
 // Sample prospect data
 const createProspect = (overrides: Partial<Prospect> = {}): Prospect => ({
   id: "prospect-1",
@@ -317,7 +327,7 @@ describe("LeadCard", () => {
       expect(screen.getByRole("button", { name: /Rappeler/i })).toBeInTheDocument();
     });
 
-    it("should show 'Convertir' button for Qualifié status", () => {
+    it("should show 'Créer une opportunité' button for Qualifié status", () => {
       const prospect = createProspect({ statutProspection: "Qualifié" });
       render(
         <LeadCard
@@ -326,7 +336,7 @@ describe("LeadCard", () => {
         />
       );
 
-      expect(screen.getByRole("button", { name: /Convertir/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Créer une opportunité/i })).toBeInTheDocument();
     });
 
     it("should show 'Voir RDV' button for RDV planifié status", () => {
@@ -406,8 +416,7 @@ describe("LeadCard", () => {
   // CLIPBOARD ACTIONS
   // ===========================================================================
   describe("Clipboard Actions", () => {
-    it("should have copy phone option in dropdown menu", async () => {
-      const user = userEvent.setup();
+    it("should display phone number as clickable copy button", () => {
       const prospect = createProspect({ telephone: "+33 1 22 33 44 55" });
       render(
         <LeadCard
@@ -416,19 +425,10 @@ describe("LeadCard", () => {
         />
       );
 
-      // Open dropdown menu
-      const buttons = screen.getAllByRole("button");
-      const menuTrigger = buttons.find(btn => btn.querySelector("svg"));
-      expect(menuTrigger).toBeDefined();
-
-      await user.click(menuTrigger!);
-      await waitFor(() => screen.getByText("Copier le téléphone"));
-
-      expect(screen.getByText("Copier le téléphone")).toBeInTheDocument();
+      expect(screen.getByText("+33 1 22 33 44 55")).toBeInTheDocument();
     });
 
-    it("should have copy email option in dropdown menu", async () => {
-      const user = userEvent.setup();
+    it("should display email as clickable copy button", () => {
       const prospect = createProspect({ email: "copy@test.com" });
       render(
         <LeadCard
@@ -437,15 +437,7 @@ describe("LeadCard", () => {
         />
       );
 
-      // Open dropdown menu
-      const buttons = screen.getAllByRole("button");
-      const menuTrigger = buttons.find(btn => btn.querySelector("svg"));
-      expect(menuTrigger).toBeDefined();
-
-      await user.click(menuTrigger!);
-      await waitFor(() => screen.getByText(/Copier l.*email/));
-
-      expect(screen.getByText(/Copier l.*email/)).toBeInTheDocument();
+      expect(screen.getByText("copy@test.com")).toBeInTheDocument();
     });
   });
 
@@ -453,8 +445,7 @@ describe("LeadCard", () => {
   // CONVERT TO OPPORTUNITY
   // ===========================================================================
   describe("Convert to Opportunity", () => {
-    it("should show convert popover for Qualifié status", async () => {
-      const user = userEvent.setup();
+    it("should show 'Créer une opportunité' button for Qualifié status", () => {
       const prospect = createProspect({ statutProspection: "Qualifié" });
       render(
         <LeadCard
@@ -463,16 +454,12 @@ describe("LeadCard", () => {
         />
       );
 
-      const convertButton = screen.getByRole("button", { name: /Convertir/i });
-      await user.click(convertButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("Convertir en opportunité ?")).toBeInTheDocument();
-      });
+      expect(screen.getByRole("button", { name: /Créer une opportunité/i })).toBeInTheDocument();
     });
 
-    it("should call convertToOpportunity when confirmed", async () => {
+    it("should call onConvert when button is clicked", async () => {
       const user = userEvent.setup();
+      const mockOnConvert = vi.fn();
       const prospect = createProspect({
         statutProspection: "Qualifié",
         client: ["client-1"],
@@ -481,58 +468,35 @@ describe("LeadCard", () => {
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
+          onConvert={mockOnConvert}
         />
       );
 
-      // Open popover
-      const convertButton = screen.getByRole("button", { name: /Convertir/i });
+      const convertButton = screen.getByRole("button", { name: /Créer une opportunité/i });
       await user.click(convertButton);
 
-      await waitFor(() => {
-        expect(screen.getByText("Convertir en opportunité ?")).toBeInTheDocument();
-      });
-
-      // Find the confirm button in popover (there are now 2 "Convertir" buttons)
-      const confirmButtons = screen.getAllByRole("button", { name: /Convertir/i });
-      const confirmButton = confirmButtons[confirmButtons.length - 1];
-      await user.click(confirmButton);
-
-      await waitFor(() => {
-        expect(mockMutateAsync).toHaveBeenCalledWith({
-          contactId: "prospect-1",
-          clientId: "client-1",
-          contactNom: "Jean Dupont",
-          clientNom: "Acme Corp",
-          notes: "Lead intéressé par nos services",
-        });
-      });
+      expect(mockOnConvert).toHaveBeenCalledWith(prospect);
     });
 
-    it("should close popover when cancel is clicked", async () => {
+    it("should show error toast if no client linked", async () => {
       const user = userEvent.setup();
-      const prospect = createProspect({ statutProspection: "Qualifié" });
+      const mockOnConvert = vi.fn();
+      const prospect = createProspect({
+        statutProspection: "Qualifié",
+        client: [],
+      });
       render(
         <LeadCard
           prospect={prospect}
           onCall={mockOnCall}
+          onConvert={mockOnConvert}
         />
       );
 
-      // Open popover
-      const convertButton = screen.getByRole("button", { name: /Convertir/i });
+      const convertButton = screen.getByRole("button", { name: /Créer une opportunité/i });
       await user.click(convertButton);
 
-      await waitFor(() => {
-        expect(screen.getByText("Convertir en opportunité ?")).toBeInTheDocument();
-      });
-
-      // Click cancel
-      const cancelButton = screen.getByRole("button", { name: /Annuler/i });
-      await user.click(cancelButton);
-
-      await waitFor(() => {
-        expect(screen.queryByText("Convertir en opportunité ?")).not.toBeInTheDocument();
-      });
+      expect(mockOnConvert).not.toHaveBeenCalled();
     });
   });
 

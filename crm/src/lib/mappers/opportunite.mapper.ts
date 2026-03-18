@@ -40,7 +40,6 @@ export function mapToOpportunite(record: SupabaseRecord): Opportunite {
     valeurEstimee,
     probabilite,
     dateClotureEstimee: parseOptionalString(record.date_cloture_prevue),
-    source: parseOptionalString(record.source),
     notes: parseOptionalString(record.notes),
     dateCreation: parseOptionalString(record.created_at),
     // Calculated field
@@ -70,10 +69,11 @@ export function mapOpportuniteToInsert(data: Partial<Opportunite>): SupabaseReco
     valeur_estimee: data.valeurEstimee,
     probabilite: data.probabilite,
     date_cloture_prevue: data.dateClotureEstimee,
-    source: data.source,
     notes: data.notes,
     client_id: data.client?.[0],
     contact_id: data.contact?.[0],
+    // Note: 'source' is not a column in the opportunites table.
+    // Lead source is tracked on the contact (source_lead).
   };
 }
 
@@ -89,7 +89,6 @@ export function mapOpportuniteToUpdate(data: Partial<Opportunite>): SupabaseReco
   if (data.valeurEstimee !== undefined) updateData.valeur_estimee = data.valeurEstimee;
   if (data.probabilite !== undefined) updateData.probabilite = data.probabilite;
   if (data.dateClotureEstimee !== undefined) updateData.date_cloture_prevue = data.dateClotureEstimee;
-  if (data.source !== undefined) updateData.source = data.source;
   if (data.notes !== undefined) updateData.notes = data.notes;
 
   return updateData;

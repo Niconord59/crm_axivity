@@ -68,7 +68,6 @@ export const contactSchema = z.object({
   // Date de changement du lifecycle stage (lecture seule, géré par trigger DB)
   lifecycleStageChangedAt: z
     .string()
-    .datetime({ message: "Format de date invalide" })
     .optional()
     .nullable(),
 

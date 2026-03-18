@@ -75,15 +75,20 @@ export function useAuth() {
           // the lock held by _notifyAllSubscribers would never be released.
           fetchProfile(session.user.id, session.user.email || "").then(profile => {
             setUser(profile);
+            // Mark loading complete AFTER profile is fetched, so isAdmin()
+            // is accurate when pages check !isLoading && !isAdmin().
+            if (isFirstEvent) {
+              isFirstEvent = false;
+              setIsLoading(false);
+            }
           });
         } else {
           setUser(null);
-        }
-
-        // Mark loading complete after the first event
-        if (isFirstEvent) {
-          isFirstEvent = false;
-          setIsLoading(false);
+          // No session = no profile to fetch, loading is done
+          if (isFirstEvent) {
+            isFirstEvent = false;
+            setIsLoading(false);
+          }
         }
 
         // Handle specific events

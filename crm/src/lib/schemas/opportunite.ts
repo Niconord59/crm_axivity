@@ -12,9 +12,12 @@ export const OPPORTUNITE_STATUTS = [
 
 export type OpportuniteStatut = (typeof OPPORTUNITE_STATUTS)[number];
 
+// Helper: date J+30 au format YYYY-MM-DD
+export function getDefaultClotureDate(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+}
+
 // Schéma pour la création/édition d'une opportunité
-// Les champs valeurEstimee, probabilite et statut ont des valeurs par défaut
-// et ne sont pas affichés à la création (formulaire simplifié)
 export const opportuniteSchema = z.object({
   // Nom de l'opportunité (obligatoire)
   nom: z
@@ -27,10 +30,11 @@ export const opportuniteSchema = z.object({
     .string()
     .min(1, "Veuillez sélectionner un client"),
 
-  // Date de clôture prévue
+  // Date de clôture prévue (optionnel, défaut J+30)
   dateClotureEstimee: z
     .string()
-    .min(1, "La date de clôture est requise"),
+    .optional()
+    .or(z.literal("")),
 
   // Valeur estimée en euros (défaut 0, rempli plus tard)
   valeurEstimee: z
@@ -70,7 +74,7 @@ export type OpportuniteFormData = z.infer<typeof opportuniteSchema>;
 export const opportuniteDefaultValues: Partial<OpportuniteFormData> = {
   nom: "",
   clientId: "",
-  dateClotureEstimee: "",
+  dateClotureEstimee: getDefaultClotureDate(),
   valeurEstimee: 0,
   probabilite: 20,
   statut: "Qualifié",

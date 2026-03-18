@@ -24,6 +24,9 @@ export const OPPORTUNITY_STATUSES = [
 ] as const;
 export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number];
 
+// Active opportunity statuses (still in pipeline)
+export const ACTIVE_OPPORTUNITY_STATUSES: OpportunityStatus[] = ["Qualifié", "Proposition", "Négociation"];
+
 export const OPPORTUNITY_STATUS_COLORS: Record<OpportunityStatus, string> = {
   Qualifié: "bg-blue-500",
   Proposition: "bg-purple-500",

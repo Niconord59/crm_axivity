@@ -96,12 +96,17 @@ function getHelperMessage(status?: string): { text: string; type: "info" | "succ
 
 interface ProspectProgressStepperProps {
   currentStatus?: string;
+  hasOpportunite?: boolean;
   className?: string;
 }
 
-export function ProspectProgressStepper({ currentStatus, className }: ProspectProgressStepperProps) {
-  const currentStepIndex = getStepIndexFromStatus(currentStatus);
-  const helperMessage = getHelperMessage(currentStatus);
+export function ProspectProgressStepper({ currentStatus, hasOpportunite, className }: ProspectProgressStepperProps) {
+  const statusIndex = getStepIndexFromStatus(currentStatus);
+  // Si le prospect est qualifié ET a une opportunité, on passe à l'étape finale
+  const currentStepIndex = hasOpportunite && statusIndex >= 4 ? 5 : statusIndex;
+  const helperMessage = currentStepIndex === 5
+    ? { text: "Opportunité créée ! Suivez l'avancement dans le pipeline", type: "success" as const }
+    : getHelperMessage(currentStatus);
   const isLost = currentStatus === "Non qualifié" || currentStatus === "Perdu";
 
   return (

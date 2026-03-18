@@ -26,6 +26,7 @@ import {
   OpportuniteFormData,
   opportuniteDefaultValues,
   OPPORTUNITE_STATUTS,
+  getDefaultClotureDate,
 } from "@/lib/schemas/opportunite";
 import { useClients } from "@/hooks/use-clients";
 import { useCreateOpportunite, useUpdateOpportunite } from "@/hooks/use-opportunites";
@@ -97,7 +98,7 @@ export function OpportuniteForm({
         client: [data.clientId],
         valeurEstimee: data.valeurEstimee,
         probabilite: data.probabilite,
-        dateClotureEstimee: data.dateClotureEstimee,
+        dateClotureEstimee: data.dateClotureEstimee || getDefaultClotureDate(),
         statut: data.statut,
         source: data.source || undefined,
         notes: data.notes || undefined,
@@ -196,13 +197,35 @@ function OpportuniteFormFields({
         )}
       />
 
-      {/* Date de clôture */}
+      {/* Valeur Estimée - toujours visible */}
+      <FormField
+        control={form.control}
+        name="valeurEstimee"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Valeur estimée (€)</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                min={0}
+                placeholder="10000"
+                {...field}
+                value={field.value ?? 0}
+                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Date de clôture - optionnelle, défaut J+30 */}
       <FormField
         control={form.control}
         name="dateClotureEstimee"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Date de clôture prévue *</FormLabel>
+            <FormLabel>Date de clôture prévue</FormLabel>
             <FormControl>
               <Input type="date" {...field} />
             </FormControl>
@@ -214,52 +237,28 @@ function OpportuniteFormFields({
       {/* Champs avancés - uniquement en mode édition */}
       {isEditing && (
         <>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Valeur Estimée */}
-            <FormField
-              control={form.control}
-              name="valeurEstimee"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valeur estimée (€)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="10000"
-                      {...field}
-                      value={field.value ?? 0}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Probabilité */}
-            <FormField
-              control={form.control}
-              name="probabilite"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Probabilité (%)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      placeholder="20"
-                      {...field}
-                      value={field.value ?? 20}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          {/* Probabilité */}
+          <FormField
+            control={form.control}
+            name="probabilite"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Probabilité (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="20"
+                    {...field}
+                    value={field.value ?? 20}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Statut */}
           <FormField
@@ -286,23 +285,23 @@ function OpportuniteFormFields({
               </FormItem>
             )}
           />
+
+          {/* Source - uniquement en édition */}
+          <FormField
+            control={form.control}
+            name="source"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Source</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: Recommandation, LinkedIn, Salon..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </>
       )}
-
-      {/* Source - toujours visible mais optionnel */}
-      <FormField
-        control={form.control}
-        name="source"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Source</FormLabel>
-            <FormControl>
-              <Input placeholder="Ex: Recommandation, LinkedIn, Salon..." {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
 
       {/* Notes - toujours visible mais optionnel */}
       <FormField

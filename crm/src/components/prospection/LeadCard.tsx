@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Phone,
   PhoneCall,
@@ -14,14 +13,22 @@ import {
   FileText,
   Video,
   MapPin,
-  Loader2,
   Edit2,
+  Trash2,
+  Briefcase,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,20 +43,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { Prospect } from "@/hooks/use-prospects";
-import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
-import { formatDate, cn } from "@/lib/utils";
+import { useDeleteContact } from "@/hooks/use-prospects";
+import { useAuth } from "@/hooks/use-auth";
+import { formatDate, formatCurrency, cn } from "@/lib/utils";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { LifecycleStageBadge } from "@/components/shared/LifecycleStageBadge";
 
 interface LeadCardProps {
   prospect: Prospect;
   onCall: (prospect: Prospect) => void;
+  /** Called when user wants to convert a qualified lead — parent opens OpportuniteForm */
+  onConvert?: (prospect: Prospect) => void;
 }
 
 // Configuration des couleurs par statut
@@ -189,12 +204,18 @@ function getActionButton(status: string | undefined): {
 export const LeadCard = React.memo(function LeadCard({
   prospect,
   onCall,
+  onConvert,
 }: LeadCardProps) {
+  const { isAdmin } = useAuth();
   const router = useRouter();
-  const [convertPopoverOpen, setConvertPopoverOpen] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const convertToOpportunity = useConvertToOpportunity();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteContact = useDeleteContact();
+  const activeOpps = (prospect.opportunites || []).filter(
+    (opp) => ["Qualifié", "Proposition", "Négociation"].includes(opp.statut)
+  );
+  const hasActiveOpps = activeOpps.length > 0;
+  const hasOpps = (prospect.opportuniteCount ?? 0) > 0;
 
   const fullName = prospect.prenom
     ? `${prospect.prenom} ${prospect.nom}`
@@ -231,39 +252,12 @@ export const LeadCard = React.memo(function LeadCard({
     }
   };
 
-  const handleDirectConvert = async () => {
+  const handleConvert = () => {
     if (!prospect.client?.[0]) {
       toast.error("Ce lead doit être lié à un client pour être converti");
-      setConvertPopoverOpen(false);
       return;
     }
-
-    setIsConverting(true);
-    try {
-      const result = await convertToOpportunity.mutateAsync({
-        contactId: prospect.id,
-        clientId: prospect.client[0],
-        contactNom: fullName,
-        clientNom: prospect.clientNom || "Client",
-        notes: prospect.notesProspection,
-      });
-
-      setConvertPopoverOpen(false);
-
-      toast.success("Opportunité créée !", {
-        description: `${prospect.clientNom || "Nouvelle opportunité"}`,
-        action: {
-          label: "Voir le pipeline",
-          onClick: () => router.push("/opportunites"),
-        },
-        duration: 5000,
-      });
-    } catch (error) {
-      console.error("Error converting to opportunity:", error);
-      toast.error("Erreur lors de la conversion");
-    } finally {
-      setIsConverting(false);
-    }
+    onConvert?.(prospect);
   };
 
   return (
@@ -317,21 +311,6 @@ export const LeadCard = React.memo(function LeadCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={handleCopyPhone}
-                    disabled={!prospect.telephone}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copier le téléphone
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleCopyEmail}
-                    disabled={!prospect.email}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Copier l&apos;email
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditDialogOpen(true);
@@ -340,6 +319,21 @@ export const LeadCard = React.memo(function LeadCard({
                     <Edit2 className="h-4 w-4 mr-2" />
                     Modifier le contact
                   </DropdownMenuItem>
+                  {isAdmin() && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer le contact
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -367,6 +361,72 @@ export const LeadCard = React.memo(function LeadCard({
                   size="sm"
                   showLabel={true}
                 />
+              )}
+              {hasOpps && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center"
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] font-medium px-2 py-0 bg-indigo-50 text-indigo-700 border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
+                      >
+                        <Briefcase className="h-2.5 w-2.5 mr-1" />
+                        {prospect.opportuniteCount} opp.
+                        {prospect.totalValeurPipeline ? ` · ${formatCurrency(prospect.totalValeurPipeline)}` : ""}
+                        <ChevronRight className="h-2.5 w-2.5 ml-0.5" />
+                      </Badge>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-72 p-0"
+                    align="start"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-3 border-b">
+                      <p className="text-sm font-semibold">Pipeline</p>
+                    </div>
+                    <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+                      {(prospect.opportunites || []).slice(0, 3).map((opp) => (
+                        <div key={opp.id} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs truncate">{opp.nom}</p>
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 mt-0.5">
+                              {opp.statut}
+                            </Badge>
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground ml-2 shrink-0">
+                            {opp.valeurEstimee ? formatCurrency(opp.valeurEstimee) : "—"}
+                          </span>
+                        </div>
+                      ))}
+                      {(prospect.opportuniteCount ?? 0) > 3 && (
+                        <p className="text-xs text-muted-foreground px-2 py-1">
+                          +{(prospect.opportuniteCount ?? 0) - 3} autre{(prospect.opportuniteCount ?? 0) - 3 > 1 ? "s" : ""}
+                        </p>
+                      )}
+                    </div>
+                    {prospect.totalValeurPipeline ? (
+                      <div className="px-3 py-2 border-t bg-muted/30">
+                        <p className="text-xs font-medium">
+                          Total : {formatCurrency(prospect.totalValeurPipeline)}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div className="p-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs justify-start text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        onClick={() => router.push("/opportunites")}
+                      >
+                        Voir dans le pipeline →
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
           </div>
@@ -524,65 +584,36 @@ export const LeadCard = React.memo(function LeadCard({
         <div className="flex-1" />
 
         {/* Bouton d'action principal - toujours en bas */}
-        {isQualified ? (
-          <Popover open={convertPopoverOpen} onOpenChange={setConvertPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full h-8 text-xs font-medium mt-auto bg-emerald-600 hover:bg-emerald-700"
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
-                Convertir
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-72 p-4"
-              align="center"
-              side="top"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <h4 className="font-semibold text-sm">Convertir en opportunité ?</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Ce lead sera ajouté au pipeline commercial avec le statut "Lead".
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setConvertPopoverOpen(false)}
-                    disabled={isConverting}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                    onClick={handleDirectConvert}
-                    disabled={isConverting}
-                  >
-                    {isConverting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <>
-                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                        Convertir
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+        {isQualified && hasActiveOpps ? (
+          /* Qualifié avec opportunités actives : bouton pipeline */
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full h-8 text-xs font-medium mt-auto bg-indigo-600 hover:bg-indigo-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push("/opportunites");
+            }}
+          >
+            <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+            Voir dans le pipeline ({activeOpps.length})
+          </Button>
+        ) : isQualified ? (
+          /* Qualifié sans opportunité : bouton création vert */
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full h-8 text-xs font-medium mt-auto bg-emerald-600 hover:bg-emerald-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleConvert();
+            }}
+          >
+            <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
+            Créer une opportunité
+          </Button>
         ) : (
+          /* Autre statut : bouton contextuel normal */
           <Button
             variant={actionButton.variant}
             size="sm"
@@ -605,8 +636,38 @@ export const LeadCard = React.memo(function LeadCard({
       contact={prospect}
       open={editDialogOpen}
       onOpenChange={setEditDialogOpen}
-      trigger={<span className="hidden" />}
     />
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Supprimer ce contact ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Cette action est irréversible. Le contact <strong>{fullName}</strong> sera
+            définitivement supprimé ainsi que ses liens avec les opportunités.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              deleteContact.mutate(prospect.id, {
+                onSuccess: () => {
+                  toast.success(`Contact "${fullName}" supprimé`);
+                },
+                onError: () => {
+                  toast.error("Erreur lors de la suppression du contact");
+                },
+              });
+            }}
+          >
+            Supprimer
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 });

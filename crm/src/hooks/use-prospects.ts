@@ -5,9 +5,20 @@ import { supabase } from "@/lib/supabase";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Contact, ProspectStatus, ProspectSource, RdvType, LifecycleStage } from "@/types";
 
-// Extended prospect type with client name
+// Summary of a linked opportunity (for display on LeadCard)
+export interface ProspectOpportunite {
+  id: string;
+  nom: string;
+  statut: string;
+  valeurEstimee?: number;
+}
+
+// Extended prospect type with client name and opportunity info
 export interface Prospect extends Contact {
   clientNom?: string;
+  opportuniteCount?: number;
+  opportunites?: ProspectOpportunite[];
+  totalValeurPipeline?: number;
 }
 
 // Filters for prospects list
@@ -65,6 +76,7 @@ function getEndOfWeek(): string {
 export function useProspects(filters?: ProspectFilters) {
   return useQuery({
     queryKey: queryKeys.prospects.list(filters),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       let query = supabase
         .from("contacts")
@@ -112,12 +124,6 @@ export function useProspects(filters?: ProspectFilters) {
         }
       }
 
-      // Search filter (search in nom, prenom, and email)
-      if (filters?.search) {
-        const searchTerm = `%${filters.search}%`;
-        query = query.or(`nom.ilike.${searchTerm},prenom.ilike.${searchTerm},email.ilike.${searchTerm}`);
-      }
-
       const { data, error } = await query;
 
       if (error) throw error;
@@ -152,10 +158,13 @@ export function useProspect(id: string | undefined) {
  * Hook to get prospects with client names (for display)
  */
 export function useProspectsWithClients(filters?: ProspectFilters) {
-  const { data: prospects, isLoading: prospectsLoading } = useProspects(filters);
+  // Exclude search from both queries — search filtering is done client-side in the page
+  const { search: _search, ...serverFilters } = filters || {};
+  const { data: prospects, isLoading: prospectsLoading } = useProspects(serverFilters as ProspectFilters);
 
   return useQuery({
-    queryKey: queryKeys.prospects.withClients(filters),
+    queryKey: queryKeys.prospects.withClients(serverFilters),
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<Prospect[]> => {
       // Return empty array if no prospects (important for filters!)
       if (!prospects || prospects.length === 0) return [];
@@ -184,13 +193,48 @@ export function useProspectsWithClients(filters?: ProspectFilters) {
         clientMap.set(c.id, c.nom || "");
       });
 
-      // Merge client names with prospects
-      return prospects.map(prospect => ({
-        ...prospect,
-        clientNom: prospect.client?.[0]
-          ? clientMap.get(prospect.client[0])
-          : undefined,
-      }));
+      // Fetch opportunity details per contact in one batch query
+      const contactIds = prospects.map(p => p.id);
+      const { data: oppLinks } = await supabase
+        .from("opportunite_contacts")
+        .select("contact_id, opportunite_id, opportunites(id, nom, statut, valeur_estimee)")
+        .in("contact_id", contactIds);
+
+      // Group opportunities by contact
+      const oppMap = new Map<string, ProspectOpportunite[]>();
+      (oppLinks || []).forEach((link: Record<string, unknown>) => {
+        const contactId = link.contact_id as string;
+        const opp = link.opportunites as Record<string, unknown> | null;
+        if (!opp) return;
+        const mapped: ProspectOpportunite = {
+          id: opp.id as string,
+          nom: (opp.nom as string) || "",
+          statut: (opp.statut as string) || "",
+          valeurEstimee: opp.valeur_estimee as number | undefined,
+        };
+        const existing = oppMap.get(contactId) || [];
+        // Avoid duplicates (same contact linked to same opp via multiple roles)
+        if (!existing.some(e => e.id === mapped.id)) {
+          existing.push(mapped);
+        }
+        oppMap.set(contactId, existing);
+      });
+
+      // Merge client names and opportunity data with prospects
+      return prospects.map(prospect => {
+        const opps = oppMap.get(prospect.id) || [];
+        return {
+          ...prospect,
+          clientNom: prospect.client?.[0]
+            ? clientMap.get(prospect.client[0])
+            : undefined,
+          opportuniteCount: opps.length,
+          opportunites: opps.length > 0 ? opps : undefined,
+          totalValeurPipeline: opps.length > 0
+            ? opps.reduce((sum, o) => sum + (o.valeurEstimee || 0), 0)
+            : undefined,
+        };
+      });
     },
     // Enable when prospects query is done (even if empty)
     enabled: !prospectsLoading && prospects !== undefined,
@@ -341,11 +385,38 @@ export function useUpdateContact() {
       return mapToContact(data);
     },
     onSuccess: async (_, variables) => {
-      // Invalidate and refetch all related queries
-      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
+      // 1. Refetch base prospects list first (updates cache)
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.lists() });
+      // 2. Invalidate withClients AFTER list is updated, so its queryFn
+      //    picks up the new prospects data from the re-render closure
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.prospects.all, "with-clients"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.prospects.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
       // Also invalidate clients if client association changed
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+    },
+  });
+}
+
+/**
+ * Hook to delete a contact (admin only per RLS policy contacts_delete_admin)
+ */
+export function useDeleteContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.lists() });
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.prospects.all, "with-clients"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
       queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
     },
   });

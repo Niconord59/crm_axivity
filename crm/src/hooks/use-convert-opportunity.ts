@@ -11,18 +11,23 @@ interface ConvertToOpportunityParams {
   clientNom: string;
   valeurEstimee?: number;
   notes?: string;
+  /** If provided, skip opportunity creation and link to this existing opportunity */
+  opportuniteId?: string;
 }
 
 /**
  * Hook to convert a prospect to an opportunity.
- * This:
- * 1. Creates an opportunity in the opportunites table
- * 2. Creates the N:N link in opportunite_contacts (isPrimary: true, role: "Decideur")
- * 3. Updates the contact lifecycle_stage to "Opportunity" and status to "Qualifié"
- * 4. Creates an interaction "Passage en Opportunité" for audit trail
- * 5. Updates the client status to "Actif" if it was "Prospect"
  *
- * Note: contact_id is still written for backward compatibility during transition period
+ * Two modes:
+ * - Without opportuniteId: creates the opportunity + runs all lifecycle steps
+ * - With opportuniteId: links to an existing opportunity + runs lifecycle steps only
+ *
+ * Lifecycle steps:
+ * 1. Creates the N:N link in opportunite_contacts (isPrimary: true, role: "Decideur")
+ * 2. Updates the contact lifecycle_stage to "Opportunity" and status to "Qualifié"
+ * 3. Creates an interaction "Passage en Opportunité" for audit trail
+ * 4. Updates the client status to "Actif" if it was "Prospect"
+ * 5. Links contact_id on the opportunity for backward compatibility
  */
 export function useConvertToOpportunity() {
   const queryClient = useQueryClient();
@@ -35,31 +40,55 @@ export function useConvertToOpportunity() {
       clientNom,
       valeurEstimee,
       notes,
+      opportuniteId,
     }: ConvertToOpportunityParams) => {
-      // 1. Create the opportunity (with contact_id for backward compatibility)
-      const opportunityName = `${clientNom} - ${contactNom}`;
-      const { data: opportunity, error: oppError } = await supabase
-        .from("opportunites")
-        .insert({
-          nom: opportunityName,
-          client_id: clientId,
-          contact_id: contactId, // Keep for backward compatibility
-          statut: "Qualifié",
-          valeur_estimee: valeurEstimee || null,
-          probabilite: 20, // Default probability for new opportunities
-          notes: notes || null,
-          date_cloture_prevue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // 30 days from now
-        })
-        .select()
-        .single();
+      let finalOpportunityId: string;
+      let opportunityName: string;
 
-      if (oppError) throw oppError;
+      if (opportuniteId) {
+        // Mode: link to existing opportunity
+        finalOpportunityId = opportuniteId;
 
-      // 2. Create N:N link in opportunite_contacts
+        // Fetch the opportunity name for the interaction audit trail
+        const { data: opp } = await supabase
+          .from("opportunites")
+          .select("nom")
+          .eq("id", opportuniteId)
+          .single();
+        opportunityName = opp?.nom || "Opportunité";
+
+        // Update contact_id on the opportunity for backward compatibility
+        await supabase
+          .from("opportunites")
+          .update({ contact_id: contactId })
+          .eq("id", opportuniteId);
+      } else {
+        // Mode: create new opportunity
+        opportunityName = `${clientNom} - ${contactNom}`;
+        const { data: opportunity, error: oppError } = await supabase
+          .from("opportunites")
+          .insert({
+            nom: opportunityName,
+            client_id: clientId,
+            contact_id: contactId,
+            statut: "Qualifié",
+            valeur_estimee: valeurEstimee || null,
+            probabilite: 20,
+            notes: notes || null,
+            date_cloture_prevue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          })
+          .select()
+          .single();
+
+        if (oppError) throw oppError;
+        finalOpportunityId = opportunity.id;
+      }
+
+      // 1. Create N:N link in opportunite_contacts
       const { error: pivotError } = await supabase
         .from("opportunite_contacts")
         .insert({
-          opportunite_id: opportunity.id,
+          opportunite_id: finalOpportunityId,
           contact_id: contactId,
           role: "Decideur",
           is_primary: true,
@@ -67,7 +96,7 @@ export function useConvertToOpportunity() {
 
       if (pivotError) throw pivotError;
 
-      // 3. Update contact: lifecycle_stage to "Opportunity" and status to "Qualifié"
+      // 2. Update contact: lifecycle_stage to "Opportunity" and status to "Qualifié"
       const { error: contactError } = await supabase
         .from("contacts")
         .update({
@@ -79,7 +108,7 @@ export function useConvertToOpportunity() {
 
       if (contactError) throw contactError;
 
-      // 4. Create interaction for audit trail
+      // 3. Create interaction for audit trail
       try {
         await supabase
           .from("interactions")
@@ -95,7 +124,7 @@ export function useConvertToOpportunity() {
         // Non-blocking: interaction creation is for audit, don't fail conversion
       }
 
-      // 5. Check if client is "Prospect" and update to "Actif"
+      // 4. Check if client is "Prospect" and update to "Actif"
       try {
         const { data: client } = await supabase
           .from("clients")
@@ -113,7 +142,7 @@ export function useConvertToOpportunity() {
         // Client might not exist or have been deleted, continue anyway
       }
 
-      return { contactId, clientId, opportunityId: opportunity.id };
+      return { contactId, clientId, opportunityId: finalOpportunityId };
     },
     onSuccess: async () => {
       // Force refetch pour afficher immédiatement les changements

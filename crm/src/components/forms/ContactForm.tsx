@@ -73,11 +73,15 @@ export function ContactForm({
     </Button>
   );
 
+  // When controlled via open/onOpenChange, don't pass a trigger
+  // to avoid Radix DropdownMenu + Dialog pointer event conflicts
+  const isControlled = open !== undefined;
+
   return (
     <FormDialog
       title="Modifier le contact"
       description="Modifiez les informations du contact"
-      trigger={trigger || defaultTrigger}
+      trigger={isControlled ? undefined : (trigger || defaultTrigger)}
       schema={contactSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}

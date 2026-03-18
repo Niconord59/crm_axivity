@@ -70,11 +70,18 @@ function ProspectionContent() {
   }, [leadIdFromUrl, prospectFromUrl, router]);
   const updateStatus = useUpdateProspectStatus();
 
-  // "Tous les statuts" = vraiment tous les statuts
+  // Client-side search filter (includes company name, instant response)
   const activeProspects = useMemo(() => {
     if (!prospects) return [];
-    return prospects;
-  }, [prospects]);
+    if (!filters.search) return prospects;
+    const term = filters.search.toLowerCase();
+    return prospects.filter(p =>
+      p.nom?.toLowerCase().includes(term) ||
+      p.prenom?.toLowerCase().includes(term) ||
+      p.email?.toLowerCase().includes(term) ||
+      p.clientNom?.toLowerCase().includes(term)
+    );
+  }, [prospects, filters.search]);
 
   const handleCall = async (prospect: Prospect) => {
     // Copy phone to clipboard
@@ -85,6 +92,12 @@ function ProspectionContent() {
       });
     }
     // Open CallResultDialog
+    setSelectedProspect(prospect);
+    setCallDialogOpen(true);
+  };
+
+  // Called when LeadCard "Créer une opportunité" is clicked — open CallResultDialog
+  const handleConvertFromCard = (prospect: Prospect) => {
     setSelectedProspect(prospect);
     setCallDialogOpen(true);
   };
@@ -194,6 +207,7 @@ function ProspectionContent() {
                   key={prospect.id}
                   prospect={prospect}
                   onCall={handleCall}
+                  onConvert={handleConvertFromCard}
                 />
               ))}
             </div>
@@ -230,6 +244,7 @@ function ProspectionContent() {
           queryClient.invalidateQueries({ queryKey: ["prospection-kpis"] });
         }}
       />
+
     </div>
   );
 }

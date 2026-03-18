@@ -91,9 +91,12 @@ import { InteractionEditDialog } from "./InteractionEditDialog";
 import type { Interaction } from "@/types";
 import { useClient } from "@/hooks/use-clients";
 import { useConvertToOpportunity } from "@/hooks/use-convert-opportunity";
+import { useCreateOpportunite } from "@/hooks/use-opportunites";
+import { getDefaultClotureDate } from "@/lib/schemas/opportunite";
 import { AgendaTab } from "./agenda";
 import { ProspectProgressStepper } from "./ProspectProgressStepper";
 import { EmailComposer } from "./EmailComposer";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
 interface CallResultDialogProps {
@@ -120,6 +123,29 @@ const RDV_RESULTS = [
   { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas à nos critères", icon: AlertCircle, color: "text-amber-500" },
   { value: "Perdu", label: "Perdu", description: "Le prospect n'est plus intéressé", icon: XCircle, color: "text-red-500" },
 ] as const;
+
+// Options post-RDV (quand statut = "RDV effectué")
+const POST_RDV_RESULTS = [
+  { value: "Qualifié", label: "Qualifié", description: "Le lead est qualifié, créer une opportunité", icon: Target, color: "text-emerald-500" },
+  { value: "Rappeler", label: "Rappeler", description: "Replanifier un échange", icon: Clock, color: "text-orange-500" },
+  { value: "Non qualifié", label: "Non qualifié", description: "Le lead ne correspond pas à nos critères", icon: AlertCircle, color: "text-amber-500" },
+  { value: "Perdu", label: "Perdu", description: "Le prospect n'est plus intéressé", icon: XCircle, color: "text-red-500" },
+] as const;
+
+// Options pour un lead déjà qualifié (logger un échange sans re-qualifier)
+const QUALIFIED_RESULTS = [
+  { value: "Appelé - pas répondu", label: "Pas répondu", description: "Le contact n'a pas décroché", icon: PhoneCall, color: "text-slate-500" },
+  { value: "Rappeler", label: "Rappeler", description: "Planifier un rappel", icon: Clock, color: "text-orange-500" },
+  { value: "RDV planifié", label: "RDV planifié", description: "Un rendez-vous a été programmé", icon: CalendarIcon, color: "text-violet-500" },
+  { value: "Non qualifié", label: "Non qualifié", description: "Finalement pas le bon profil", icon: AlertCircle, color: "text-amber-500" },
+  { value: "Perdu", label: "Perdu", description: "Le lead n'est plus intéressé", icon: XCircle, color: "text-red-500" },
+] as const;
+
+function hasActiveOpportunities(prospect: Prospect | null): boolean {
+  if (!prospect?.opportunites?.length) return false;
+  const activeStatuses = ["Qualifié", "Proposition", "Négociation"];
+  return prospect.opportunites.some((opp) => activeStatuses.includes(opp.statut));
+}
 
 // Configuration des couleurs par statut (cohérent avec LeadCard)
 function getStatusConfig(status: string | undefined) {
@@ -228,6 +254,9 @@ function StatCard({
   );
 }
 
+// Quick amount presets for opportunity value
+const AMOUNT_PRESETS = [5000, 10000, 25000, 50000] as const;
+
 export function CallResultDialog({
   open,
   onOpenChange,
@@ -238,7 +267,12 @@ export function CallResultDialog({
   const updateStatus = useUpdateProspectStatus();
   const createInteraction = useCreateInteraction();
   const deleteInteraction = useDeleteInteraction();
+  const createOpportunite = useCreateOpportunite();
   const convertToOpportunity = useConvertToOpportunity();
+
+  // Inline opportunity fields state (when Qualifié is selected)
+  const [oppNom, setOppNom] = useState("");
+  const [oppValeur, setOppValeur] = useState(0);
 
   // State for interaction edit/delete
   const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
@@ -271,6 +305,9 @@ export function CallResultDialog({
   // Determine if it's a visio RDV (show live meeting view)
   const isVisioRdv = isRdvContext && prospect?.typeRdv === "Visio";
 
+  // Show the Opportunités tab when prospect has opps or is qualified
+  const showOppsTab = prospect?.statutProspection === "Qualifié" || (prospect?.opportuniteCount ?? 0) > 0;
+
   // State for live notes during meeting
   const [liveNotes, setLiveNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -284,8 +321,11 @@ export function CallResultDialog({
   const [manualNote, setManualNote] = useState("");
   const [isSavingManualNote, setIsSavingManualNote] = useState(false);
 
-  // Use appropriate result options based on context
-  const resultOptions = isRdvContext ? RDV_RESULTS : CALL_RESULTS;
+  // Result options adapt to the prospect's current status
+  const resultOptions = isRdvContext ? RDV_RESULTS
+    : prospect?.statutProspection === "RDV effectué" ? POST_RDV_RESULTS
+    : prospect?.statutProspection === "Qualifié" ? QUALIFIED_RESULTS
+    : CALL_RESULTS;
 
   const showDatePicker = selectedResult === "Rappeler" || selectedResult === "Reporter";
   const showNotes = selectedResult !== "RDV planifié" && selectedResult !== "Appelé - pas répondu" && selectedResult !== "Reporter";
@@ -370,32 +410,59 @@ export function CallResultDialog({
         });
       }
 
-      toast.success("Résultat enregistré", {
-        description: `Statut mis à jour: ${data.resultat}`,
-      });
+      // If qualified, create opportunity inline
+      if (data.resultat === "Qualifié" && prospect && clientId) {
+        if (!oppNom.trim()) {
+          toast.error("Veuillez saisir un nom pour l'opportunité");
+          setIsSubmitting(false);
+          return;
+        }
 
-      form.reset();
-      onOpenChange(false);
-
-      if (data.resultat === "Qualifié" && prospect && clientId && client) {
-        // Create the opportunity automatically
         try {
-          await convertToOpportunity.mutateAsync({
-            contactId: prospect.id,
-            clientId: clientId,
-            contactNom: `${prospect.prenom || ""} ${prospect.nom}`.trim(),
-            clientNom: client.nom,
-            notes: data.notes || prospect.notesProspection,
+          // 1. Create the opportunity
+          const opp = await createOpportunite.mutateAsync({
+            nom: oppNom.trim(),
+            client: [clientId],
+            valeurEstimee: oppValeur,
+            probabilite: 20,
+            dateClotureEstimee: getDefaultClotureDate(),
+            statut: "Qualifié",
+            notes: data.notes || prospect.notesProspection || undefined,
           });
-          toast.success("Opportunité créée !", {
-            description: "Le lead a été converti en opportunité dans le pipeline.",
+
+          // 2. Run lifecycle updates (N:N link, lifecycle_stage, interaction, client status)
+          if (opp?.id) {
+            await convertToOpportunity.mutateAsync({
+              contactId: prospect.id,
+              clientId,
+              contactNom: `${prospect.prenom || ""} ${prospect.nom}`.trim(),
+              clientNom: client?.nom || "Client",
+              opportuniteId: opp.id,
+            });
+          }
+
+          toast.success("Lead converti en opportunité !", {
+            description: oppNom.trim(),
+            action: {
+              label: "Voir le pipeline",
+              onClick: () => router.push("/opportunites"),
+            },
             duration: 5000,
           });
         } catch (error) {
           console.error("Error creating opportunity:", error);
           toast.error("Erreur lors de la création de l'opportunité");
         }
+      } else {
+        toast.success("Résultat enregistré", {
+          description: `Statut mis à jour: ${data.resultat}`,
+        });
       }
+
+      form.reset();
+      setOppNom("");
+      setOppValeur(0);
+      onOpenChange(false);
     } catch (error) {
       toast.error("Erreur lors de l'enregistrement");
       console.error(error);
@@ -411,6 +478,8 @@ export function CallResultDialog({
     setLeftVoicemail(false);
     setWantToSendEmail(false);
     setEmailSent(false);
+    setOppNom("");
+    setOppValeur(0);
     onOpenChange(false);
   };
 
@@ -538,7 +607,7 @@ export function CallResultDialog({
           </div>
 
           {/* Progress Stepper */}
-          <ProspectProgressStepper currentStatus={prospect.statutProspection} className="mt-4" />
+          <ProspectProgressStepper currentStatus={prospect.statutProspection} hasOpportunite={hasActiveOpportunities(prospect)} className="mt-4" />
         </div>
 
         {/* Tabs avec icônes - flex pour remplir l'espace */}
@@ -546,7 +615,13 @@ export function CallResultDialog({
           <div className="shrink-0 pl-6 pr-8 pt-2 border-b">
             <TabsList className={cn(
               "grid w-full h-10",
-              isVisioRdv ? "grid-cols-5" : isRdvContext ? "grid-cols-4" : "grid-cols-5"
+              // Explicit Tailwind classes (dynamic template strings get purged)
+              !isRdvContext && !isVisioRdv && !showOppsTab && "grid-cols-5",
+              !isRdvContext && !isVisioRdv && showOppsTab && "grid-cols-6",
+              isRdvContext && !isVisioRdv && !showOppsTab && "grid-cols-4",
+              isRdvContext && !isVisioRdv && showOppsTab && "grid-cols-5",
+              isRdvContext && isVisioRdv && !showOppsTab && "grid-cols-5",
+              isRdvContext && isVisioRdv && showOppsTab && "grid-cols-6",
             )}>
               <TabsTrigger value="lead" className="text-xs gap-1.5">
                 <User className="h-3.5 w-3.5" />
@@ -572,9 +647,15 @@ export function CallResultDialog({
                   <span className="hidden sm:inline">RDV</span>
                 </TabsTrigger>
               )}
+              {showOppsTab && (
+                <TabsTrigger value="opps" className="text-xs gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Opps</span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="call" className="text-xs gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{isRdvContext ? "Résultat" : "Résultat"}</span>
+                <span className="hidden sm:inline">Résultat</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1015,15 +1096,195 @@ export function CallResultDialog({
             </TabsContent>
           )}
 
-          {/* Call Result Tab */}
+          {/* ═══ Opportunités Tab ═══ */}
+          {showOppsTab && (
+          <TabsContent value="opps" className="mt-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-6 pr-8 space-y-5">
+                {/* Active opportunities */}
+                {(prospect?.opportunites || []).some((opp) => ["Qualifié", "Proposition", "Négociation"].includes(opp.statut)) && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Opportunités actives
+                    </Label>
+                    <div className="space-y-2">
+                      {(prospect?.opportunites || [])
+                        .filter((opp) => ["Qualifié", "Proposition", "Négociation"].includes(opp.statut))
+                        .map((opp) => (
+                        <div key={opp.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">{opp.nom}</p>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1">
+                              {opp.statut}
+                            </Badge>
+                          </div>
+                          <span className="text-sm font-semibold text-muted-foreground ml-3 shrink-0">
+                            {opp.valeurEstimee ? `${(opp.valeurEstimee / 1000).toFixed(0)}k €` : "—"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Closed opportunities */}
+                {(prospect?.opportunites || []).some((opp) => ["Gagné", "Perdu"].includes(opp.statut)) && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">Opportunités fermées</p>
+                    {(prospect?.opportunites || [])
+                      .filter((opp) => ["Gagné", "Perdu"].includes(opp.statut))
+                      .map((opp) => (
+                      <div key={opp.id} className="flex items-center justify-between px-3 py-2 rounded-md text-sm opacity-60">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs truncate">{opp.nom}</p>
+                          <Badge variant="outline" className={cn(
+                            "text-[9px] px-1 py-0 mt-0.5",
+                            opp.statut === "Gagné" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
+                          )}>
+                            {opp.statut}
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground ml-2 shrink-0">
+                          {opp.valeurEstimee ? `${(opp.valeurEstimee / 1000).toFixed(0)}k €` : "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* No opportunities yet */}
+                {!(prospect?.opportunites?.length) && (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Aucune opportunité pour ce lead</p>
+                    <p className="text-xs mt-1">Créez-en une ci-dessous</p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Create new opportunity form */}
+                <div className="p-4 bg-gradient-to-r from-indigo-50 to-transparent border border-indigo-200 rounded-xl space-y-3">
+                  <div className="flex items-center gap-2 text-indigo-800">
+                    <Plus className="h-5 w-5" />
+                    <span className="font-bold">Nouvelle opportunité</span>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Client</p>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border text-sm">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      {prospect?.clientNom || "Client inconnu"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Nom de l&apos;opportunité *</p>
+                    <Input
+                      placeholder="Ex: Refonte site web, Automatisation CRM..."
+                      value={oppNom}
+                      onChange={(e) => setOppNom(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Valeur estimée (€)</p>
+                    <div className="flex gap-2 mb-2">
+                      {AMOUNT_PRESETS.map((amount) => (
+                        <Button
+                          key={amount}
+                          type="button"
+                          variant={oppValeur === amount ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1 h-8 text-xs"
+                          onClick={() => setOppValeur(oppValeur === amount ? 0 : amount)}
+                        >
+                          {amount >= 1000 ? `${amount / 1000}k` : amount}€
+                        </Button>
+                      ))}
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Autre montant..."
+                      value={oppValeur || ""}
+                      onChange={(e) => setOppValeur(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <Button
+                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    disabled={isSubmitting || !oppNom.trim()}
+                    onClick={async () => {
+                      if (!prospect?.client?.[0]) {
+                        toast.error("Ce lead doit être lié à un client");
+                        return;
+                      }
+                      setIsSubmitting(true);
+                      try {
+                        const opp = await createOpportunite.mutateAsync({
+                          nom: oppNom.trim(),
+                          client: [prospect.client[0]],
+                          valeurEstimee: oppValeur || 0,
+                          probabilite: 20,
+                          dateClotureEstimee: getDefaultClotureDate(),
+                          statut: "Qualifié",
+                        });
+                        if (opp?.id) {
+                          await convertToOpportunity.mutateAsync({
+                            contactId: prospect.id,
+                            clientId: prospect.client[0],
+                            contactNom: `${prospect.prenom || ""} ${prospect.nom}`.trim(),
+                            clientNom: prospect.clientNom || "Client",
+                            opportuniteId: opp.id,
+                          });
+                        }
+                        toast.success("Opportunité créée !", {
+                          description: oppNom.trim(),
+                          action: { label: "Voir le pipeline", onClick: () => router.push("/opportunites") },
+                        });
+                        setOppNom("");
+                        setOppValeur(0);
+                      } catch {
+                        toast.error("Erreur lors de la création");
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Target className="h-4 w-4 mr-2" />
+                    Créer l&apos;opportunité
+                  </Button>
+                </div>
+
+                {/* Pipeline link */}
+                {(prospect?.opportuniteCount ?? 0) > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push("/opportunites")}
+                  >
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Voir dans le pipeline
+                  </Button>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          )}
+
+          {/* ═══ Call Result Tab (always activity logging) ═══ */}
           <TabsContent value="call" className="mt-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 pr-8">
+
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 {/* Result selection */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">
-                    {isRdvContext ? "Résultat du RDV" : "Résultat de l'appel"}
+                    {isRdvContext ? "Résultat du RDV" : prospect?.statutProspection === "RDV effectué" ? "Suite à donner" : "Résultat de l'appel"}
                   </Label>
                   <RadioGroup
                     value={selectedResult ?? ""}
@@ -1233,30 +1494,58 @@ export function CallResultDialog({
                   </div>
                 )}
 
-                {/* CTA Qualifié */}
+                {/* Inline opportunity creation when Qualifié */}
                 {selectedResult === "Qualifié" && (
                   <div className="p-4 bg-gradient-to-r from-emerald-50 to-transparent border border-emerald-200 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-emerald-800">
                       <Target className="h-5 w-5" />
-                      <span className="font-bold">Lead qualifié !</span>
+                      <span className="font-bold">Créer l&apos;opportunité</span>
                     </div>
-                    <p className="text-sm text-emerald-700">
-                      Créez une opportunité pour suivre le deal dans votre pipeline.
-                    </p>
-                    <Button
-                      type="button"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => {
-                        form.handleSubmit(async (data) => {
-                          await handleSubmit(data);
-                          router.push(`/opportunites?create=true&client=${prospect?.client?.[0]}&contact=${prospect?.id}&nom=${encodeURIComponent(prospect?.clientNom || "")}`);
-                        })();
-                      }}
-                    >
-                      <Target className="mr-2 h-4 w-4" />
-                      Créer une opportunité
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+
+                    {/* Client (read-only) */}
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Client</p>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border text-sm">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        {prospect?.clientNom || "Client inconnu"}
+                      </div>
+                    </div>
+
+                    {/* Nom de l'opportunité */}
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Nom de l&apos;opportunité *</p>
+                      <Input
+                        placeholder="Ex: Refonte site web, Automatisation CRM..."
+                        value={oppNom}
+                        onChange={(e) => setOppNom(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Valeur estimée avec presets */}
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Valeur estimée (€)</p>
+                      <div className="flex gap-2 mb-2">
+                        {AMOUNT_PRESETS.map((amount) => (
+                          <Button
+                            key={amount}
+                            type="button"
+                            variant={oppValeur === amount ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => setOppValeur(oppValeur === amount ? 0 : amount)}
+                          >
+                            {amount >= 1000 ? `${amount / 1000}k` : amount}€
+                          </Button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Autre montant..."
+                        value={oppValeur || ""}
+                        onChange={(e) => setOppValeur(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1264,12 +1553,24 @@ export function CallResultDialog({
                   <Button type="button" variant="outline" onClick={handleClose}>
                     Annuler
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={selectedResult === "Qualifié" ? "bg-emerald-600 hover:bg-emerald-700" : undefined}
+                  >
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Enregistrer
+                    {selectedResult === "Qualifié" ? (
+                      <>
+                        <Target className="h-4 w-4 mr-2" />
+                        Enregistrer et Convertir
+                      </>
+                    ) : (
+                      "Enregistrer"
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
+
               </div>
             </ScrollArea>
           </TabsContent>
