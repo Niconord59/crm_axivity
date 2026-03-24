@@ -1,19 +1,20 @@
-# Stage 1: Dependencies
+# Stage 1: Production dependencies only
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
-# Stage 2: Build
+# Stage 2: Build (needs devDependencies for typescript)
 FROM node:22-alpine AS builder
 WORKDIR /app
+ENV NODE_ENV=development
 COPY package*.json ./
 RUN npm ci
 COPY src ./src
 COPY tsconfig.json ./
-RUN npm run build
+RUN npx tsc
 
-# Stage 3: Production
+# Stage 3: Production runtime
 FROM node:22-alpine
 WORKDIR /app
 
