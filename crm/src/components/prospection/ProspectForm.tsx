@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
@@ -325,6 +325,23 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
     // Stocker les données validées pour les utiliser lors de la création
     // Le useEffect se charge de passer à l'onglet "resultat" automatiquement
     setValidatedFormData(data);
+  };
+
+  // Callback invoqué quand la validation Zod échoue : bascule sur l'onglet du champ fautif
+  // et affiche un toast, pour éviter les "silent fails" quand l'erreur est sur un onglet caché
+  const handleInvalidSubmit = (errors: FieldErrors<ProspectFormData>) => {
+    const firstErrorKey = Object.keys(errors)[0] as keyof ProspectFormData | undefined;
+    if (!firstErrorKey) return;
+
+    const entrepriseFields = new Set<keyof ProspectFormData>([
+      "entreprise", "clientId", "secteurActivite", "siteWeb", "linkedinPage",
+      "telephoneEntreprise", "siret", "adresse", "codePostal", "ville", "pays",
+    ]);
+    const targetTab = entrepriseFields.has(firstErrorKey) ? "entreprise" : "contact";
+    if (targetTab !== activeTab) setActiveTab(targetTab);
+
+    const message = errors[firstErrorKey]?.message;
+    toast.error(typeof message === "string" ? message : `Erreur de validation (${String(firstErrorKey)})`);
   };
 
   // Création directe du lead (pour leads historiques ou non-appels)
@@ -657,7 +674,7 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <form onSubmit={form.handleSubmit(handleSubmit, handleInvalidSubmit)}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className={cn(
               "grid w-full",
@@ -1212,7 +1229,7 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
                   {directCreationMode ? (
                     <Button
                       type="button"
-                      onClick={form.handleSubmit(handleDirectCreation)}
+                      onClick={form.handleSubmit(handleDirectCreation, handleInvalidSubmit)}
                       disabled={isSubmittingResult || !form.watch("statutInitial")}
                     >
                       {isSubmittingResult ? "Création..." : "Créer le lead"}
