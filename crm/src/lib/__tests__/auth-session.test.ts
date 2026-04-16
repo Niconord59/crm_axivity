@@ -219,8 +219,9 @@ describe("getServerAccessToken (PRO-C1)", () => {
     expect(result).toBeNull();
   });
 
-  it("forces secureCookie=true in production so it finds __Secure-authjs.session-token behind reverse proxies (hotfix regression guard)", async () => {
+  it("forces secureCookie=true AND passes AUTH_SECRET in production (hotfix v2 regression guard)", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_SECRET", "test-auth-secret-for-prod");
 
     getTokenMock.mockResolvedValueOnce({
       accessToken: "t",
@@ -231,7 +232,10 @@ describe("getServerAccessToken (PRO-C1)", () => {
     await getServerAccessToken(new Request("https://example.invalid/api/calendar/events"));
 
     expect(getTokenMock).toHaveBeenCalledWith(
-      expect.objectContaining({ secureCookie: true }),
+      expect.objectContaining({
+        secureCookie: true,
+        secret: "test-auth-secret-for-prod",
+      }),
     );
 
     vi.unstubAllEnvs();
