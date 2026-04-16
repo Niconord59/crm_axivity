@@ -30,9 +30,10 @@ export const clientSchema = z.object({
     .max(200, "Le nom ne peut pas dépasser 200 caractères"),
 
   // Secteur d'activité (optionnel)
+  // Note: .max(255) car certains libellés NAF officiels dépassent 100 chars
   secteurActivite: z
     .string()
-    .max(100, "Le secteur ne peut pas dépasser 100 caractères")
+    .max(255, "Le secteur ne peut pas dépasser 255 caractères")
     .optional()
     .or(z.literal("")),
 

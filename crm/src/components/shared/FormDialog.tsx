@@ -116,7 +116,10 @@ export function FormDialog<T extends FieldValues>({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleSubmit)}
+            onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+              const firstError = Object.values(errors)[0] as { message?: string } | undefined;
+              toast.error(firstError?.message ?? "Formulaire invalide — vérifiez les champs marqués en rouge");
+            })}
             className="space-y-4"
           >
             {children(form)}

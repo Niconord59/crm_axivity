@@ -64,7 +64,7 @@ export const prospectSchema = z.object({
   // Informations entreprise complémentaires (optionnelles)
   secteurActivite: z
     .string()
-    .max(100, "Le secteur ne peut pas dépasser 100 caractères")
+    .max(255, "Le secteur ne peut pas dépasser 255 caractères")
     .optional()
     .or(z.literal("")),
 

@@ -1280,7 +1280,13 @@ export function CallResultDialog({
             <ScrollArea className="h-full">
               <div className="p-6 pr-8">
 
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+                  const firstError = Object.values(errors)[0] as { message?: string } | undefined;
+                  toast.error(firstError?.message ?? "Formulaire invalide — vérifiez les champs marqués en rouge");
+                })}
+                className="space-y-6"
+              >
                 {/* Result selection */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">
