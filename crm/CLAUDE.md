@@ -635,6 +635,15 @@ Note: Sans cette clé, le formulaire fonctionne mais les champs téléphone/site
   - Clic sur un RDV → ouvre le CallResultDialog du prospect
   - KPIs et PastRdvNotifications restent visibles dans les deux vues
 
+- **Fix validation silencieuse des formulaires** (16 avril 2026) : Correction du bouton "Suivant" non fonctionnel sur `/prospection`
+  - **Symptôme** : sur certaines entreprises (ex: SIGMA à Brillon, code NAF 33.20C), le bouton "Suivant" de l'onglet Contact du `ProspectForm` était cliquable mais ne faisait rien, sans log console
+  - **Cause** : le libellé NAF officiel auto-rempli dans `secteurActivite` faisait 107 chars, alors que le schéma Zod limitait à 100. Validation silencieuse sur un champ d'un autre onglet, sans feedback visuel
+  - **Fix 1 — racine** : `secteurActivite.max(100)` → `.max(255)` dans `prospect.ts` et `client.ts`
+  - **Fix 2 — défense structurelle** : ajout d'un callback `onInvalid` sur `form.handleSubmit` dans `FormDialog` (6 formulaires CRUD protégés), `ProspectForm` et `CallResultDialog`
+  - Les erreurs de validation affichent désormais un `toast.error` systématique
+  - `ProspectForm` bascule automatiquement sur l'onglet contenant le 1er champ en erreur
+  - Fin de la classe de bug "bouton qui fait rien sans raison" sur tous les formulaires
+
 ## Production Checklist
 
 ### Domaine principal
