@@ -407,14 +407,20 @@ L'application supporte deux providers OAuth pour le calendrier et l'email :
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   Session (JWT)                                 │
-│   { accessToken, provider: "google" | "microsoft" }             │
+│                   Session (client-visible)                      │
+│   { hasCalendarAccess, provider: "google" | "microsoft" }       │
+│                                                                 │
+│   SECURITY (PRO-C1) : le `accessToken` reste dans le JWT cookie │
+│   chiffré. Les routes serveur le lisent via                     │
+│   `getServerAccessToken(req)` depuis `lib/auth.ts` — jamais via │
+│   `useSession()` côté client.                                   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │              API Routes (auto-détection provider)               │
 │   /api/calendar/events     │       /api/email/send              │
+│   ↳ getServerAccessToken(req)  ← lit le JWT, refresh si expiré  │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼

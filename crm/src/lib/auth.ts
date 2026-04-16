@@ -1,26 +1,18 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
-import type { JWT } from "next-auth/jwt";
 
-export type OAuthProvider = "google" | "microsoft";
+import {
+  buildPublicSession,
+  refreshAccessToken,
+  type ExtendedJWT,
+  type OAuthProvider,
+} from "./auth-helpers";
 
-declare module "next-auth" {
-  interface Session {
-    accessToken?: string;
-    error?: string;
-    provider?: OAuthProvider;
-  }
-}
-
-// Extend JWT type with our custom properties
-interface ExtendedJWT extends JWT {
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: number;
-  error?: string;
-  provider?: OAuthProvider;
-}
+// The `declare module "next-auth"` augmentation lives in `auth-helpers.ts`
+// (M3) — next to the only code that writes those fields.
+export type { OAuthProvider, ExtendedJWT } from "./auth-helpers";
+export { buildPublicSession, getServerAccessToken } from "./auth-helpers";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -53,9 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Initial sign in
       if (account) {
-        // Determine provider from account
         const provider: OAuthProvider = account.provider === "microsoft-entra-id" ? "microsoft" : "google";
-
         return {
           ...extendedToken,
           accessToken: account.access_token,
@@ -70,64 +60,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return extendedToken;
       }
 
-      // Access token has expired, try to refresh it
+      // Access token expired — delegate to the shared refresh helper so the
+      // server-route flow (getServerAccessToken) and the client-session flow
+      // stay byte-for-byte identical.
       if (extendedToken.refreshToken) {
-        try {
-          const isGoogle = extendedToken.provider === "google";
-
-          // Different token endpoints for each provider
-          const tokenUrl = isGoogle
-            ? "https://oauth2.googleapis.com/token"
-            : "https://login.microsoftonline.com/common/oauth2/v2.0/token";
-
-          const body = isGoogle
-            ? new URLSearchParams({
-                client_id: process.env.AUTH_GOOGLE_ID!,
-                client_secret: process.env.AUTH_GOOGLE_SECRET!,
-                grant_type: "refresh_token",
-                refresh_token: extendedToken.refreshToken,
-              })
-            : new URLSearchParams({
-                client_id: process.env.AUTH_MICROSOFT_ID!,
-                client_secret: process.env.AUTH_MICROSOFT_SECRET!,
-                grant_type: "refresh_token",
-                refresh_token: extendedToken.refreshToken,
-                scope: "openid email profile User.Read Calendars.ReadWrite Mail.Send offline_access",
-              });
-
-          const response = await fetch(tokenUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body,
-          });
-
-          const tokens = await response.json();
-
-          if (!response.ok) {
-            throw tokens;
-          }
-
-          return {
-            ...extendedToken,
-            accessToken: tokens.access_token,
-            expiresAt: Math.floor(Date.now() / 1000 + tokens.expires_in),
-            // Keep the refresh token if a new one wasn't provided
-            refreshToken: tokens.refresh_token ?? extendedToken.refreshToken,
-          };
-        } catch (error) {
-          console.error("Error refreshing access token", error);
-          return { ...extendedToken, error: "RefreshTokenError" };
-        }
+        return refreshAccessToken(extendedToken);
       }
 
       return extendedToken;
     },
     async session({ session, token }) {
-      const extendedToken = token as ExtendedJWT;
-      session.accessToken = extendedToken.accessToken;
-      session.error = extendedToken.error;
-      session.provider = extendedToken.provider;
-      return session;
+      // SECURITY (PRO-C1): see buildPublicSession docstring — `accessToken` is
+      // intentionally never copied here so it cannot leak via useSession() or
+      // GET /api/auth/session.
+      return buildPublicSession(session, token as ExtendedJWT);
     },
   },
   pages: {
