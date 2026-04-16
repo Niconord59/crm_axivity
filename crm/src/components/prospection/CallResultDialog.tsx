@@ -1585,7 +1585,11 @@ export function CallResultDialog({
     </Dialog>
 
     {/* Edit Interaction Dialog */}
+    {/* PRO-H7: `key` forces a remount when the interaction changes so the
+        child's lazy `useState` initializers re-run with the new prop, instead
+        of using a `useEffect → setState` sync. */}
     <InteractionEditDialog
+      key={editingInteraction?.id ?? "none"}
       open={!!editingInteraction}
       onOpenChange={(open) => !open && setEditingInteraction(null)}
       interaction={editingInteraction}
