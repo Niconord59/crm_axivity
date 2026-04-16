@@ -119,7 +119,9 @@ describe("getServerAccessToken (PRO-C1)", () => {
       accessToken: "ya29.real-google-token",
       provider: "google",
     });
-    expect(getTokenMock).toHaveBeenCalledWith({ req });
+    // secureCookie is set explicitly (see isSecureCookieEnv in auth-helpers);
+    // we just care that `req` is forwarded.
+    expect(getTokenMock).toHaveBeenCalledWith(expect.objectContaining({ req }));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -215,6 +217,42 @@ describe("getServerAccessToken (PRO-C1)", () => {
     );
 
     expect(result).toBeNull();
+  });
+
+  it("forces secureCookie=true in production so it finds __Secure-authjs.session-token behind reverse proxies (hotfix regression guard)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    getTokenMock.mockResolvedValueOnce({
+      accessToken: "t",
+      provider: "google",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    } satisfies ExtendedJWT);
+
+    await getServerAccessToken(new Request("https://example.invalid/api/calendar/events"));
+
+    expect(getTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ secureCookie: true }),
+    );
+
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps secureCookie=false in dev so it finds authjs.session-token on http://localhost", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    getTokenMock.mockResolvedValueOnce({
+      accessToken: "t",
+      provider: "google",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    } satisfies ExtendedJWT);
+
+    await getServerAccessToken(new Request("http://localhost/api/calendar/events"));
+
+    expect(getTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ secureCookie: false }),
+    );
+
+    vi.unstubAllEnvs();
   });
 });
 

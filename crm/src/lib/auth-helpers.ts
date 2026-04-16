@@ -125,6 +125,23 @@ function isTokenFresh(token: ExtendedJWT): boolean {
 }
 
 /**
+ * NextAuth v5 picks the session-cookie name based on `secureCookie`:
+ *   - secureCookie=true → `__Secure-authjs.session-token` (HTTPS)
+ *   - secureCookie=false → `authjs.session-token` (HTTP dev)
+ *
+ * Behind a reverse proxy (Coolify in our case) the auto-detection inside
+ * `getToken({ req })` can see an internal `http://` URL and pick the wrong
+ * cookie name, so `getToken` returns null even though the `__Secure-` cookie
+ * is sitting right there in the request. We force it explicitly.
+ *
+ * `NODE_ENV=production` is the right signal because we set it for every
+ * deployment (staging + prod) via the Dockerfile. Local dev stays at `false`.
+ */
+function isSecureCookieEnv(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+/**
  * Server-only helper. Reads the OAuth access token directly from the encrypted
  * JWT cookie so that it never has to flow through the public session response.
  *
@@ -143,7 +160,15 @@ export async function getServerAccessToken(
 ): Promise<{ accessToken: string; provider: OAuthProvider } | null> {
   let token: ExtendedJWT | null;
   try {
-    token = (await getToken({ req })) as ExtendedJWT | null;
+    // HOTFIX: explicit `secureCookie` — see `isSecureCookieEnv()`. Without
+    // this, NextAuth v5 behind a reverse proxy (Coolify) looked for
+    // `authjs.session-token` while the actual cookie was
+    // `__Secure-authjs.session-token`, and this helper returned null on
+    // every call → 401 on every `/api/calendar/events` request.
+    token = (await getToken({
+      req,
+      secureCookie: isSecureCookieEnv(),
+    })) as ExtendedJWT | null;
   } catch (error) {
     console.error("getServerAccessToken: failed to decode JWT", error);
     return null;
