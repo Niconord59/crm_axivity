@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -56,6 +56,28 @@ const INTERACTION_TYPES: { value: InteractionType; label: string; icon: React.El
   { value: "Autre", label: "Autre", icon: MessageSquare },
 ];
 
+interface InitialFormValues {
+  objet: string;
+  type: InteractionType;
+  date: Date | undefined;
+  time: string;
+  resume: string;
+}
+
+function computeInitialValues(interaction: Interaction | null): InitialFormValues {
+  if (!interaction) {
+    return { objet: "", type: "Note", date: undefined, time: "09:00", resume: "" };
+  }
+  const parsedDate = interaction.date ? new Date(interaction.date) : undefined;
+  return {
+    objet: interaction.objet || "",
+    type: interaction.type || "Note",
+    resume: interaction.resume || "",
+    date: parsedDate,
+    time: parsedDate ? format(parsedDate, "HH:mm") : "09:00",
+  };
+}
+
 export function InteractionEditDialog({
   open,
   onOpenChange,
@@ -63,28 +85,19 @@ export function InteractionEditDialog({
 }: InteractionEditDialogProps) {
   const updateInteraction = useUpdateInteraction();
 
-  const [objet, setObjet] = useState("");
-  const [type, setType] = useState<InteractionType>("Note");
-  const [date, setDate] = useState<Date | undefined>();
-  const [time, setTime] = useState("09:00");
-  const [resume, setResume] = useState("");
+  // PRO-H7: derive initial form values from the prop via useMemo + lazy
+  // useState. Parent must pass `key={interaction.id}` so a new interaction
+  // remounts the component — that is what re-runs these lazy initializers.
+  // This replaces a previous `useEffect(() => setState(...), [interaction])`
+  // which violated `react-hooks/set-state-in-effect` and caused an extra
+  // render pass that could race with form submission.
+  const initial = useMemo(() => computeInitialValues(interaction), [interaction]);
 
-  // Populate form when interaction changes
-  useEffect(() => {
-    if (interaction) {
-      setObjet(interaction.objet || "");
-      setType(interaction.type || "Note");
-      setResume(interaction.resume || "");
-      if (interaction.date) {
-        const d = new Date(interaction.date);
-        setDate(d);
-        setTime(format(d, "HH:mm"));
-      } else {
-        setDate(undefined);
-        setTime("09:00");
-      }
-    }
-  }, [interaction]);
+  const [objet, setObjet] = useState(initial.objet);
+  const [type, setType] = useState<InteractionType>(initial.type);
+  const [date, setDate] = useState<Date | undefined>(initial.date);
+  const [time, setTime] = useState(initial.time);
+  const [resume, setResume] = useState(initial.resume);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

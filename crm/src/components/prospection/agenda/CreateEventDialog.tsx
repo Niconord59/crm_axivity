@@ -56,9 +56,13 @@ export function CreateEventDialog({
   const { mutateAsync: updateProspectStatus, isPending: isUpdatingProspect } = useUpdateProspectStatus();
   const isPending = isCreatingEvent || isCreatingInteraction || isUpdatingProspect;
 
-  // Default to 1 hour from initial date or now
+  // Default to 1 hour from initial date or now.
+  // PRO-H11: always clone before mutating — previously this called
+  // `.setMinutes()` directly on the `initialDate` prop, which is a live
+  // reference from the parent's state. The parent's own Date object was
+  // being silently rounded and shifted, causing drift across renders.
   const getDefaultStartDate = () => {
-    const date = initialDate || new Date();
+    const date = new Date(initialDate ?? Date.now());
     // Round to next hour
     date.setMinutes(0, 0, 0);
     if (!initialDate) {

@@ -60,6 +60,20 @@ yarn-error.log*
 # Claude Code
 # ===================
 .claude/settings.local.json
+.claude/github-star-reminder.txt
+mcp-server/.claude/
+
+# ===================
+# Kombai
+# ===================
+.kombai/
+
+# ===================
+# Ad-hoc screenshots / scratch
+# ===================
+Capture.PNG
+Capture*.png
+Capture*.PNG
 
 # ===================
 # Temporary files

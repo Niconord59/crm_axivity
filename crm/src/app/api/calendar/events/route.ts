@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getServerAccessToken } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getCalendarEvents, createCalendarEvent } from "@/lib/services/calendar-service";
 import { handleApiError } from "@/lib/api-error-handler";
@@ -7,9 +7,9 @@ import type { CreateEventInput } from "@/lib/google-calendar";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const credentials = await getServerAccessToken(request);
 
-    if (!session?.accessToken) {
+    if (!credentials) {
       throw new UnauthorizedError();
     }
 
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const provider = session.provider || "google";
-    const result = await getCalendarEvents(provider, session.accessToken, timeMin, timeMax);
+    const { accessToken, provider } = credentials;
+    const result = await getCalendarEvents(provider, accessToken, timeMin, timeMax);
 
     if (result.error) {
       throw new ExternalServiceError(`Calendar (${provider})`, { error: result.error });
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const credentials = await getServerAccessToken(request);
 
-    if (!session?.accessToken) {
+    if (!credentials) {
       throw new UnauthorizedError();
     }
 
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const provider = session.provider || "google";
+    const { accessToken, provider } = credentials;
 
     // Convert the request body to CreateEventInput format
     const input: CreateEventInput = {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       meetingType: body.conferenceData ? "visio" : body.location ? "presentiel" : undefined,
     };
 
-    const result = await createCalendarEvent(provider, session.accessToken, input);
+    const result = await createCalendarEvent(provider, accessToken, input);
 
     if (result.error) {
       throw new ExternalServiceError(`Calendar (${provider})`, { error: result.error });
