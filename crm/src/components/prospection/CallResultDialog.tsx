@@ -1375,7 +1375,11 @@ export function CallResultDialog({
                     )}
 
                     {wantToSendEmail && prospect?.email && (
+                      // PRO-H8: `key` forces a remount when leftVoicemail
+                      // toggles so the lazy useState initializers regenerate
+                      // the template body — replaces a useEffect sync.
                       <EmailComposer
+                        key={leftVoicemail ? "vm" : "nvm"}
                         prospectEmail={prospect.email}
                         prospectPrenom={prospect.prenom}
                         prospectNom={prospect.nom}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
   Mail,
   Send,
@@ -59,30 +59,27 @@ export function EmailComposer({
 }: EmailComposerProps) {
   const { mutate: sendEmail, isPending, isSuccess, isError, error } = useSendEmail();
 
-  // Generate initial email template
-  const initialEmail = generateFollowUpEmail({
-    prospectPrenom,
-    prospectNom,
-    entreprise,
-    leftVoicemail,
-  });
+  // PRO-H8: derive the template body from the props via useMemo + lazy
+  // useState. Previously a `useEffect(() => setBody(...))` re-synced the body
+  // on every prop change, which tripped `react-hooks/set-state-in-effect`
+  // AND silently overwrote user edits. Parent CallResultDialog now passes
+  // `key={leftVoicemail ? "vm" : "nvm"}` so toggling the voicemail switch
+  // triggers a clean remount — same regeneration behavior, no extra render.
+  const initialEmail = useMemo(
+    () =>
+      generateFollowUpEmail({
+        prospectPrenom,
+        prospectNom,
+        entreprise,
+        leftVoicemail,
+      }),
+    [prospectPrenom, prospectNom, entreprise, leftVoicemail],
+  );
 
   const [to, setTo] = useState(prospectEmail);
-  const [subject, setSubject] = useState(initialEmail.subject);
-  const [body, setBody] = useState(initialEmail.body);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [subject, setSubject] = useState(() => initialEmail.subject);
+  const [body, setBody] = useState(() => initialEmail.body);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-
-  // Update template when leftVoicemail changes
-  useEffect(() => {
-    const newEmail = generateFollowUpEmail({
-      prospectPrenom,
-      prospectNom,
-      entreprise,
-      leftVoicemail,
-    });
-    setBody(newEmail.body);
-  }, [leftVoicemail, prospectPrenom, prospectNom, entreprise]);
 
   const handleSend = () => {
     if (!to || !subject || !body) {
