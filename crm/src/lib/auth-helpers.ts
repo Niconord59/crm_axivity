@@ -160,13 +160,16 @@ export async function getServerAccessToken(
 ): Promise<{ accessToken: string; provider: OAuthProvider } | null> {
   let token: ExtendedJWT | null;
   try {
-    // HOTFIX: explicit `secureCookie` — see `isSecureCookieEnv()`. Without
-    // this, NextAuth v5 behind a reverse proxy (Coolify) looked for
-    // `authjs.session-token` while the actual cookie was
-    // `__Secure-authjs.session-token`, and this helper returned null on
-    // every call → 401 on every `/api/calendar/events` request.
+    // `getToken` from @auth/core/jwt requires BOTH:
+    // - `secret` (throws `MissingSecret` otherwise — the previous hotfix
+    //   missed this because the tests mock `getToken` entirely)
+    // - `secureCookie` explicitly (behind Coolify's reverse proxy the
+    //   internal http:// URL confuses auto-detection — see isSecureCookieEnv).
+    // Together they guarantee the helper can actually decode the encrypted
+    // session cookie that NextAuth wrote during sign-in.
     token = (await getToken({
       req,
+      secret: process.env.AUTH_SECRET,
       secureCookie: isSecureCookieEnv(),
     })) as ExtendedJWT | null;
   } catch (error) {
