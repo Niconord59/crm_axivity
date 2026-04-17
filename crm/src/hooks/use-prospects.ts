@@ -4,6 +4,11 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import { supabase } from "@/lib/supabase";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Contact, ProspectStatus, ProspectSource, RdvType, LifecycleStage } from "@/types";
+import {
+  mapToContact,
+  mapToContactOrThrow,
+  mapToContacts,
+} from "@/lib/mappers/contact.mapper";
 
 // Summary of a linked opportunity (for display on LeadCard)
 export interface ProspectOpportunite {
@@ -30,30 +35,12 @@ export interface ProspectFilters {
   search?: string;
 }
 
-// Mapper Supabase -> Contact type
-function mapToContact(record: Record<string, unknown>): Contact {
-  return {
-    id: record.id as string,
-    nom: (record.nom as string) || "",
-    prenom: record.prenom as string | undefined,
-    email: record.email as string | undefined,
-    telephone: record.telephone as string | undefined,
-    poste: record.poste as string | undefined,
-    linkedin: record.linkedin as string | undefined,
-    estPrincipal: record.est_principal as boolean | undefined,
-    lifecycleStage: record.lifecycle_stage as LifecycleStage | undefined,
-    lifecycleStageChangedAt: record.lifecycle_stage_changed_at as string | undefined,
-    statutProspection: record.statut_prospection as ProspectStatus,
-    dateRappel: record.date_rappel as string | undefined,
-    dateRdvPrevu: record.date_rdv_prevu as string | undefined,
-    typeRdv: record.type_rdv as RdvType,
-    lienVisio: record.lien_visio as string | undefined,
-    sourceLead: record.source_lead as ProspectSource,
-    notesProspection: record.notes_prospection as string | undefined,
-    client: record.client_id ? [record.client_id as string] : undefined,
-    createdTime: record.created_at as string | undefined,
-  };
-}
+// PRO-H1 — `mapToContact` est maintenant déplacé dans
+// `@/lib/mappers/contact.mapper.ts` et validé via Zod au boundary. Les
+// enums hors périmètre (statut_prospection inventé, source_lead drift…)
+// font émettre un warning et sont ignorés plutôt que de produire un type
+// corrompu. Voir aussi `mapToContactOrThrow` pour les queries `.single()`
+// et `mapToContacts` pour les listes.
 
 // Get today's date in ISO format (YYYY-MM-DD)
 function getToday(): string {
@@ -127,7 +114,7 @@ export function useProspects(filters?: ProspectFilters) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return (data || []).map(mapToContact);
+      return mapToContacts(data || []);
     },
   });
 }
@@ -148,96 +135,140 @@ export function useProspect(id: string | undefined) {
         .single();
 
       if (error) throw error;
-      return mapToContact(data);
+      return mapToContactOrThrow(data);
     },
     enabled: !!id,
   });
 }
 
+// PRO-H2 — helpers partagés pour dériver `opportunites` à partir d'une
+// jointure Supabase `opportunite_contacts(opportunites(...))`.
+function extractOpportunites(
+  opportuniteContactsRaw: unknown,
+): ProspectOpportunite[] {
+  if (!Array.isArray(opportuniteContactsRaw)) return [];
+
+  const opps: ProspectOpportunite[] = [];
+  for (const link of opportuniteContactsRaw) {
+    if (!link || typeof link !== "object") continue;
+    const opp = (link as Record<string, unknown>).opportunites as
+      | Record<string, unknown>
+      | null;
+    if (!opp || typeof opp !== "object") continue;
+
+    const id = typeof opp.id === "string" ? opp.id : null;
+    if (!id) continue;
+    // Dedup : un même contact peut pointer deux fois la même opportunité
+    // via plusieurs rôles.
+    if (opps.some((e) => e.id === id)) continue;
+
+    opps.push({
+      id,
+      nom: typeof opp.nom === "string" ? opp.nom : "",
+      statut: typeof opp.statut === "string" ? opp.statut : "",
+      valeurEstimee:
+        typeof opp.valeur_estimee === "number" ? opp.valeur_estimee : undefined,
+    });
+  }
+  return opps;
+}
+
+function extractClientNom(clientsRaw: unknown): string | undefined {
+  // Supabase retourne `clients` comme objet unique quand FK many→one.
+  if (!clientsRaw || typeof clientsRaw !== "object") return undefined;
+  const nom = (clientsRaw as Record<string, unknown>).nom;
+  return typeof nom === "string" && nom.length > 0 ? nom : undefined;
+}
+
 /**
- * Hook to get prospects with client names (for display)
+ * Hook to get prospects with client names and linked opportunities for display.
+ *
+ * PRO-H2 — Ce hook était auparavant dérivé de `useProspects` et faisait
+ * 2 fetchs supplémentaires (clients + opportunite_contacts), avec une
+ * queryKey qui n'incluait pas la liste d'IDs prospects → la query
+ * d'enrichissement restait obsolète quand le parent refetchait. On passe
+ * maintenant par un unique `select(...)` Supabase avec joins, ce qui :
+ *  - supprime la cascade de 3 requêtes (1 seule au lieu de 3),
+ *  - fait co-varier `clientNom` / `opportunites` avec les prospects
+ *    (plus de staleness cross-query),
+ *  - conserve la même signature `ProspectFilters` côté appelant.
  */
 export function useProspectsWithClients(filters?: ProspectFilters) {
-  // Exclude search from both queries — search filtering is done client-side in the page
+  // `search` est filtré côté client (réactif instantané) — on l'exclut
+  // pour ne pas fragmenter le cache React Query par variation de saisie.
   const { search: _search, ...serverFilters } = filters || {};
-  const { data: prospects, isLoading: prospectsLoading } = useProspects(serverFilters as ProspectFilters);
 
   return useQuery({
     queryKey: queryKeys.prospects.withClients(serverFilters),
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<Prospect[]> => {
-      // Return empty array if no prospects (important for filters!)
-      if (!prospects || prospects.length === 0) return [];
+      let query = supabase
+        .from("contacts")
+        .select(
+          "*, clients(id, nom), opportunite_contacts(opportunite_id, opportunites(id, nom, statut, valeur_estimee))",
+        )
+        .not("statut_prospection", "is", null)
+        .order("date_rappel", { ascending: true, nullsFirst: false })
+        .order("statut_prospection", { ascending: true });
 
-      // Get unique client IDs
-      const clientIds = [...new Set(
-        prospects
-          .flatMap(p => p.client || [])
-          .filter(Boolean)
-      )];
-
-      if (clientIds.length === 0) {
-        return prospects.map(p => ({ ...p, clientNom: undefined }));
+      if (serverFilters.statut) {
+        query = Array.isArray(serverFilters.statut)
+          ? query.in("statut_prospection", serverFilters.statut)
+          : query.eq("statut_prospection", serverFilters.statut);
       }
 
-      // Fetch client names in one query
-      const { data: clients, error } = await supabase
-        .from("clients")
-        .select("id, nom")
-        .in("id", clientIds);
+      if (serverFilters.source) {
+        query = query.eq("source_lead", serverFilters.source);
+      }
 
+      if (serverFilters.lifecycleStage) {
+        query = query.eq("lifecycle_stage", serverFilters.lifecycleStage);
+      }
+
+      if (serverFilters.dateRappel && serverFilters.dateRappel !== "all") {
+        const today = getToday();
+        switch (serverFilters.dateRappel) {
+          case "today":
+            query = query.eq("date_rappel", today);
+            break;
+          case "this_week":
+            query = query.gte("date_rappel", today).lte("date_rappel", getEndOfWeek());
+            break;
+          case "overdue":
+            query = query
+              .not("date_rappel", "is", null)
+              .lt("date_rappel", today)
+              .eq("statut_prospection", "Rappeler");
+            break;
+        }
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
-      const clientMap = new Map<string, string>();
-      (clients || []).forEach(c => {
-        clientMap.set(c.id, c.nom || "");
-      });
+      const rows = (data || []) as Array<Record<string, unknown>>;
+      const prospects: Prospect[] = [];
 
-      // Fetch opportunity details per contact in one batch query
-      const contactIds = prospects.map(p => p.id);
-      const { data: oppLinks } = await supabase
-        .from("opportunite_contacts")
-        .select("contact_id, opportunite_id, opportunites(id, nom, statut, valeur_estimee)")
-        .in("contact_id", contactIds);
+      for (const row of rows) {
+        const contact = mapToContact(row);
+        if (!contact) continue;
 
-      // Group opportunities by contact
-      const oppMap = new Map<string, ProspectOpportunite[]>();
-      (oppLinks || []).forEach((link: Record<string, unknown>) => {
-        const contactId = link.contact_id as string;
-        const opp = link.opportunites as Record<string, unknown> | null;
-        if (!opp) return;
-        const mapped: ProspectOpportunite = {
-          id: opp.id as string,
-          nom: (opp.nom as string) || "",
-          statut: (opp.statut as string) || "",
-          valeurEstimee: opp.valeur_estimee as number | undefined,
-        };
-        const existing = oppMap.get(contactId) || [];
-        // Avoid duplicates (same contact linked to same opp via multiple roles)
-        if (!existing.some(e => e.id === mapped.id)) {
-          existing.push(mapped);
-        }
-        oppMap.set(contactId, existing);
-      });
-
-      // Merge client names and opportunity data with prospects
-      return prospects.map(prospect => {
-        const opps = oppMap.get(prospect.id) || [];
-        return {
-          ...prospect,
-          clientNom: prospect.client?.[0]
-            ? clientMap.get(prospect.client[0])
-            : undefined,
+        const opps = extractOpportunites(row.opportunite_contacts);
+        const prospect: Prospect = {
+          ...contact,
+          clientNom: extractClientNom(row.clients),
           opportuniteCount: opps.length,
           opportunites: opps.length > 0 ? opps : undefined,
-          totalValeurPipeline: opps.length > 0
-            ? opps.reduce((sum, o) => sum + (o.valeurEstimee || 0), 0)
-            : undefined,
+          totalValeurPipeline:
+            opps.length > 0
+              ? opps.reduce((sum, o) => sum + (o.valeurEstimee || 0), 0)
+              : undefined,
         };
-      });
+        prospects.push(prospect);
+      }
+
+      return prospects;
     },
-    // Enable when prospects query is done (even if empty)
-    enabled: !prospectsLoading && prospects !== undefined,
   });
 }
 
@@ -297,7 +328,7 @@ export function useUpdateProspectStatus() {
         .single();
 
       if (error) throw error;
-      return mapToContact(data);
+      return mapToContactOrThrow(data);
     },
     onSuccess: async (_, variables) => {
       await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
@@ -382,7 +413,7 @@ export function useUpdateContact() {
         .single();
 
       if (error) throw error;
-      return mapToContact(data);
+      return mapToContactOrThrow(data);
     },
     onSuccess: async (_, variables) => {
       // 1. Refetch base prospects list first (updates cache)
@@ -544,7 +575,7 @@ export function useCreateProspect() {
 
       if (error) throw error;
 
-      return { ...mapToContact(record), clientId };
+      return { ...mapToContactOrThrow(record), clientId };
     },
     onSuccess: async () => {
       // Force refetch in correct order (prospects first, then derived queries)
@@ -629,7 +660,7 @@ export function useRappelsAujourdhui(userId?: string) {
 
       if (error) throw error;
 
-      const mappedProspects = (prospects || []).map(mapToContact);
+      const mappedProspects = mapToContacts(prospects || []);
 
       if (mappedProspects.length > 0) {
         const clientIds = [...new Set(
@@ -684,7 +715,7 @@ export function useRdvAujourdhui(userId?: string) {
 
       if (error) throw error;
 
-      const mappedProspects = (prospects || []).map(mapToContact);
+      const mappedProspects = mapToContacts(prospects || []);
 
       if (mappedProspects.length > 0) {
         const clientIds = [...new Set(
@@ -734,7 +765,7 @@ export function usePastRdvProspects() {
 
       if (error) throw error;
 
-      const mappedProspects = (prospects || []).map(mapToContact);
+      const mappedProspects = mapToContacts(prospects || []);
 
       if (mappedProspects.length > 0) {
         // Get unique client IDs
@@ -790,7 +821,7 @@ export function useUpcomingRdvProspects() {
 
       if (error) throw error;
 
-      const mappedProspects = (prospects || []).map(mapToContact);
+      const mappedProspects = mapToContacts(prospects || []);
 
       if (mappedProspects.length > 0) {
         const clientIds = [...new Set(
@@ -844,7 +875,7 @@ export function useContactsByClient(clientId: string | undefined) {
 
       if (error) throw error;
 
-      return (contacts || []).map(mapToContact);
+      return mapToContacts(contacts || []);
     },
     enabled: !!clientId,
   });

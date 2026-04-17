@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:prospection-gate": "eslint --no-config-lookup --config eslint.prospection-gate.config.mjs src/components/prospection \"src/app/(main)/prospection\" src/hooks/use-prospects.ts src/hooks/use-calendar.ts",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",

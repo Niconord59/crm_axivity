@@ -60,3 +60,9 @@ export {
   mapEmailTemplateToInsert,
   mapEmailTemplateToUpdate,
 } from "./email-template.mapper";
+
+export {
+  mapToContact,
+  mapToContactOrThrow,
+  mapToContacts,
+} from "./contact.mapper";

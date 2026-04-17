@@ -11,6 +11,36 @@ import {
   getWeekDates,
 } from "@/lib/google-calendar";
 
+/**
+ * Safely extract a human-readable error message from an API error response.
+ *
+ * PRO-H13 — `response.json()` blindly on a 502/504 HTML gateway error throws
+ * `SyntaxError: Unexpected token '<'`, which then surfaces to the user as a
+ * stack trace instead of an actionable message. We guard on the content-type
+ * before parsing, and fall back to a status-based message.
+ */
+export async function parseApiError(
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return `${fallbackMessage} (code ${response.status})`;
+  }
+  try {
+    const payload = (await response.json()) as Record<string, unknown> | null;
+    if (payload && typeof payload === "object") {
+      const err = payload.error;
+      const msg = payload.message;
+      if (typeof err === "string" && err.trim() !== "") return err;
+      if (typeof msg === "string" && msg.trim() !== "") return msg;
+    }
+    return `${fallbackMessage} (code ${response.status})`;
+  } catch {
+    return `${fallbackMessage} (code ${response.status})`;
+  }
+}
+
 // Fetch calendar events for a date range
 async function fetchCalendarEvents(
   timeMin: string,
@@ -21,8 +51,9 @@ async function fetchCalendarEvents(
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Erreur lors de la récupération des événements");
+    throw new Error(
+      await parseApiError(response, "Erreur lors de la récupération des événements"),
+    );
   }
 
   const data: CalendarEventsResponse = await response.json();
@@ -42,8 +73,9 @@ async function createCalendarEvent(input: CreateEventInput): Promise<CalendarEve
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Erreur lors de la création de l'événement");
+    throw new Error(
+      await parseApiError(response, "Erreur lors de la création de l'événement"),
+    );
   }
 
   return response.json();

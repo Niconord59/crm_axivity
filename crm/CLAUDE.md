@@ -71,6 +71,32 @@ npm run test:ui       # Vitest UI
 - Shadcn/UI components exclusively
 - Mobile-first responsive (375px, 768px, 1024px)
 
+### `setState` dans `useEffect` — interdit en prospection (PRO-TRX-1)
+
+Le pattern "sync prop → state via `useEffect(() => setX(prop), [prop])`" a été
+introduit **3 fois** dans le module prospection (H5/H7/H8 du Sprint 1, plus
+l'hotfix `8e1405f7`). Un gate CI dédié (`npm run lint:prospection-gate`)
+bloque toute nouvelle occurrence dans :
+
+- `src/components/prospection/**`
+- `src/app/(main)/prospection/**`
+- `src/hooks/use-prospects.ts`, `src/hooks/use-calendar.ts`
+
+**À la place**, utiliser un des deux patterns ci-dessous :
+
+```tsx
+// Pattern 1 — key prop : force un remount avec l'état initial correct.
+<MyDialog key={item.id} item={item} />
+
+// Pattern 2 — useMemo + lazy useState, pour dériver l'état initial.
+const derived = useMemo(() => compute(prop), [prop]);
+const [value, setValue] = useState(() => derived);
+```
+
+Le gate s'exécute via `eslint.prospection-gate.config.mjs` (config isolée
+pour ne pas être bloquée par les 85 erreurs lint pré-existantes des autres
+modules).
+
 ## Features
 
 ### 001-crm-axivity-interface (Phase 1 - COMPLETE)
