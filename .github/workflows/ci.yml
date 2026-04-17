@@ -25,6 +25,16 @@ jobs:
         working-directory: crm
         run: npm run lint || true  # Non-blocking until existing errors are fixed
 
+      # PRO-TRX-1 — hard gate on react-hooks/set-state-in-effect for the
+      # prospection module. This anti-pattern has been reintroduced 3 times
+      # (H5/H7/H8 + hotfix 8e1405f7), so we fail CI on any future regression
+      # in prospection paths. Scoped via eslint.prospection-gate.config.mjs
+      # so it does NOT depend on fixing the 85 pre-existing lint errors in
+      # other modules.
+      - name: Lint (prospection set-state-in-effect gate)
+        working-directory: crm
+        run: npm run lint:prospection-gate
+
       - name: Test
         working-directory: crm
         run: npm test -- --run
