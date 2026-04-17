@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getServerAccessToken } from "@/lib/auth";
 import { sendEmail } from "@/lib/services/email-service";
 import { handleApiError, validateRequestBody } from "@/lib/api-error-handler";
 import { sendEmailSchema } from "@/lib/schemas/api";
@@ -7,9 +7,9 @@ import { UnauthorizedError, ForbiddenError, ExternalServiceError } from "@/lib/e
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const credentials = await getServerAccessToken(request);
 
-    if (!session?.accessToken) {
+    if (!credentials) {
       throw new UnauthorizedError("Veuillez vous connecter pour envoyer des emails");
     }
 
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
       sendEmailSchema
     );
 
-    const provider = session.provider || "google";
-    const result = await sendEmail(provider, session.accessToken, {
+    const { accessToken, provider } = credentials;
+    const result = await sendEmail(provider, accessToken, {
       to,
       subject,
       body: emailBody,

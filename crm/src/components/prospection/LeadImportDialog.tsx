@@ -49,6 +49,41 @@ interface LeadImportDialogProps {
   onSuccess?: () => void;
 }
 
+// PRO-H10: guard both the drag-drop and file-picker entry points before we
+// hand the file to PapaParse. Reject anything without a .csv extension and
+// anything > 5 MB — PapaParse is synchronous on the main thread and a large
+// file freezes the UI.
+// Browsers disagree on the CSV MIME (`text/csv`, `application/vnd.ms-excel`,
+// or empty) so we trust the extension, which the OS file picker already
+// filters. MIME is not a security boundary here anyway — it's user-supplied.
+export const MAX_CSV_BYTES = 5 * 1024 * 1024;
+const MAX_CSV_MB = 5;
+
+export function isValidCsv(file: File): boolean {
+  const hasExtension = file.name.toLowerCase().endsWith(".csv");
+  const sizeOk = file.size > 0 && file.size <= MAX_CSV_BYTES;
+  return hasExtension && sizeOk;
+}
+
+function reportInvalidCsv(file: File): void {
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    toast.error("Format non supporté", {
+      description: "Veuillez utiliser un fichier CSV (.csv)",
+    });
+    return;
+  }
+  if (file.size === 0) {
+    toast.error("Fichier vide", { description: "Le CSV ne contient aucune donnée." });
+    return;
+  }
+  if (file.size > MAX_CSV_BYTES) {
+    toast.error("Fichier trop volumineux", {
+      description: `La limite est ${MAX_CSV_MB} Mo — votre fichier fait ${(file.size / 1024 / 1024).toFixed(1)} Mo.`,
+    });
+    return;
+  }
+}
+
 // CRM fields for mapping - grouped by category
 const CRM_FIELDS = [
   // Required fields
@@ -109,10 +144,8 @@ export function LeadImportDialog({
       const file = e.dataTransfer.files[0];
       if (!file) return;
 
-      if (!file.name.endsWith(".csv")) {
-        toast.error("Format non supporté", {
-          description: "Veuillez utiliser un fichier CSV",
-        });
+      if (!isValidCsv(file)) {
+        reportInvalidCsv(file);
         return;
       }
 
@@ -132,6 +165,13 @@ export function LeadImportDialog({
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+
+      if (!isValidCsv(file)) {
+        reportInvalidCsv(file);
+        // Reset the input so the same invalid file can be re-picked after fix.
+        e.target.value = "";
+        return;
+      }
 
       try {
         await parseFile(file);

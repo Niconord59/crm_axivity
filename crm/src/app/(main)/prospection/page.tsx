@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Upload, Phone as PhoneIcon, CalendarDays, Users, LayoutGrid, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,15 +59,25 @@ function ProspectionContent() {
   // S'abonner aux changements Realtime pour rafraîchir automatiquement
   useProspectionRealtime();
 
-  // Auto-open dialog if leadId is in URL
-  useEffect(() => {
-    if (leadIdFromUrl && prospectFromUrl) {
-      setSelectedProspect(prospectFromUrl as Prospect);
-      setCallDialogOpen(true);
-      // Clear the URL parameter without reloading
-      router.replace("/prospection", { scroll: false });
-    }
-  }, [leadIdFromUrl, prospectFromUrl, router]);
+  // PRO-H5: derive the URL-driven prospect during render instead of mirroring
+  // it into state via `useEffect(() => setState(...))`. Fixes two bugs at
+  // once: (1) unsafe `contact as Prospect` cast, (2) react-hooks/set-state
+  // -in-effect violation. `useProspect` returns a `Contact`, so we widen it
+  // to a `Prospect` with safe defaults for the two fields the UI may read.
+  const urlDrivenProspect = useMemo<Prospect | null>(() => {
+    if (!leadIdFromUrl || !prospectFromUrl) return null;
+    return {
+      ...prospectFromUrl,
+      clientNom: undefined,
+      opportuniteCount: 0,
+    };
+  }, [leadIdFromUrl, prospectFromUrl]);
+
+  // The dialog shows either the URL-driven prospect (deep-link) or whatever
+  // the user selected via LeadCard / agenda. URL wins when both are set.
+  const activeProspect = urlDrivenProspect ?? selectedProspect;
+  const dialogOpen = callDialogOpen || urlDrivenProspect !== null;
+
   const updateStatus = useUpdateProspectStatus();
 
   // Client-side search filter (includes company name, instant response)
@@ -228,10 +238,17 @@ function ProspectionContent() {
       )}
 
       {/* Call Result Dialog */}
+      {/* PRO-H5: dialog closes → clear URL query param so re-navigation works. */}
       <CallResultDialog
-        open={callDialogOpen}
-        onOpenChange={setCallDialogOpen}
-        prospect={selectedProspect}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setCallDialogOpen(open);
+          if (!open) {
+            setSelectedProspect(null);
+            if (leadIdFromUrl) router.replace("/prospection", { scroll: false });
+          }
+        }}
+        prospect={activeProspect}
       />
 
       {/* Lead Import Dialog */}

@@ -76,10 +76,15 @@ export function getWeekDates(date: Date): { start: Date; end: Date; days: Date[]
   return { start: monday, end: sunday, days };
 }
 
-// Format date to ISO string with timezone
-export function toISOStringWithTimezone(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
-  return date.toISOString();
-}
+// PRO-H12: `toISOStringWithTimezone(date, timeZone)` was removed — it
+// silently ignored the `timeZone` argument and returned a UTC string, which
+// contradicted both its name and the `DEFAULT_TIMEZONE = "Europe/Paris"`
+// constant. It had zero callers.
+//
+// Timezone handling for Google Calendar is done inside `createEventPayload`
+// below: the `start.dateTime` / `end.dateTime` fields carry an ISO-8601
+// local datetime (no offset) and the adjacent `timeZone` field tells Google
+// how to interpret it. See tests in `google-calendar.test.ts` for the pin.
 
 // Generate unique request ID for conference creation
 function generateRequestId(): string {

@@ -54,7 +54,7 @@ export function useCalendarStatus() {
   const { data: session, status } = useSession();
 
   return {
-    isConnected: !!session?.accessToken,
+    isConnected: !!session?.hasCalendarAccess,
     isLoading: status === "loading",
     hasError: session?.error === "RefreshTokenError",
     provider: session?.provider as OAuthProvider | undefined,
@@ -79,7 +79,7 @@ export function useCalendarAuth() {
   };
 
   return {
-    isConnected: !!session?.accessToken,
+    isConnected: !!session?.hasCalendarAccess,
     isLoading: status === "loading",
     hasError: session?.error === "RefreshTokenError",
     provider: session?.provider as OAuthProvider | undefined,
