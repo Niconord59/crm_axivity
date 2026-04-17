@@ -22,11 +22,11 @@ afin de **pouvoir merger `feature/mcp-server` vers `main` sans exposer de token 
 
 ---
 
-## Status — dernière mise à jour 2026-04-16 ~18:45 UTC
+## Status — dernière mise à jour 2026-04-17 ~07:35 UTC
 
 ### Vue d'ensemble
-**Sprint 1 = DONE en `develop`, validé en staging, EN ATTENTE de PR `develop → main`.**
-Tout le code technique Sprint 1 a été mergé, déployé en staging (`crm-staging.axivity.cloud`), et le smoke test OAuth + Calendar a été validé après 2 hotfixes.
+**Sprint 1 = DONE en `main`, déployé en prod, TRX-2 exécuté en staging.**
+PR #73 (`develop → main`) mergée le 2026-04-17 à 07:09 UTC (commit `4ccd3c54`). Coolify a redéployé `crm.axivity.cloud` avec succès. Les 8 issues Sprint 1 (#22-#28 + #37) se sont auto-fermées via les `Fixes` du body. TRX-2 a été exécuté en staging (rotation `AUTH_SECRET`) et validé : OAuth Google reconnecté, `hasCalendarAccess: true`, pas d'`accessToken` dans `/api/auth/session`. **Reste uniquement TRX-2 prod** (planifié dimanche soir CEST).
 
 ### Sprint 1 — stories mergées dans `develop`
 
@@ -74,23 +74,21 @@ Les deux fixes sont dans `crm/src/lib/auth-helpers.ts` — voir `getServerAccess
 
 ### Next steps — dans l'ordre, reprendre ici
 
-1. **PR `develop → main`** (non ouverte) — Sprint 1 passe en prod.
-   - Titre suggéré : `Prospection Hardening Sprint 1 → prod`
-   - Body : référencer PR #70 + PRs #71 + #72, inclure `Fixes #22 #23 #24 #25 #26 #27 #28 #37`.
-   - CI doit être verte (lint + test + build).
-   - Après merge, Coolify redéploie `crm.axivity.cloud`.
-2. **Exécuter PRO-TRX-2** (`docs/runbooks/rotate-oauth-tokens-2026-04.md`) — staging d'abord, puis prod.
-   - But : invalider les JWT pré-PRO-C1 qui portent encore l'ancien shape `accessToken` dans leurs sessions actives.
-   - Rotation `AUTH_SECRET` dans Coolify + redeploy. Tous les users reconnectent une fois.
-   - Fenêtre recommandée : dimanche soir.
-3. **Sprint 2** — data-layer + Zod tightening.
+1. ~~**PR `develop → main`**~~ ✅ DONE — PR #73 mergée `4ccd3c54` le 2026-04-17 07:09 UTC. Issues #22-#28 + #37 auto-fermées.
+2. **PRO-TRX-2 staging** ✅ DONE — `AUTH_SECRET` rotaté sur `crm-staging.axivity.cloud`, redeploy Coolify OK, OAuth Google reconnecté, shape session validé (`hasCalendarAccess: true`, pas d'`accessToken`).
+3. **PRO-TRX-2 prod** ⏳ À PLANIFIER — reproduire la même procédure sur `crm.axivity.cloud`.
+   - Fenêtre recommandée : **dimanche 20h CEST** (trafic proche de zéro).
+   - Comm Slack `#crm` 1h avant : template dans le runbook §Production → 2.
+   - **Ne pas** réutiliser le secret staging — en générer un nouveau.
+   - Post-exécution : remplir la checklist post-mortem à la fin du runbook (date, nb de reconnexions, tickets support, anomalies).
+4. **Sprint 2** — data-layer + Zod tightening (peut démarrer dès maintenant, indépendant de TRX-2 prod).
    - Stories : H1, H2, H3, H4, H6, H9, H13 (voir sections ci-dessous).
-   - Dépendances à respecter : H1 avant M2 ; H4 avant H5 (mais H5 déjà fait — H4 devient standalone).
-   - Peut être lancé en parallèle d'un Sprint 3 (M-stories) avec attention aux dépendances.
-4. **PRO-TRX-1 (CI gate `react-hooks/set-state-in-effect: error`)**.
+   - Nouvelle branche : `fix/prospection-hardening-sprint2` depuis `develop` (à jour avec `main` post-merge #73).
+   - Dépendances : H1 avant M2 ; H4 avant H5 (H5 déjà fait → H4 standalone).
+5. **PRO-TRX-1 (CI gate `react-hooks/set-state-in-effect: error`)** — parallélisable avec Sprint 2.
    - Bloqué par les **85 erreurs lint pré-existantes** dans d'autres modules (hors prospection).
-   - Deux options : (a) fixer toutes les erreurs (gros scope), (b) limiter la règle aux fichiers de prospection uniquement via `eslint.config.mjs` `overrides`.
-   - Option (b) recommandée pour débloquer TRX-1 sans dépendance sur une clean-up pré-existante.
+   - Deux options : (a) fixer toutes les erreurs (gros scope), (b) limiter la règle aux fichiers de prospection via `eslint.config.mjs` `overrides`.
+   - Option (b) recommandée pour débloquer TRX-1 sans dépendance sur un clean-up pré-existant.
 
 ### Ce qu'il NE FAUT PAS refaire en reprise
 
@@ -468,7 +466,7 @@ import { supabaseMock } from "@/test/mocks/supabase";
 - **Validation** : `npm run lint` + push sur feature et vérifier CI GitHub Actions.
 - **Dépendances** : **doit être merged APRÈS H5/H7/H8** pour ne pas casser `develop`.
 
-### PRO-TRX-2 — Rotation des tokens OAuth existants après déploiement C1 ✅ RUNBOOK WRITTEN (execution pending: staging + prod after `develop → main` merge)
+### PRO-TRX-2 — Rotation des tokens OAuth existants après déploiement C1 ⏳ STAGING DONE (2026-04-17), PROD PENDING (fenêtre dimanche 20h CEST)
 - **Severity** : HIGH (ops — transverse) · **Taille** : S · **Branch** : N/A (runbook)
 - **Fichiers** : nouveau `docs/runbooks/rotate-oauth-tokens-2026-04.md`.
 - **Problème** : Tant que C1 n'est pas déployé, les tokens déjà distribués à des sessions client restent exploitables (copiés par XSS éventuelle, loggés dans proxies, etc.).
@@ -688,10 +686,10 @@ Sprint 4+ L1–L6, L7
 - [x] PR #70 `fix/prospection-hardening-sprint1` → `develop` mergée ✅
 - [x] Hotfix #71 + #72 (`getToken` cookie + secret) mergés ✅
 - [x] Smoke test staging validé (OAuth Google + hasCalendarAccess + pas d'accessToken) ✅
-- [ ] **PR `develop` → `main`** — à ouvrir (Fixes #22 #23 #24 #25 #26 #27 #28 #37)
-- [ ] **TRX-2 runbook** exécuté en staging après merge main
-- [ ] **TRX-2 runbook** exécuté en prod après validation staging
-- [ ] Issues GitHub #22-#28 + #37 fermées automatiquement par le merge main
+- [x] **PR `develop` → `main`** mergée (PR #73, commit `4ccd3c54`, 2026-04-17 07:09 UTC) ✅
+- [x] **TRX-2 runbook** exécuté en staging (rotation `AUTH_SECRET` + validation session shape) ✅
+- [ ] **TRX-2 runbook** exécuté en prod — planifié dimanche 20h CEST
+- [x] Issues GitHub #22-#28 + #37 fermées automatiquement par le merge main ✅
 
 ### Sprint 2
 - [ ] **H1, H2, H3, H4, H6, H9, H13** mergés.
@@ -749,12 +747,13 @@ Sprint 4+ L1–L6, L7
 
 ## Next Steps
 
-**Sprint 1 = DONE en `develop`. Reprendre ici dans une nouvelle conversation :**
+**Sprint 1 = DONE en `main` + prod. TRX-2 staging DONE. Reprendre ici dans une nouvelle conversation :**
 
-1. Ouvrir la PR `develop → main` (voir section *Status* → *Next steps* pour le titre/body suggérés + issues à fermer).
-2. Après merge `main` + redéploiement prod : exécuter le runbook `docs/runbooks/rotate-oauth-tokens-2026-04.md` pour PRO-TRX-2.
-3. Démarrer Sprint 2 : `/ecc:prp-implement --stories PRO-H1,PRO-H2,PRO-H3,PRO-H4,PRO-H6,PRO-H9,PRO-H13` depuis une branche `fix/prospection-hardening-sprint2` créée depuis `develop` (après que `develop → main` soit mergé).
-4. **PRO-TRX-1** (CI gate lint) peut être fait en parallèle de Sprint 2, en scopant la règle à `crm/src/components/prospection/**` via `overrides` ESLint pour éviter de buter sur les 85 erreurs pré-existantes.
+1. ~~Ouvrir la PR `develop → main`~~ ✅ PR #73 mergée
+2. ~~TRX-2 staging~~ ✅ exécuté 2026-04-17
+3. **TRX-2 prod** — planifier fenêtre dimanche 20h CEST, suivre la §Production du runbook (comm Slack 1h avant, nouveau secret, Coolify redeploy, validation post-rotation).
+4. **Sprint 2** (indépendant de TRX-2 prod) : `/ecc:prp-implement --stories PRO-H1,PRO-H2,PRO-H3,PRO-H4,PRO-H6,PRO-H9,PRO-H13` depuis une branche `fix/prospection-hardening-sprint2` créée depuis `develop`.
+5. **PRO-TRX-1** (CI gate lint) — parallèle Sprint 2, scope règle à `crm/src/components/prospection/**` via `overrides` ESLint pour éviter les 85 erreurs pré-existantes.
 
 **Pour une continuation en nouvelle conversation** : lire dans l'ordre
 - Status block en haut de ce fichier → état courant
