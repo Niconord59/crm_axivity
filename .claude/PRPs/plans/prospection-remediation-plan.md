@@ -28,6 +28,34 @@ afin de **pouvoir merger `feature/mcp-server` vers `main` sans exposer de token 
 **Sprint 1 = DONE en `main`, déployé en prod, TRX-2 exécuté en staging.**
 PR #73 (`develop → main`) mergée le 2026-04-17 à 07:09 UTC (commit `4ccd3c54`). Coolify a redéployé `crm.axivity.cloud` avec succès. Les 8 issues Sprint 1 (#22-#28 + #37) se sont auto-fermées via les `Fixes` du body. TRX-2 a été exécuté en staging (rotation `AUTH_SECRET`) et validé : OAuth Google reconnecté, `hasCalendarAccess: true`, pas d'`accessToken` dans `/api/auth/session`. **Reste uniquement TRX-2 prod** (planifié dimanche soir CEST).
 
+### ⚠️ Note opérationnelle — TRX-2 prod (à exécuter)
+
+**Fenêtre** : **dimanche 20h CEST** (trafic proche de zéro — éviter lundi matin et vendredi après-midi).
+**Procédure complète** : [`docs/runbooks/rotate-oauth-tokens-2026-04.md`](../../docs/runbooks/rotate-oauth-tokens-2026-04.md) **§Production**.
+
+Checklist condensée (à exécuter dans l'ordre) :
+
+1. **T-1h** — poster le template Slack `#crm` (repris du runbook §Production → 2) : *"Reconnexion OAuth requise dans 15 min sur crm.axivity.cloud"*.
+2. **T-0** — générer un nouveau `AUTH_SECRET` (**différent de celui du staging**) :
+   ```bash
+   openssl rand -base64 32
+   # ou
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+   ```
+3. Coolify → projet **`crm.axivity.cloud`** → Environment variables → remplacer `AUTH_SECRET` → **Redeploy** (pas Restart — sinon Next.js ne recharge pas les env vars).
+4. Health check : `curl -s https://crm.axivity.cloud/api/health` → doit retourner `{"status":"ok"}`.
+5. Smoke test (onglet incognito) :
+   - login OAuth Google sur `crm.axivity.cloud`
+   - DevTools → Console : `fetch("/api/auth/session").then(r => r.json()).then(console.log)` → attendu `hasCalendarAccess: true`, **pas** de champ `accessToken`
+   - création d'un RDV test dans `/prospection` onglet Agenda → succès
+   - (optionnel) envoi d'un email depuis `CallResultDialog` → succès
+6. **Comm post-maintenance** Slack `#crm` : *"✅ Maintenance terminée, reconnectez-vous avec Google ou Microsoft."*
+7. Remplir le post-mortem à la fin du runbook (date, nb reconnexions 24h, tickets support, anomalies) + fermer issue [#37](https://github.com/Niconord59/crm_axivity/issues/37) si pas déjà auto-fermée.
+
+**Rollback** si incident bloquant (ex. nouveau secret empêche le build) : restaurer l'ancienne valeur `AUTH_SECRET` depuis l'historique Coolify + redeploy. **La vulnérabilité PRO-C1 résiduelle revient** dans ce cas → flaguer comme incident et replanifier.
+
+---
+
 ### Sprint 1 — stories mergées dans `develop`
 
 | Story | Issue | Commit | PR | Smoke staging |
