@@ -22,18 +22,13 @@ export function mapToContact(record: SupabaseRecord): Contact | null {
   const parsed = contactDbRecordSchema.safeParse(record);
 
   if (!parsed.success) {
-    if (typeof console !== "undefined" && typeof console.warn === "function") {
-      console.warn(
-        "[mapToContact] record invalide, ignoré",
-        {
-          id: typeof record?.id === "string" ? record.id : "<unknown>",
-          issues: parsed.error.issues.map((i) => ({
-            path: i.path.join("."),
-            message: i.message,
-          })),
-        },
-      );
-    }
+    console.warn("[mapToContact] record invalide, ignoré", {
+      id: typeof record?.id === "string" ? record.id : "<unknown>",
+      issues: parsed.error.issues.map((i) => ({
+        path: i.path.join("."),
+        message: i.message,
+      })),
+    });
     return null;
   }
 

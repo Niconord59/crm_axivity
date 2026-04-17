@@ -1498,5 +1498,55 @@ describe("use-prospects", () => {
 
       expect(result.current.data?.[0].opportuniteCount).toBe(1);
     });
+
+    // CodeRabbit follow-up — verrouille la parité de filtrage entre
+    // `useProspects` et `useProspectsWithClients`. Les 3 filtres secondaires
+    // (source / lifecycleStage / dateRappel) passent par le même `query.eq`
+    // ou `query.gte/.lte` — on teste qu'ils sont bien propagés.
+    it("applies the `source` filter via `eq(source_lead, ...)`", async () => {
+      setupSuccessfulListQuery([]);
+
+      const { result } = renderHook(
+        () => useProspectsWithClients({ source: "LinkedIn" }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(mockEq).toHaveBeenCalledWith("source_lead", "LinkedIn");
+    });
+
+    it("applies the `lifecycleStage` filter via `eq(lifecycle_stage, ...)`", async () => {
+      setupSuccessfulListQuery([]);
+
+      const { result } = renderHook(
+        () => useProspectsWithClients({ lifecycleStage: "Lead" }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(mockEq).toHaveBeenCalledWith("lifecycle_stage", "Lead");
+    });
+
+    it("applies the `dateRappel: \"today\"` filter via `eq(date_rappel, today)`", async () => {
+      setupSuccessfulListQuery([]);
+      const today = new Date().toISOString().split("T")[0];
+
+      const { result } = renderHook(
+        () => useProspectsWithClients({ dateRappel: "today" }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(mockEq).toHaveBeenCalledWith("date_rappel", today);
+    });
   });
 });
