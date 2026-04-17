@@ -1385,11 +1385,15 @@ export function CallResultDialog({
                         prospectNom={prospect.nom}
                         entreprise={prospect.clientNom}
                         leftVoicemail={leftVoicemail}
-                        onEmailSent={(emailData) => {
+                        onEmailSent={async (emailData) => {
                           setEmailSent(true);
-                          if (prospect?.client?.[0]) {
-                            const emailContent = `OBJET: ${emailData.subject}\n\nDESTINATAIRE: ${emailData.to}\n\nCONTENU:\n${emailData.body}`;
-                            createInteraction.mutate({
+                          if (!prospect?.client?.[0]) return;
+                          // PRO-H6 : on await la mutation pour surfacer les
+                          // erreurs Supabase (auparavant silencées par un
+                          // `.mutate()` flottant).
+                          const emailContent = `OBJET: ${emailData.subject}\n\nDESTINATAIRE: ${emailData.to}\n\nCONTENU:\n${emailData.body}`;
+                          try {
+                            await createInteraction.mutateAsync({
                               objet: `Email: ${emailData.subject}`,
                               type: "Email",
                               date: new Date().toISOString(),
@@ -1397,6 +1401,13 @@ export function CallResultDialog({
                               contact: [prospect.id],
                               client: prospect.client,
                             });
+                            toast.success("Email consigné dans les interactions");
+                          } catch (err) {
+                            toast.error(
+                              err instanceof Error
+                                ? err.message
+                                : "Impossible d'enregistrer l'interaction email",
+                            );
                           }
                         }}
                         onCancel={() => setWantToSendEmail(false)}

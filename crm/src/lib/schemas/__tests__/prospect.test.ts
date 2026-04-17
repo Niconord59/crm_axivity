@@ -5,6 +5,7 @@ import {
   prospectDefaultValues,
   callResultSchema,
   callResultDefaultValues,
+  importedLeadSchema,
   PROSPECT_STATUTS,
   PROSPECT_SOURCES,
   FIRST_CONTACT_TYPES,
@@ -528,5 +529,75 @@ describe('Constants', () => {
     expect(INITIAL_STATUTS).toContain('RDV effectué');
     expect(INITIAL_STATUTS).toContain('Qualifié');
     expect(INITIAL_STATUTS.length).toBe(5);
+  });
+});
+
+describe('importedLeadSchema (PRO-H3 — email OR telephone)', () => {
+  it('should accept a lead with email only', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+      email: 'jean@acme.com',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept a lead with telephone only (phone-only CSV)', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+      telephone: '0612345678',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept an empty email string when telephone is provided', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+      email: '',
+      telephone: '0612345678',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject a lead with neither email nor telephone', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some(i => i.message === 'Email ou téléphone requis')).toBe(true);
+    }
+  });
+
+  it('should reject a lead with a malformed email', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+      email: 'not-an-email',
+      telephone: '0612345678',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept both email and telephone', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+      email: 'jean@acme.com',
+      telephone: '0612345678',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should require entreprise and nom', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: '',
+      nom: '',
+      email: 'jean@acme.com',
+    });
+    expect(result.success).toBe(false);
   });
 });

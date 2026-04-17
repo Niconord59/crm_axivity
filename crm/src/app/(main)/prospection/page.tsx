@@ -19,7 +19,6 @@ import {
 } from "@/components/prospection";
 import {
   useProspectsWithClients,
-  useUpdateProspectStatus,
   useProspect,
   type ProspectFilters,
   type Prospect,
@@ -77,8 +76,6 @@ function ProspectionContent() {
   // the user selected via LeadCard / agenda. URL wins when both are set.
   const activeProspect = urlDrivenProspect ?? selectedProspect;
   const dialogOpen = callDialogOpen || urlDrivenProspect !== null;
-
-  const updateStatus = useUpdateProspectStatus();
 
   // Client-side search filter (includes company name, instant response)
   const activeProspects = useMemo(() => {
