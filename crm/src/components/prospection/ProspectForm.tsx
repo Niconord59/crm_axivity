@@ -455,10 +455,19 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
         statutProspection: "RDV planifié",
       });
 
+      // PRO-H9 : guard explicite plutôt que non-null assertion.
+      // `createProspect` renvoie toujours un `clientId` en pratique, mais
+      // on évite de faire planter React en cas d'incident serveur.
+      if (!result.clientId) {
+        toast.error("Lead créé mais aucun client n'a pu être associé. Merci de réessayer.");
+        keepDialogOpenRef.current = false;
+        return;
+      }
+
       // Stocker le lead créé
       setCreatedProspect({
         id: result.id,
-        clientId: result.clientId!,
+        clientId: result.clientId,
         nom: validatedFormData.nom,
         prenom: validatedFormData.prenom,
         email: validatedFormData.email,
@@ -554,8 +563,14 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
             : undefined,
         });
 
+        // PRO-H9 : guard explicite plutôt que non-null assertion.
+        if (!result.clientId) {
+          toast.error("Lead créé mais aucun client n'a pu être associé. Merci de réessayer.");
+          keepDialogOpenRef.current = false;
+          return;
+        }
         leadId = result.id;
-        clientId = result.clientId!;
+        clientId = result.clientId;
       }
 
       // Créer l'interaction si demandé

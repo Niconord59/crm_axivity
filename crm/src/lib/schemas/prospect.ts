@@ -278,14 +278,32 @@ export const csvMappingSchema = z.object({
 export type CsvMappingData = z.infer<typeof csvMappingSchema>;
 
 // Schéma pour un lead importé (après mapping)
-export const importedLeadSchema = z.object({
-  entreprise: z.string().min(1),
-  nom: z.string().min(1),
-  email: z.string().email(),
-  prenom: z.string().optional(),
-  telephone: z.string().optional(),
-  sourceLead: z.enum(PROSPECT_SOURCES).optional(),
-  notesProspection: z.string().optional(),
-});
+// Email OU téléphone requis — aligné sur `prospectSchema` pour que les CSV
+// phone-only ne soient pas rejetés silencieusement (PRO-H3).
+export const importedLeadSchema = z
+  .object({
+    entreprise: z.string().min(1),
+    nom: z.string().min(1),
+    email: z
+      .string()
+      .email("Email invalide")
+      .optional()
+      .or(z.literal("")),
+    prenom: z.string().optional(),
+    telephone: z.string().optional(),
+    sourceLead: z.enum(PROSPECT_SOURCES).optional(),
+    notesProspection: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      const hasEmail = typeof data.email === "string" && data.email.trim() !== "";
+      const hasPhone = typeof data.telephone === "string" && data.telephone.trim() !== "";
+      return hasEmail || hasPhone;
+    },
+    {
+      message: "Email ou téléphone requis",
+      path: ["email"],
+    },
+  );
 
 export type ImportedLead = z.infer<typeof importedLeadSchema>;

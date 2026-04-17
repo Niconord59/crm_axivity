@@ -94,7 +94,7 @@ const sampleProspectRecords = [
     date_rdv_prevu: "2024-01-25",
     type_rdv: "Visio",
     lien_visio: "https://meet.google.com/abc-123",
-    source_lead: "Référence",
+    source_lead: "Recommandation",
     notes_prospection: null,
     client_id: "client-3",
     created_at: "2024-01-17T09:00:00Z",
@@ -866,7 +866,7 @@ describe("use-prospects", () => {
         poste: "Manager",
         client_id: "client-opt",
         statut_prospection: "À appeler",
-        source_lead: "Référence",
+        source_lead: "Recommandation",
         notes_prospection: "Test notes",
         date_rappel: "2024-02-01",
       };
@@ -922,7 +922,7 @@ describe("use-prospects", () => {
         email: "full.name@test.com",
         telephone: "0600000000",
         role: "Manager",
-        sourceLead: "Référence",
+        sourceLead: "Recommandation",
         notesProspection: "Test notes",
         dateRappel: "2024-02-01",
       });
@@ -1296,13 +1296,16 @@ describe("use-prospects", () => {
     });
 
     it("should map source_lead to sourceLead", async () => {
+      // PRO-H1 — aligné sur PROSPECT_SOURCES (Zod enum strict).
+      // "Référence" et "Email" étaient des valeurs invalides silencieuses
+      // que le cast `as ProspectSource` ne repérait pas.
       const sources = [
         "LinkedIn",
         "Salon",
-        "Référence",
+        "Recommandation",
         "Site web",
         "Appel entrant",
-        "Email",
+        "Achat liste",
         "Autre",
       ];
 
@@ -1343,6 +1346,157 @@ describe("use-prospects", () => {
       });
 
       expect(result.current.data?.[0].nom).toBe("");
+    });
+  });
+
+  // PRO-H2 — `useProspectsWithClients` est maintenant self-contained
+  // (1 seule query Supabase avec joins sur `clients` et
+  // `opportunite_contacts(opportunites(...))`). On teste ici le shape
+  // d'enrichissement côté client, pas le SQL lui-même.
+  describe("useProspectsWithClients (PRO-H2)", () => {
+    it("fires a single Supabase `from('contacts')` call with joins", async () => {
+      const row = {
+        ...sampleProspectRecords[0],
+        clients: { id: "client-1", nom: "Acme Corp" },
+        opportunite_contacts: [
+          {
+            opportunite_id: "opp-1",
+            opportunites: {
+              id: "opp-1",
+              nom: "Deal Alpha",
+              statut: "Qualifié",
+              valeur_estimee: 12000,
+            },
+          },
+        ],
+      };
+      setupSuccessfulListQuery([row]);
+
+      const { result } = renderHook(() => useProspectsWithClients(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // `from("contacts")` est appelé exactement une fois — pas de
+      // cascade clients + opportunite_contacts séparées.
+      const contactsCalls = mockFrom.mock.calls.filter(
+        (args) => args[0] === "contacts",
+      );
+      expect(contactsCalls).toHaveLength(1);
+      // `.select(...)` reçoit le statement de jointure explicite.
+      const selectArg = mockSelect.mock.calls[0]?.[0];
+      expect(typeof selectArg).toBe("string");
+      expect(selectArg).toContain("clients(id, nom)");
+      expect(selectArg).toContain("opportunite_contacts");
+    });
+
+    it("enriches prospects with clientNom and opportunites", async () => {
+      const row = {
+        ...sampleProspectRecords[0],
+        clients: { id: "client-1", nom: "Acme Corp" },
+        opportunite_contacts: [
+          {
+            opportunite_id: "opp-1",
+            opportunites: {
+              id: "opp-1",
+              nom: "Deal Alpha",
+              statut: "Qualifié",
+              valeur_estimee: 12000,
+            },
+          },
+          {
+            opportunite_id: "opp-2",
+            opportunites: {
+              id: "opp-2",
+              nom: "Deal Beta",
+              statut: "Proposition",
+              valeur_estimee: 8000,
+            },
+          },
+        ],
+      };
+      setupSuccessfulListQuery([row]);
+
+      const { result } = renderHook(() => useProspectsWithClients(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      const prospect = result.current.data?.[0];
+      expect(prospect?.clientNom).toBe("Acme Corp");
+      expect(prospect?.opportuniteCount).toBe(2);
+      expect(prospect?.totalValeurPipeline).toBe(20000);
+      expect(prospect?.opportunites?.[0].id).toBe("opp-1");
+    });
+
+    it("returns an empty array when no prospects match", async () => {
+      setupSuccessfulListQuery([]);
+
+      const { result } = renderHook(() => useProspectsWithClients(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(result.current.data).toEqual([]);
+    });
+
+    it("tolerates prospects without linked client (clientNom undefined)", async () => {
+      const row = {
+        ...sampleProspectRecords[0],
+        clients: null,
+        opportunite_contacts: null,
+      };
+      setupSuccessfulListQuery([row]);
+
+      const { result } = renderHook(() => useProspectsWithClients(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      const prospect = result.current.data?.[0];
+      expect(prospect?.clientNom).toBeUndefined();
+      expect(prospect?.opportuniteCount).toBe(0);
+      expect(prospect?.opportunites).toBeUndefined();
+    });
+
+    it("deduplicates opportunities linked via multiple roles", async () => {
+      const row = {
+        ...sampleProspectRecords[0],
+        clients: { id: "client-1", nom: "Acme Corp" },
+        opportunite_contacts: [
+          {
+            opportunite_id: "opp-1",
+            opportunites: { id: "opp-1", nom: "Same Deal", statut: "Qualifié", valeur_estimee: 5000 },
+          },
+          {
+            opportunite_id: "opp-1",
+            opportunites: { id: "opp-1", nom: "Same Deal", statut: "Qualifié", valeur_estimee: 5000 },
+          },
+        ],
+      };
+      setupSuccessfulListQuery([row]);
+
+      const { result } = renderHook(() => useProspectsWithClients(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(result.current.data?.[0].opportuniteCount).toBe(1);
     });
   });
 });
