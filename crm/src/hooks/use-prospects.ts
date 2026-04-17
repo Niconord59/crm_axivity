@@ -416,14 +416,12 @@ export function useUpdateContact() {
       return mapToContactOrThrow(data);
     },
     onSuccess: async (_, variables) => {
-      // 1. Refetch base prospects list first (updates cache)
-      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.lists() });
-      // 2. Invalidate withClients AFTER list is updated, so its queryFn
-      //    picks up the new prospects data from the re-render closure
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.prospects.all, "with-clients"] });
+      // PRO-H2 — `useProspectsWithClients` est self-contained (1 seule query
+      // avec joins), donc un invalidate prefix sur `prospects.all` suffit à
+      // rafraîchir toutes les variantes (liste, with-clients, KPIs, …).
+      await queryClient.refetchQueries({ queryKey: queryKeys.prospects.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.prospects.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.prospects.kpis() });
-      // Also invalidate clients if client association changed
+      // Clients aussi si l'association a changé.
       queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
     },
   });

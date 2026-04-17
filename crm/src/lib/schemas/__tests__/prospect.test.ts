@@ -568,8 +568,31 @@ describe('importedLeadSchema (PRO-H3 — email OR telephone)', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some(i => i.message === 'Email ou téléphone requis')).toBe(true);
+      // CodeRabbit follow-up : pin aussi le path pour bloquer toute régression
+      // UX du placement du message (aligné sur `prospectSchema` → "telephone").
+      expect(result.error.issues.some(
+        i => i.message === 'Email ou téléphone requis' && i.path.includes('telephone')
+      )).toBe(true);
     }
+  });
+
+  it('should reject an imported lead with entreprise exceeding 200 chars', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'a'.repeat(201),
+      nom: 'Dupont',
+      email: 'jean@acme.com',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject an imported lead with a notesProspection exceeding 5000 chars', () => {
+    const result = importedLeadSchema.safeParse({
+      entreprise: 'Acme',
+      nom: 'Dupont',
+      email: 'jean@acme.com',
+      notesProspection: 'a'.repeat(5001),
+    });
+    expect(result.success).toBe(false);
   });
 
   it('should reject a lead with a malformed email', () => {

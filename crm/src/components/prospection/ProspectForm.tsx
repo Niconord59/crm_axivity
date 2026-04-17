@@ -458,22 +458,28 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
       // PRO-H9 : guard explicite plutôt que non-null assertion.
       // `createProspect` renvoie toujours un `clientId` en pratique, mais
       // on évite de faire planter React en cas d'incident serveur.
-      if (!result.clientId) {
-        toast.error("Lead créé mais aucun client n'a pu être associé. Merci de réessayer.");
-        keepDialogOpenRef.current = false;
-        return;
-      }
-
-      // Stocker le lead créé
+      //
+      // CodeRabbit follow-up : même en cas d'incident partiel, on mémorise
+      // le lead dans `createdProspect` pour que le gating `!createdProspect`
+      // bloque un deuxième appel à `createLeadForAgenda` (sinon l'utilisateur
+      // retente et crée un doublon côté Supabase). `clientId` reste à chaîne
+      // vide — l'ouverture d'agenda qui en dépend échoue en aval, ce qui est
+      // le bon comportement tant que l'association client n'est pas réparée.
       setCreatedProspect({
         id: result.id,
-        clientId: result.clientId,
+        clientId: result.clientId ?? "",
         nom: validatedFormData.nom,
         prenom: validatedFormData.prenom,
         email: validatedFormData.email,
         telephone: validatedFormData.telephone,
         entreprise: validatedFormData.entreprise,
       });
+
+      if (!result.clientId) {
+        toast.error("Lead créé mais aucun client n'a pu être associé. Fermez puis rouvrez le formulaire pour réessayer.");
+        keepDialogOpenRef.current = false;
+        return;
+      }
 
       // Sélectionner automatiquement "RDV planifié" comme résultat
       setSelectedResult("RDV planifié");
@@ -564,8 +570,23 @@ export function ProspectForm({ trigger, onSuccess, defaultValues: externalDefaul
         });
 
         // PRO-H9 : guard explicite plutôt que non-null assertion.
+        //
+        // CodeRabbit follow-up : on mémorise le lead dans `createdProspect`
+        // même si `clientId` manque, pour que la prochaine soumission passe
+        // par la branche "lead existant" (updateProspectStatus) au lieu de
+        // relancer `createProspect` et créer un doublon côté Supabase.
+        setCreatedProspect({
+          id: result.id,
+          clientId: result.clientId ?? "",
+          nom: validatedFormData.nom,
+          prenom: validatedFormData.prenom,
+          email: validatedFormData.email,
+          telephone: validatedFormData.telephone,
+          entreprise: validatedFormData.entreprise,
+        });
+
         if (!result.clientId) {
-          toast.error("Lead créé mais aucun client n'a pu être associé. Merci de réessayer.");
+          toast.error("Lead créé mais aucun client n'a pu être associé. Fermez puis rouvrez le formulaire pour réessayer.");
           keepDialogOpenRef.current = false;
           return;
         }

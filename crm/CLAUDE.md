@@ -74,8 +74,8 @@ npm run test:ui       # Vitest UI
 ### `setState` dans `useEffect` — interdit en prospection (PRO-TRX-1)
 
 Le pattern "sync prop → state via `useEffect(() => setX(prop), [prop])`" a été
-introduit **3 fois** dans le module prospection (H5/H7/H8 du Sprint 1, plus
-l'hotfix `8e1405f7`). Un gate CI dédié (`npm run lint:prospection-gate`)
+introduit **4 fois** dans le module prospection (H5/H7/H8 du Sprint 1 + hotfix
+`8e1405f7`). Un gate CI dédié (`npm run lint:prospection-gate`)
 bloque toute nouvelle occurrence dans :
 
 - `src/components/prospection/**`

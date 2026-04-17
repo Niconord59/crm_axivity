@@ -280,19 +280,41 @@ export type CsvMappingData = z.infer<typeof csvMappingSchema>;
 // Schéma pour un lead importé (après mapping)
 // Email OU téléphone requis — aligné sur `prospectSchema` pour que les CSV
 // phone-only ne soient pas rejetés silencieusement (PRO-H3).
+//
+// CodeRabbit follow-up : les `.max(...)` miroir de `prospectSchema` (entreprise
+// 200, nom 200, prenom 100, telephone 30, notesProspection 5000) évitent qu'un
+// CSV avec une ligne trop longue passe la validation d'import et échoue
+// ensuite silencieusement à l'INSERT Supabase. Le `path` du refine est aligné
+// sur ["telephone"] comme `prospectSchema` pour que l'UI affiche l'erreur au
+// même endroit dans les deux flows (manuel + import).
 export const importedLeadSchema = z
   .object({
-    entreprise: z.string().min(1),
-    nom: z.string().min(1),
+    entreprise: z
+      .string()
+      .min(1)
+      .max(200, "Le nom de l'entreprise ne peut pas dépasser 200 caractères"),
+    nom: z
+      .string()
+      .min(1)
+      .max(200, "Le nom du contact ne peut pas dépasser 200 caractères"),
     email: z
       .string()
       .email("Email invalide")
       .optional()
       .or(z.literal("")),
-    prenom: z.string().optional(),
-    telephone: z.string().optional(),
+    prenom: z
+      .string()
+      .max(100, "Le prénom ne peut pas dépasser 100 caractères")
+      .optional(),
+    telephone: z
+      .string()
+      .max(30, "Le téléphone ne peut pas dépasser 30 caractères")
+      .optional(),
     sourceLead: z.enum(PROSPECT_SOURCES).optional(),
-    notesProspection: z.string().optional(),
+    notesProspection: z
+      .string()
+      .max(5000, "Les notes ne peuvent pas dépasser 5000 caractères")
+      .optional(),
   })
   .refine(
     (data) => {
@@ -302,7 +324,7 @@ export const importedLeadSchema = z
     },
     {
       message: "Email ou téléphone requis",
-      path: ["email"],
+      path: ["telephone"],
     },
   );
 
